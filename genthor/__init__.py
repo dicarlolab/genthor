@@ -34,3 +34,10 @@ if 'THEANO_FLAGS' not in os.environ:
     print 'N.B. HACKING IN env["THEANO_FLAGS"] =', os.environ['THEANO_FLAGS']
 
 
+
+# The GENTHOR env variable points to the base directory of the project.
+if 'GENTHOR' not in os.environ:
+    # Put GENTHOR in your .bashrc or whatever.
+    raise EnvironmentError('You must define the environment variable: GENTHOR') 
+else:
+    ROOT_PATH = os.path.abspath(os.environ["GENTHOR"])
