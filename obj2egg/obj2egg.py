@@ -1,4 +1,9 @@
-import bpy, os, sys, pdb, mathutils
+import os
+import sys
+import bpy
+import mathutils
+import pdb
+
 
 """ Usage: 
 $ blender -b -P obj2meshdata.py -- <obj filename>
