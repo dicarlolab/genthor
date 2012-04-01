@@ -10,6 +10,7 @@ import os
 import shutil
 import sys
 import tarfile
+from subprocess import call
 from subprocess import check_call
 import pdb
 
@@ -152,6 +153,7 @@ def convert(obj_path, egg_path, blender_command_base, params):
     blender_command = "%s %s %s %s" % (blender_command_base, obj_path,
                                        egg_path, param_str)
 
+    # Run the blender conversion
     try:
         check_call(blender_command, shell=True)
     except Exception as details:
@@ -161,9 +163,14 @@ def convert(obj_path, egg_path, blender_command_base, params):
         print "Failed with exception: %s" % details
         pdb.set_trace()
 
+
+    # yabee seems not to want to copy the textures -- I could do it by hand
+    # (ie. grab the JPG files and shutil.copy()/.copy2() them ...
+
+
     # Make .bam copy as well
     bam_path = os.path.splitext(egg_path)[0] + '.bam'
-    check_call("egg2bam %s %s" % (egg_path, bam_path), shell=True)
+    call("egg2bam -o %s %s" % (bam_path, egg_path), shell=True)
 
     
 
