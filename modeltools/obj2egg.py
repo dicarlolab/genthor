@@ -33,20 +33,20 @@ def export_egg(pth):
     #: For example if main file path is "/home/username/test/test.egg",
     #: texture path is "./tex", then the actual texture path is 
     #: "/home/username/test/tex"
-    TEX_PATH = "./tex"
+    TEX_PATH = "./tex" #os.path.join(os.path.split(pth)[0], "tex")
     #: "True" to write an animation data into the separate files
-    SEPARATE_ANIM_FILE = True
+    SEPARATE_ANIM_FILE = False #True
     #: "True" to write only animation data
     ANIM_ONLY = False
     #: number of sign after point
-    FLOATING_POINT_ACCURACY = 4
+    FLOATING_POINT_ACCURACY = 6
     #: Enable tangent space calculation. Tangent space needed for some 
     # shaders/autoshaders, but increase exporting time
     # "NO", "INTERNAL", "PANDA"
     # "INTERNAL" - use internal TBS calculation
     # "PANDA" - use egg-trans to calculate TBS
     # "NO" - do not calc TBS
-    CALC_TBS = "PANDA"#"NO" #
+    CALC_TBS = "NO" #"PANDA"#
     #: Type of texture processing. May be "SIMPLE" or "BAKE".
     # "SIMPLE" - export all texture layers as MODULATE. 
     # Exceptions: 
@@ -97,7 +97,7 @@ def transform_model(rot):
     for obj in bpy.context.selected_objects:
         for i, d in enumerate(obj.dimensions):
             Dim[i] = max((Dim[i], d))
-    scale = [1. / max(Dim)] * 3
+    scale = [1. / min(Dim)] * 3
     bpy.ops.transform.resize(value=scale)
 
     ## Rotate

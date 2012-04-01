@@ -11,6 +11,7 @@ import shutil
 import sys
 import tarfile
 from subprocess import call
+from subprocess import check_call
 import pdb
 
 
@@ -83,8 +84,7 @@ def main():
     for categ, names in model_categories.iteritems():
         eggnames.extend([(name, categ + str(i)) for i, name in enumerate(names)])
     eggdict = dict(eggnames)
-
-
+   
     # Loop over models, doing the conversions
     for modelname, targzname in modeldict.iteritems():
         # un-tar, un-gz into a temp directory
@@ -106,8 +106,6 @@ def main():
         print
         print "rm -rf %s" % tmp_path
         shutil.rmtree(tmp_path)
-
-        pdb.set_trace()
 
 
 def untargz(tmp_path, targzname, modelname):
@@ -161,8 +159,9 @@ def convert(obj_path, egg_path, blender_command_base, params):
     blender_command = "%s %s %s %s" % (blender_command_base, obj_path,
                                        egg_path, param_str)
 
+    # Run the blender conversion
     try:
-        call(blender_command, shell=True)
+        check_call(blender_command, shell=True)
     except Exception as details:
         print "Tried to call:"
         print blender_command
@@ -170,6 +169,16 @@ def convert(obj_path, egg_path, blender_command_base, params):
         print "Failed with exception: %s" % details
         pdb.set_trace()
 
+
+    # yabee seems not to want to copy the textures -- I could do it by hand
+    # (ie. grab the JPG files and shutil.copy()/.copy2() them ...
+
+
+    # Make .bam copy as well
+    bam_path = os.path.splitext(egg_path)[0] + '.bam'
+    call("egg2bam -o %s %s" % (bam_path, egg_path), shell=True)
+
+    
 
 
 if __name__ == "__main__":
