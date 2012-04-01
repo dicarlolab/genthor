@@ -102,10 +102,15 @@ def main():
         # Do the conversion from .obj to .egg
         convert(obj_path, egg_path, blender_command_base, params)
 
-        # Remove all contents of tmp_path
-        print
-        print "rm -rf %s" % tmp_path
-        shutil.rmtree(tmp_path)
+        # Copy the textures from the .obj path to the .egg path
+        tex_path = os.path.join(os.path.split(egg_path)[0], "tex")
+        copy_tex(os.path.split(obj_path)[0], tex_path)
+
+        # Remove tmp directory
+        rm_path = os.path.join(
+            tmp_path, obj_path[len(tmp_path.rstrip("/")) + 1:].split("/")[0])
+        print "rm -rf %s" % rm_path
+        shutil.rmtree(rm_path)
 
 
 def untargz(tmp_path, targzname, modelname):
@@ -116,30 +121,22 @@ def untargz(tmp_path, targzname, modelname):
     # .obj filename
     objname = modelname + ".obj"
 
-    # Open the .tar.gz
+    # Open the tar.gz
     with tarfile.open(targzname, 'r') as tf:
         # Extract it
         tf.extractall(tmp_path)
-        # Get .obj file path
-        tf.getmembers()
-        pdb.set_trace()
+        # Get tar.gz's member names
+        tarnames = tf.getnames()
 
-    # # Get any files with extension .obj
-    # untargzed_path = os.path.join(tmp_path, "3dmodels", modelname)
-    # objname = [name for name in os.listdir(untargzed_path)
-    #            if os.path.splitext(name)[1] == ".obj"]
-    
-    # # If there's more than 1 .obj file, pick those that startwith modelname
-    # if len(objname) > 1:
-    #     objname = [name for name in objname
-    #                if name.startswith(modelname)]
-    # # If objname still has more than 1 file, error
-    # if len(objname) > 1:
-    #     raise IOError("Cannot determine .obj filename. Confused between: %s"
-    #                   % ", ".join(objname))
-
-    # Assemble full obj path
-    obj_path = os.path.join(untargzed_path, objname[0])
+    # Get obj_path
+    obj_path = [pth for pth in tarnames
+                if os.path.split(pth)[1] == objname]
+    # Raise exception if there're more than 1
+    if len(obj_path) != 1:
+        raise ValueError("Cannot find unique .obj file in tar.gz. Found: %s"
+                         % ", ".join(obj_path))
+    else:
+        obj_path = obj_path[0]
 
     return obj_path
 
@@ -169,15 +166,24 @@ def convert(obj_path, egg_path, blender_command_base, params):
         print "Failed with exception: %s" % details
         pdb.set_trace()
 
-
-    # yabee seems not to want to copy the textures -- I could do it by hand
-    # (ie. grab the JPG files and shutil.copy()/.copy2() them ...
-
-
     # Make .bam copy as well
     bam_path = os.path.splitext(egg_path)[0] + '.bam'
     call("egg2bam -o %s %s" % (bam_path, egg_path), shell=True)
 
+
+def copy_tex(obj_path, tex_path):
+    """ Copy texture images from .obj's directory to .egg's directory """
+
+    # Texture image file extensions
+    tex_imgexts = (".jpg", ".tif", ".bmp", ".gif", ".png")
+    
+    # Tex image files in obj_path
+    tex_filenames0 = [name for name in os.listdir(obj_path)
+                      if os.path.splitext(name)[1].lower() in tex_imgexts]
+
+    for name in tex_filenames0:
+        #print "%s --> %s" % (os.path.join(obj_path, name), tex_path)
+        shutil.copy2(os.path.join(obj_path, name), tex_path)
     
 
 
