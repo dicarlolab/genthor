@@ -7,12 +7,10 @@ Peter Battaglia - 03.2012
 """
 
 import os
-import modeltools
 import shutil
-import subprocess
 import sys
 import tarfile
-from matplotlib.cbook import flatten
+from subprocess import call
 import pdb
 
 
@@ -26,14 +24,15 @@ def main():
     canonical_angles_py = "canonical_angles"
 
     # Temporary path in which to extract .obj files before conversion.
-    tmp_path = os.path.join(os.environ["HOME"], "tmp/scrap")
+    tmp_path = os.path.join(os.environ["HOME"], "tmp", "scrap")
 
     # Blender script and conversion command.
+    blender_path = os.path.join(os.environ["HOME"], "bin", "blender")
     blender_script_name = "obj2egg.py"
-    blender_command_base = "blender -b -P %s --" % blender_script_name
+    blender_command_base = "%s -b -P %s --" % (blender_path, blender_script_name)
 
     # Destination directory for .egg files
-    egg_root_path = os.path.join(os.environ["HOME"], "tmp/egg_models")
+    egg_root_path = os.path.join(os.environ["HOME"], "tmp", "egg_models")
 
     # Get the model names from the directory listing
     modeldict = dict([(name[:-7], name) for name in os.listdir(model_path)
@@ -89,12 +88,13 @@ def main():
     # Loop over models, doing the conversions
     for modelname, targzname in modeldict.iteritems():
         # un-tar, un-gz into a temp directory
-        objname = untargz(tmp_path, targzname, modelname)
+        fulltargzname = os.path.join(model_path, targzname)
+        objname = untargz(tmp_path, fulltargzname, modelname)
 
         # Construct obj and egg paths
         obj_path = os.path.join(tmp_path, objname)
         eggname = eggdict[modelname]
-        egg_path = os.path.join(egg_root_path, eggname)
+        egg_path = os.path.join(egg_root_path, eggname, eggname + '.egg')
 
         # The params are the angles
         params = angledict[modelname]
@@ -104,13 +104,10 @@ def main():
 
         # Remove all contents of tmp_path
         print
-        [print("rm: %s" % filename) for filename in os.listdir(tmp_path)]
-        #[os.remove(filename) for filename in os.listdir(tmp_path)]
+        print "rm -rf %s" % tmp_path
+        shutil.rmtree(tmp_path)
 
         pdb.set_trace()
-        
-        break
-
 
 
 def untargz(tmp_path, targzname, modelname):
@@ -119,13 +116,15 @@ def untargz(tmp_path, targzname, modelname):
         os.makedirs(tmp_path)
 
     # Open the .tar.gz
-    with tf as tarfile.open(targzname, 'r'):
+    with tarfile.open(targzname, 'r') as tf:
         # Extract it
-        tf.extractall(tmpdir)
+        tf.extractall(tmp_path)
 
     # Get any files with extension .obj
-    objname = [name for name in os.listdir(tmp_path)
+    untargzed_path = os.path.join(tmp_path, "3dmodels", modelname)
+    objname = [name for name in os.listdir(untargzed_path)
                if os.path.splitext(name)[1] == ".obj"]
+    
     # If there's more than 1 .obj file, pick those that startwith modelname
     if len(objname) > 1:
         objname = [name for name in objname
@@ -134,7 +133,11 @@ def untargz(tmp_path, targzname, modelname):
     if len(objname) > 1:
         raise IOError("Cannot determine correct .obj file. Confused between: %s"
                       % ", ".join(objname))
-    return objname[0]
+
+    # Assemble full obj path
+    obj_path = os.path.join(untargzed_path, objname[0])
+
+    return obj_path
 
 
 def convert(obj_path, egg_path, blender_command_base, params):
@@ -152,9 +155,14 @@ def convert(obj_path, egg_path, blender_command_base, params):
     blender_command = "%s %s %s %s" % (blender_command_base, obj_path,
                                        egg_path, param_str)
 
-    print blender_command
-
-    #subprocess.call(blender_command)
+    try:
+        call(blender_command, shell=True)
+    except Exception as details:
+        print "Tried to call:"
+        print blender_command
+        print
+        print "Failed with exception: %s" % details
+        pdb.set_trace()
 
 
 

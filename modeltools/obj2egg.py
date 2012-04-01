@@ -101,25 +101,25 @@ def transform_model(rot):
     bpy.ops.transform.resize(value=scale)
 
     ## Rotate
-    bpy.ops.transform.rotate(value=rot[0], axis=(1., 0., 0.))
-    bpy.ops.transform.rotate(value=rot[1], axis=(0., 1., 0.))
-    bpy.ops.transform.rotate(value=rot[2], axis=(0., 0., 1.))
+    bpy.ops.transform.rotate(value=(rot[0],), axis=(1., 0., 0.))
+    bpy.ops.transform.rotate(value=(rot[1],), axis=(0., 1., 0.))
+    bpy.ops.transform.rotate(value=(rot[2],), axis=(0., 0., 1.))
 
 
-def run(obj_pth, egg_path, rot):
+def run(obj_path, egg_path, rot):
     # Empty the current scene
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
     
     # Import obj into scene
-    import_obj(obj_pth)
+    import_obj(obj_path)
 
     # Do whatever you need to do within the Blender scene
     transform_model(rot)
 
     # Export egg
     #outpth = os.path.splitext(pth)[0] + ".egg"
-    export_egg(egg_pth)
+    export_egg(egg_path)
 
     # # Drop to debugger
     # print("\nYou're now in the debugger, within the Blender context\n")
@@ -136,15 +136,23 @@ if __name__ == "__main__":
     pyargs = args[args.index("--") + 1:]
 
     # Get the .obj filename
-    obj_pth = pyargs[0]
+    obj_path = pyargs[0]
 
-    # Get the .egg filename
-    egg_pth = pyargs[1]
+    # Put together output egg path
+    if len(pyargs) < 2:
+        egg_path = os.path.splitext(obj_path)[0] + ".egg"
+    else:
+    # Get the .egg filename from cmd line
+        egg_path = pyargs[1]
 
-    # Get the parameters
-    param_str = pyargs[2]
-    rot = [float(s) for s in param_str.split(",")]
+    # Put together rotation
+    if len(pyargs) < 3:
+        rot = [0., 0., 0.]
+    else:
+        # Get rotation from cmd line
+        param_str = pyargs[2]
+        rot = [float(s) for s in param_str.split(",")]
 
     # Run the import
-    run(obj_pth, egg_path, rot)
+    run(obj_path, egg_path, rot)
 
