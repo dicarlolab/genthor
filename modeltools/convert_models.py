@@ -10,6 +10,7 @@ import os
 import shutil
 import sys
 import tarfile
+from math import pi
 from subprocess import call
 from subprocess import check_call
 import pdb
@@ -30,7 +31,8 @@ def main():
     # Blender script and conversion command.
     blender_path = os.path.join(os.environ["HOME"], "bin", "blender")
     blender_script_name = "obj2egg.py"
-    blender_command_base = "%s -b -P %s --" % (blender_path, blender_script_name)
+    blender_command_base = "%s -b -P %s --" % (blender_path,
+                                               blender_script_name)
 
     # Destination directory for .egg files
     egg_root_path = os.path.join(os.environ["HOME"], "tmp", "egg_models")
@@ -71,7 +73,8 @@ def main():
 
     # Raise exception if the egg_root_path is an existing file
     if os.path.isfile(egg_root_path):
-        raise IOError("File already exists, cannot make dir: %s" % egg_root_path)
+        raise IOError("File already exists, cannot make dir: %s"
+                      % egg_root_path)
 
     # Create egg_root_path directory if necessary
     if not os.path.isdir(egg_root_path):
@@ -82,7 +85,8 @@ def main():
     # Rename models as numbered category instances
     eggnames = []
     for categ, names in model_categories.iteritems():
-        eggnames.extend([(name, categ + str(i)) for i, name in enumerate(names)])
+        eggnames.extend([(name, categ + str(i))
+                         for i, name in enumerate(names)])
     eggdict = dict(eggnames)
    
     # Loop over models, doing the conversions
@@ -97,14 +101,10 @@ def main():
         egg_path = os.path.join(egg_root_path, eggname, eggname + '.egg')
 
         # The params are the angles
-        params = angledict[modelname]
+        params = [rad2deg(angle) for angle in angledict[modelname]]
         
         # Do the conversion from .obj to .egg
         convert(obj_path, egg_path, blender_command_base, params)
-
-        # Copy the textures from the .obj path to the .egg path
-        tex_path = os.path.join(os.path.split(egg_path)[0], "tex")
-        copy_tex(os.path.split(obj_path)[0], tex_path)
 
         # Remove tmp directory
         rm_path = os.path.join(
@@ -166,6 +166,10 @@ def convert(obj_path, egg_path, blender_command_base, params):
         print "Failed with exception: %s" % details
         pdb.set_trace()
 
+    # Copy the textures from the .obj path to the .egg path
+    tex_path = os.path.join(os.path.split(egg_path)[0], "tex")
+    copy_tex(os.path.split(obj_path)[0], tex_path)
+
     # Make .bam copy as well
     bam_path = os.path.splitext(egg_path)[0] + '.bam'
     call("egg2bam -o %s %s" % (bam_path, egg_path), shell=True)
@@ -185,6 +189,11 @@ def copy_tex(obj_path, tex_path):
         #print "%s --> %s" % (os.path.join(obj_path, name), tex_path)
         shutil.copy2(os.path.join(obj_path, name), tex_path)
     
+
+def rad2deg(rad):
+    deg = rad * 180. / pi
+    return deg
+
 
 
 if __name__ == "__main__":
