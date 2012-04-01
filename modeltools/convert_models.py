@@ -1,35 +1,163 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+
+"""
+Convert .obj models to .egg files (Panda3d format)
+Peter Battaglia - 03.2012
+
+"""
 
 import os
-import sys
+import modeltools
 import shutil
 import subprocess
-
-import obj2egg
-
-
-
-blender_script_name = 'obj2egg.py'
+import sys
+import tarfile
+from matplotlib.cbook import flatten
+import pdb
 
 
-blender_command_base = 'blender -b -P %s -- ' % blender_script_name
+def main():
+
+    # Model root directory
+    model_path = os.path.join(os.environ["HOME"], "Dropbox/genthor/models/")
+
+    # Model info scripts
+    model_categories_py = "model_categories"
+    canonical_angles_py = "canonical_angles"
+
+    # Temporary path in which to extract .obj files before conversion.
+    tmp_path = os.path.join(os.environ["HOME"], "tmp/scrap")
+
+    # Blender script and conversion command.
+    blender_script_name = "obj2egg.py"
+    blender_command_base = "blender -b -P %s --" % blender_script_name
+
+    # Destination directory for .egg files
+    egg_root_path = os.path.join(os.environ["HOME"], "tmp/egg_models")
+
+    # Get the model names from the directory listing
+    modeldict = dict([(name[:-7], name) for name in os.listdir(model_path)
+                       if name[-7:] == ".tar.gz"])
+
+    # Get the model info that's contained in the scripts
+    sys.path.append(model_path)
+    try:
+        model_categories = __import__(model_categories_py).MODEL_CATEGORIES
+        canonical_angles = __import__(canonical_angles_py).ANGLES
+    except ImportError:
+        raise
+
+    # Assemble category info in dict with {modelname: category, ...}
+    categories = []
+    for categ, names in model_categories.iteritems():
+        categories.extend([(name, categ) for name in names])
+    categorydict = dict(categories)
+
+    # Assemble angle info in dict with {modelname: angle, ...}
+    angledict = dict([(entry[0], entry[1:]) for entry in canonical_angles])
+
+    # Check that model_categories and canonical_angles has info on the models
+    modelnames = set(modeldict.keys())
+    # model_categories
+    names = set(categorydict.keys())
+    if not modelnames.issubset(names):
+        raise ValueError("%s doesn't have info for: %s" % (
+            model_categories_py, ",".join(modelnames.difference(names))))
+    # canonical_angles
+    names = set(angledict.keys())
+    if not modelnames.issubset(names):
+        raise ValueError("%s does not have info for: %s" % (
+            canonical_angles_py, ", ".join(modelnames.difference(names))))
+
+    # Raise exception if the egg_root_path is an existing file
+    if os.path.isfile(egg_root_path):
+        raise IOError("File already exists, cannot make dir: %s" % egg_root_path)
+
+    # Create egg_root_path directory if necessary
+    if not os.path.isdir(egg_root_path):
+        os.makedirs(egg_root_path)
+
+    # Don't rename models 
+    eggdict = modeldict
+    # Rename models as numbered category instances
+    eggnames = []
+    for categ, names in model_categories.iteritems():
+        eggnames.extend([(name, categ + str(i)) for i, name in enumerate(names)])
+    eggdict = dict(eggnames)
+
+
+    # Loop over models, doing the conversions
+    for modelname, targzname in modeldict.iteritems():
+        # un-tar, un-gz into a temp directory
+        objname = untargz(tmp_path, targzname, modelname)
+
+        # Construct obj and egg paths
+        obj_path = os.path.join(tmp_path, objname)
+        eggname = eggdict[modelname]
+        egg_path = os.path.join(egg_root_path, eggname)
+
+        # The params are the angles
+        params = angledict[modelname]
+        
+        # Do the conversion from .obj to .egg
+        convert(obj_path, egg_path, blender_command_base, params)
+
+        # Remove all contents of tmp_path
+        print
+        [print("rm: %s" % filename) for filename in os.listdir(tmp_path)]
+        #[os.remove(filename) for filename in os.listdir(tmp_path)]
+
+        pdb.set_trace()
+        
+        break
 
 
 
+def untargz(tmp_path, targzname, modelname):
+    # Make the tmp_path directory if it doesn't exist already
+    if not os.path.isdir(tmp_path):
+        os.makedirs(tmp_path)
 
-# Append the model directory to the path
-sys.path.append(MODEL_PATH)
+    # Open the .tar.gz
+    with tf as tarfile.open(targzname, 'r'):
+        # Extract it
+        tf.extractall(tmpdir)
 
-# Get the model info that's contained in the scripts
-model_categories_script = 'model_categories.py'
-canonical_angles_script = 'canonical_angles.py'
+    # Get any files with extension .obj
+    objname = [name for name in os.listdir(tmp_path)
+               if os.path.splitext(name)[1] == ".obj"]
+    # If there's more than 1 .obj file, pick those that startwith modelname
+    if len(objname) > 1:
+        objname = [name for name in objname
+                   if name.startswith(modelname)]
+    # If objname still has more than 1 file, error
+    if len(objname) > 1:
+        raise IOError("Cannot determine correct .obj file. Confused between: %s"
+                      % ", ".join(objname))
+    return objname[0]
 
-try:
-    model_categories = __import__(model_categories_script)
-    canonical_angles = __import__(canonical_angles_script)
 
-    for i in config.__dict__:
-        print i            
-except ImportError:
-    print "Unable to import configuration file %s" % (myconfigfile,)
+def convert(obj_path, egg_path, blender_command_base, params):
+    # Split into directory and filename
+    eggdir, eggname = os.path.split(egg_path)
+    
+    # Make the eggdir directory if it doesn't exist already
+    if not os.path.isdir(eggdir):
+        os.makedirs(eggdir)
 
+    # Put the parameters together into a string
+    param_str = ",".join([str(float(x)) for x in params])
+
+    # Assemble the full blender command
+    blender_command = "%s %s %s %s" % (blender_command_base, obj_path,
+                                       egg_path, param_str)
+
+    print blender_command
+
+    #subprocess.call(blender_command)
+
+
+
+if __name__ == "__main__":
+
+    main()
