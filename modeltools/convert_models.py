@@ -115,24 +115,30 @@ def untargz(tmp_path, targzname, modelname):
     if not os.path.isdir(tmp_path):
         os.makedirs(tmp_path)
 
+    # .obj filename
+    objname = modelname + ".obj"
+
     # Open the .tar.gz
     with tarfile.open(targzname, 'r') as tf:
         # Extract it
         tf.extractall(tmp_path)
+        # Get .obj file path
+        tf.getmembers()
+        pdb.set_trace()
 
-    # Get any files with extension .obj
-    untargzed_path = os.path.join(tmp_path, "3dmodels", modelname)
-    objname = [name for name in os.listdir(untargzed_path)
-               if os.path.splitext(name)[1] == ".obj"]
+    # # Get any files with extension .obj
+    # untargzed_path = os.path.join(tmp_path, "3dmodels", modelname)
+    # objname = [name for name in os.listdir(untargzed_path)
+    #            if os.path.splitext(name)[1] == ".obj"]
     
-    # If there's more than 1 .obj file, pick those that startwith modelname
-    if len(objname) > 1:
-        objname = [name for name in objname
-                   if name.startswith(modelname)]
-    # If objname still has more than 1 file, error
-    if len(objname) > 1:
-        raise IOError("Cannot determine correct .obj file. Confused between: %s"
-                      % ", ".join(objname))
+    # # If there's more than 1 .obj file, pick those that startwith modelname
+    # if len(objname) > 1:
+    #     objname = [name for name in objname
+    #                if name.startswith(modelname)]
+    # # If objname still has more than 1 file, error
+    # if len(objname) > 1:
+    #     raise IOError("Cannot determine .obj filename. Confused between: %s"
+    #                   % ", ".join(objname))
 
     # Assemble full obj path
     obj_path = os.path.join(untargzed_path, objname[0])
