@@ -160,7 +160,7 @@ def convert(obj_path, egg_path, blender_command_base, params):
     try:
         check_call(blender_command, shell=True)
     except Exception as details:
-        print "Tried to call:"
+        print "Tried to call: "
         print blender_command
         print
         print "Failed with exception: %s" % details
