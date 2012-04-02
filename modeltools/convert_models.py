@@ -105,12 +105,15 @@ def main():
         
         # Do the conversion from .obj to .egg
         convert(obj_path, egg_path, blender_command_base, params)
-
+        
         # Remove tmp directory
         rm_path = os.path.join(
             tmp_path, obj_path[len(tmp_path.rstrip("/")) + 1:].split("/")[0])
         print "rm -rf %s" % rm_path
         shutil.rmtree(rm_path)
+
+        # Remove .egg file (because they're huge)
+        os.remove(egg_path)
 
 
 def untargz(tmp_path, targzname, modelname):
