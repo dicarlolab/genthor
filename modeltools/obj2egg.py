@@ -84,7 +84,7 @@ def export_egg(pth):
 
 def transform_model(rot):
     
-    ## Select the meshes
+    ## Select the meshes, add them to active object
     bpy.ops.object.select_by_type(type="MESH")
 
     ## Center model
@@ -92,18 +92,32 @@ def transform_model(rot):
     # bpy.ops.view3d.snap_cursor_to_center()
     # bpy.ops.view3d.snap_selected_to_cursor()
 
-    ## Scale
-    Dim = [0., 0., 0]
+    ## Compute scale and location
+    # Compute bounding box of selection in abs coords
+    BB0 = [0., 0., 0.]
+    BB1 = [0., 0., 0.]
     for obj in bpy.context.selected_objects:
-        for i, d in enumerate(obj.dimensions):
-            Dim[i] = max((Dim[i], d))
+        for i in range(3):
+            BB0[i] = min(BB0[i], obj.location[i] - obj.dimensions[i] / 2.)
+            BB1[i] = max(BB1[i], obj.location[i] + obj.dimensions[i] / 2.)
+    Dim = [bb1 - bb0 for bb0, bb1 in zip(BB0, BB1)]
+    Loc = [(bb1 + bb0) / 2. for bb0, bb1 in zip(BB0, BB1)]
+
+    ## Re-scale
     scale = [1. / min(Dim)] * 3
     bpy.ops.transform.resize(value=scale)
 
+    ## Re-locate
+    bpy.ops.transform.translate(value=(-Loc[0], -Loc[1], -Loc[2]))
+
     ## Rotate
-    bpy.ops.transform.rotate(value=(rot[0],), axis=(1., 0., 0.))
+    bpy.ops.transform.rotate(value=(rot[0],), axis=(0., 0., 1.))
     bpy.ops.transform.rotate(value=(rot[1],), axis=(0., 1., 0.))
-    bpy.ops.transform.rotate(value=(rot[2],), axis=(0., 0., 1.))
+    bpy.ops.transform.rotate(value=(rot[2],), axis=(1., 0., 0.))
+
+    # # Swap coords
+    # bpy.ops.transform.rotate(value=(90.,), axis=(0., 1., 0.))
+    # bpy.ops.transform.rotate(value=(90.,), axis=(1., 0., 0.))
 
 
 def run(obj_path, egg_path, rot):
