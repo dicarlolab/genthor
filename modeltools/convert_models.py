@@ -101,11 +101,11 @@ def main():
         egg_path = os.path.join(egg_root_path, eggname, eggname + '.egg')
 
         # The params are the angles
-        params = [rad2deg(angle) for angle in angledict[modelname]]
+        params = angledict[modelname]
         
         # Do the conversion from .obj to .egg
         convert(obj_path, egg_path, blender_command_base, params)
-        
+
         # Remove tmp directory
         rm_path = os.path.join(
             tmp_path, obj_path[len(tmp_path.rstrip("/")) + 1:].split("/")[0])
@@ -192,12 +192,6 @@ def copy_tex(obj_path, tex_path):
         #print "%s --> %s" % (os.path.join(obj_path, name), tex_path)
         shutil.copy2(os.path.join(obj_path, name), tex_path)
     
-
-def rad2deg(rad):
-    deg = rad * 180. / pi
-    return deg
-
-
 
 if __name__ == "__main__":
 

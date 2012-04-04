@@ -103,17 +103,17 @@ def transform_model(rot):
     Dim = [bb1 - bb0 for bb0, bb1 in zip(BB0, BB1)]
     Loc = [(bb1 + bb0) / 2. for bb0, bb1 in zip(BB0, BB1)]
 
+    ## Re-locate
+    bpy.ops.transform.translate(value=(-Loc[0], -Loc[1], -Loc[2]))
+
     ## Re-scale
     scale = [1. / min(Dim)] * 3
     bpy.ops.transform.resize(value=scale)
 
-    ## Re-locate
-    bpy.ops.transform.translate(value=(-Loc[0], -Loc[1], -Loc[2]))
-
     ## Rotate
-    bpy.ops.transform.rotate(value=(rot[0],), axis=(0., 0., 1.))
+    bpy.ops.transform.rotate(value=(rot[0],), axis=(1., 0., 0.))
     bpy.ops.transform.rotate(value=(rot[1],), axis=(0., 1., 0.))
-    bpy.ops.transform.rotate(value=(rot[2],), axis=(1., 0., 0.))
+    bpy.ops.transform.rotate(value=(rot[2],), axis=(0., 0., 1.))
 
     # # Swap coords
     # bpy.ops.transform.rotate(value=(90.,), axis=(0., 1., 0.))
@@ -132,7 +132,6 @@ def run(obj_path, egg_path, rot):
     transform_model(rot)
 
     # Export egg
-    #outpth = os.path.splitext(pth)[0] + ".egg"
     export_egg(egg_path)
 
     # # Drop to debugger
