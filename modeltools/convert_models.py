@@ -35,7 +35,7 @@ def main():
                                                blender_script_name)
 
     # Destination directory for .egg files
-    egg_root_path = os.path.join(os.environ["HOME"], "tmp", "egg_models")
+    egg_root_path = os.path.join(os.environ["HOME"], "tmp", "processed_models")
 
     # Get the model names from the directory listing
     modeldict = dict([(name[:-7], name) for name in os.listdir(model_path)
@@ -91,6 +91,9 @@ def main():
    
     # Loop over models, doing the conversions
     for modelname, targzname in modeldict.iteritems():
+        #pdb.set_trace()
+        #if modelname != "MB29694": continue
+        
         # un-tar, un-gz into a temp directory
         fulltargzname = os.path.join(model_path, targzname)
         objname = untargz(tmp_path, fulltargzname, modelname)
@@ -106,6 +109,12 @@ def main():
         # Do the conversion from .obj to .egg
         convert(obj_path, egg_path, blender_command_base, params)
 
+        # Convert the .egg to a .tgz
+        outtgz_path = os.path.splitext(egg_path)[0] + ".tgz"
+        with tarfile.open(outtgz_path, mode="w:bz2") as tf:
+            tf.add(egg_path)
+            tf.add(os.path.join(os.path.split(egg_path)[0], "tex"))
+
         # Remove tmp directory
         rm_path = os.path.join(
             tmp_path, obj_path[len(tmp_path.rstrip("/")) + 1:].split("/")[0])
@@ -113,7 +122,7 @@ def main():
         shutil.rmtree(rm_path)
 
         # Remove .egg file (because they're huge)
-        #os.remove(egg_path)
+        os.remove(egg_path)
 
 
 def untargz(tmp_path, targzname, modelname):
@@ -173,7 +182,7 @@ def convert(obj_path, egg_path, blender_command_base, params):
     tex_path = os.path.join(os.path.split(egg_path)[0], "tex")
     copy_tex(os.path.split(obj_path)[0], tex_path)
 
-    # Make .bam copy as well
+    # Make a .bam copy
     bam_path = os.path.splitext(egg_path)[0] + '.bam'
     call("egg2bam -o %s %s" % (bam_path, egg_path), shell=True)
 
