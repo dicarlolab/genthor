@@ -113,7 +113,7 @@ def main():
         shutil.rmtree(rm_path)
 
         # Remove .egg file (because they're huge)
-        os.remove(egg_path)
+        #os.remove(egg_path)
 
 
 def untargz(tmp_path, targzname, modelname):
