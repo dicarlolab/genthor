@@ -91,8 +91,6 @@ def main():
    
     # Loop over models, doing the conversions
     for modelname, targzname in modeldict.iteritems():
-        #pdb.set_trace()
-        #if modelname != "MB29694": continue
         
         # un-tar, un-gz into a temp directory
         fulltargzname = os.path.join(model_path, targzname)
@@ -102,6 +100,12 @@ def main():
         obj_path = os.path.join(tmp_path, objname)
         eggname = eggdict[modelname]
         egg_path = os.path.join(egg_root_path, eggname, eggname + '.egg')
+
+        # if eggname != "plants1":
+        #     continue
+        # else:
+        #     #pdb.set_trace()
+        #     pass
 
         # The params are the angles
         params = angledict[modelname]
@@ -198,10 +202,10 @@ def copy_tex(obj_path, tex_path):
                       if os.path.splitext(name)[1].lower() in tex_imgexts]
 
     # Make the directory if need be, and error if it is a file already
-    if not os.path.isdir(tex_path):
+    if os.path.isfile(tex_path):
+        raise IOError("File exists: '%s'")
+    elif not os.path.isdir(tex_path):
         os.mkdir(tex_path)
-    elif os.path.isfile(tex_path):
-        raise IOError("A file named '%s` already exists.")
 
     for name in tex_filenames0:
         #print "%s --> %s" % (os.path.join(obj_path, name), tex_path)
