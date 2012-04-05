@@ -197,6 +197,12 @@ def copy_tex(obj_path, tex_path):
     tex_filenames0 = [name for name in os.listdir(obj_path)
                       if os.path.splitext(name)[1].lower() in tex_imgexts]
 
+    # Make the directory if need be, and error if it is a file already
+    if not os.path.isdir(tex_path):
+        os.mkdir(tex_path)
+    elif os.path.isfile(tex_path):
+        raise IOError("A file named '%s` already exists.")
+
     for name in tex_filenames0:
         #print "%s --> %s" % (os.path.join(obj_path, name), tex_path)
         shutil.copy2(os.path.join(obj_path, name), tex_path)
