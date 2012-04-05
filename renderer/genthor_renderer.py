@@ -7,7 +7,7 @@ from pandac.PandaModules import CullFaceAttrib
 from pandac.PandaModules import TexGenAttrib
 from pandac.PandaModules import TextureStage
 from pandac.PandaModules import NodePath
-from cogphysics.vision import LightBase
+from lightbase import LightBase
 import pdb
 
 
@@ -130,6 +130,8 @@ def run(args):
     if window_type == "offscreen":
         # Get the image
         img = lbase.get_tex_image(tex)
+    else:
+        img = None
 
     return lbase, img
 
@@ -142,7 +144,7 @@ if __name__ == "__main__":
     #modelpath, envpth, scale, pos, hpr, phitheta, bgscale
     args = [
         os.path.join(os.environ["HOME"],
-                     "tmp/egg_models/reptiles3/reptiles3.bam"),
+                     "work/genthor/processed_models/reptiles3/reptiles3.bam"),
         os.path.join(os.environ["HOME"],
                      "Dropbox/genthor/rendering/backgrounds/Hires_pano.jpg"),
         (1., 1., 1.),

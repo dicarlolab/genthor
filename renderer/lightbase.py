@@ -23,10 +23,11 @@ from pandac.PandaModules import WindowProperties
 
 class LightBase(object):
     
-    """ This class is a lightweight container for a
-    GraphicsEngine/GraphicsPipe, GraphicsOutputs, root NodePath
-    (rootnode), cameras and lights. It provides also methods for
-    manipulating them."""
+    """ LightBase is a lightweight interface for rendering with
+    Panda3d. It contains several key Panda3d objects that are required
+    for rendering, like GraphicsEngine, GraphicsPipe, GraphicsOutput,
+    a root NodePath (rootnode), cameras and lights. It provides also
+    methods for manipulating and reading them out them."""
 
     def __init__(self):
         self.init_graphics()
