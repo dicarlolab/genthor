@@ -14,10 +14,7 @@ import genthor_renderer as gr
 import pdb
 
 
-# TODO: make scale & bgscale 1D, pos 2D, original instance name, +
-# category name
-# - verify long width is length 1
-# - camera should be (-1.5, 1.5)
+# TODO: camera should be (-1.5, 1.5)
 
 
 
@@ -34,11 +31,32 @@ def sample_model_bg(modelnames, bgnames, n_examples_per_model, n_examples):
     bglist: list of 'n_examples' background names
     """
 
+    # Make model list
     modellist = [m for m in flatten(zip(*([modelnames] * n_examples_per_model)))]
+    # Make background list
     bgrand = np.random.randint(0, n_bg, n_examples)
     bglist = [bgnames[r] for r in bgrand]
 
-    return modellist, bglist
+    # Make category list
+    # Model root directory
+    model_path = os.path.join(os.environ["HOME"], "Dropbox/genthor/models/")
+    # Model info scripts
+    model_categories_py = "model_categories"
+    # Get the model names from the directory listing
+    modeldict = dict([(name[:-7], name) for name in os.listdir(model_path)
+                      if name[-7:] == ".tar.gz"])
+    # Get the model info that's contained in the scripts
+    sys.path.append(model_path)
+    model_categories = __import__(model_categories_py).MODEL_CATEGORIES
+    # Assemble category info in dict with {modelname: category, ...}
+    categories = []
+    for categ, names in model_categories.iteritems():
+        categories.extend([(name, categ) for name in names])
+    categorydict = dict(categories)
+    # The actual list
+    categorylist = [categorydict[model] for model in modellist]
+    
+    return modellist, bglist, categorylist
 
 
 def sample(rng, num=1, f_log=False):
@@ -143,7 +161,7 @@ bgscale_rng = (0.5, 2.0)
 bghp_rng = ((-180., 180.), (-180., 180.))
 
 # Make the 'n_examples' models and backgrounds list
-modellist, bglist = sample_model_bg(
+modellist, bglist, categorylist  = sample_model_bg(
     modelnames, bgnames, n_examples_per_model, n_examples)
 
 # Make the latent parameters lists
@@ -154,7 +172,7 @@ bgscalelist = sample(bgscale_rng, num=n_examples, f_log=True)
 bghplist = sample(bghp_rng, num=n_examples)
 
 # Make the list of latent states
-latents = zip(modellist, bglist,
+latents = zip(modellist, bglist, categorylist, 
               scalelist, poslist, hprlist, bgscalelist, bghplist)
 
 ## We could make this a dict, but hold off for now

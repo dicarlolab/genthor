@@ -28,11 +28,11 @@ def setup_renderer(window_type, size=(512, 512)):
     # Set up a camera
     camera = lbase.make_camera(output)
     lens = camera.node().getLens()
-    lens.setMinFov(45)
+    lens.setMinFov(30)
     # Position the camera
     camera_rot = rootnode.attachNewNode('camera_rot')
     lbase.cameras.reparentTo(camera_rot)
-    lbase.cameras.setPos(0, -24, 0)
+    lbase.cameras.setPos(0, -5.8, 0)
     lbase.cameras.lookAt(0, 0, 0)
     camera_rot.setH(0.)
     # Lights
