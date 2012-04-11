@@ -107,7 +107,7 @@ def transform_model(rot):
     bpy.ops.transform.translate(value=(-Loc[0], -Loc[1], -Loc[2]))
 
     ## Re-scale
-    scale = [1. / min(Dim)] * 3
+    scale = [1. / max(Dim)] * 3
     bpy.ops.transform.resize(value=scale)
 
     ## Rotate
