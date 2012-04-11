@@ -82,11 +82,11 @@ def main():
 
     # Don't rename models 
     eggdict = modeldict
-    # Rename models as numbered category instances
-    eggnames = []
-    for categ, names in model_categories.iteritems():
-        eggnames.extend([(name, categ + str(i))
-                         for i, name in enumerate(names)])
+    # # Rename models as numbered category instances
+    # eggnames = []
+    # for categ, names in model_categories.iteritems():
+    #     eggnames.extend([(name, categ + str(i))
+    #                      for i, name in enumerate(names)])
     eggdict = dict(eggnames)
    
     # Loop over models, doing the conversions
