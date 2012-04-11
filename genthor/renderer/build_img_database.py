@@ -14,6 +14,12 @@ import genthor_renderer as gr
 import pdb
 
 
+# TODO: make scale & bgscale 1D, pos 2D, original instance name, +
+# category name
+# - verify long width is length 1
+# - camera should be (-1.5, 1.5)
+
+
 
 def sample_model_bg(modelnames, bgnames, n_examples_per_model, n_examples):
     """ Samples a list of models and backgrounds for building the
@@ -100,7 +106,7 @@ def build_renderer_data(latents, out_root):
         all_args.append(latent2args(latent))
         # out_paths
         category = pat.findall(latent[0])[0]
-        filename = "scene%0*i_%s" % (8, ilatent, category)
+        filename = "scene%0*i" % (8, ilatent)
         out_paths.append(os.path.join(out_root, filename))
 
     return all_args, out_paths
@@ -130,10 +136,10 @@ n_examples = n_examples_per_model * n_models
 image_size = (512, 512)
 
 # Ranges for latent states
-scale_rng = (0.2, 5.0)
-pos_rng = ((-5.0, 5.0), (-5.0, 5.0), (0., 0.))
+scale_rng = (0.5, 2.)
+pos_rng = ((-1.0, 1.0), (-1.0, 1.0))
 hpr_rng = ((-180., 180.), (-180., 180.), (-180., 180.))
-bgscale_rng = (0.2, 5.0)
+bgscale_rng = (0.5, 2.0)
 bghp_rng = ((-180., 180.), (-180., 180.))
 
 # Make the 'n_examples' models and backgrounds list
@@ -197,3 +203,4 @@ for iimg, (args, out_path) in enumerate(zip(all_args, out_paths)[:3]):
 
     # # Store the img
     # Img[iimg] = img
+
