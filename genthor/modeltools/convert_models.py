@@ -87,7 +87,7 @@ def main():
     # for categ, names in model_categories.iteritems():
     #     eggnames.extend([(name, categ + str(i))
     #                      for i, name in enumerate(names)])
-    eggdict = dict(eggnames)
+    #eggdict = dict(eggnames)
    
     # Loop over models, doing the conversions
     for modelname, targzname in modeldict.iteritems():
