@@ -39,15 +39,12 @@ def main():
 
     # Get the model names from the directory listing
     modeldict = dict([(name[:-7], name) for name in os.listdir(model_path)
-                       if name[-7:] == ".tar.gz"])
+                      if name[-7:] == ".tar.gz"])
 
     # Get the model info that's contained in the scripts
     sys.path.append(model_path)
-    try:
-        model_categories = __import__(model_categories_py).MODEL_CATEGORIES
-        canonical_angles = __import__(canonical_angles_py).ANGLES
-    except ImportError:
-        raise
+    model_categories = __import__(model_categories_py).MODEL_CATEGORIES
+    canonical_angles = __import__(canonical_angles_py).ANGLES
 
     # Assemble category info in dict with {modelname: category, ...}
     categories = []
@@ -81,7 +78,7 @@ def main():
         os.makedirs(egg_root_path)
 
     # Don't rename models 
-    eggdict = modeldict
+    eggdict = dict(zip(modeldict.keys(), modeldict.keys()))
     # # Rename models as numbered category instances
     # eggnames = []
     # for categ, names in model_categories.iteritems():
