@@ -3,9 +3,7 @@
 """ Create a dataset of images and latent state descriptions, based on
 models and backgrounds."""
 
-import collections
 import os
-import re
 import sys
 import numpy as np
 from matplotlib.cbook import flatten
@@ -15,36 +13,31 @@ import time
 import pdb
 
 
-def sample_model_bg(modelnames, bgnames, n_examples_per_model, n_examples):
+def sample_model_bg(modelnames, bgnames, n_ex_per_model, n_ex):
     """ Samples a list of models and backgrounds for building the
-    dataset. The models will be repeated 'n_examples_per_model' times.
+    dataset. The models will be repeated 'n_ex_per_model' times.
     
     modelnames: list of model names
     bgnames: list of background filenames
-    n_examples_per_model: number of examples per model
-    n_examples: total number of examples
+    n_ex_per_model: number of examples per model
+    n_ex: total number of examples
 
-    modellist: list of 'n_examples' models
-    bglist: list of 'n_examples' background names
+    modellist: list of 'n_ex' models
+    bglist: list of 'n_ex' background names
     """
 
     # Make model list
-    modellist = [m for m in flatten(zip(*([modelnames] * n_examples_per_model)))]
+    modellist = [m for m in flatten(zip(*([modelnames] * n_ex_per_model)))]
     # Make background list
-    bgrand = np.random.randint(0, n_bg, n_examples)
+    bgrand = np.random.randint(0, n_bg, n_ex)
     bglist = [bgnames[r] for r in bgrand]
 
     # Make category list
     # Model root directory
     model_path = os.path.join(os.environ["HOME"], "Dropbox/genthor/models/")
-    # Model info scripts
-    model_categories_py = "model_categories"
-    # Get the model names from the directory listing
-    modeldict = dict([(name[:-7], name) for name in os.listdir(model_path)
-                      if name[-7:] == ".tar.gz"])
     # Get the model info that's contained in the scripts
     sys.path.append(model_path)
-    model_categories = __import__(model_categories_py).MODEL_CATEGORIES
+    model_categories = __import__("model_categories").MODEL_CATEGORIES
     # Assemble category info in dict with {modelname: category, ...}
     categories = []
     for categ, names in model_categories.iteritems():
@@ -144,8 +137,8 @@ assert len(modelnames) == n_models, "number of models is wrong"
 assert len(bgnames) == n_bg, "number of backgrounds is wrong"
 
 # Parameters that will define how the dataset is made
-n_examples_per_model = 100
-n_examples = n_examples_per_model * n_models
+n_ex_per_model = 100
+n_ex = n_ex_per_model * n_models
 image_size = (256, 256)
 
 # Ranges for latent states
@@ -155,16 +148,16 @@ hpr_rng = ((-180., 180.), (-180., 180.), (-180., 180.))
 bgscale_rng = (0.5, 2.0)
 bghp_rng = ((-180., 180.), (-180., 180.))
 
-# Make the 'n_examples' models and backgrounds list
+# Make the 'n_ex' models and backgrounds list
 modellist, bglist, categorylist  = sample_model_bg(
-    modelnames, bgnames, n_examples_per_model, n_examples)
+    modelnames, bgnames, n_ex_per_model, n_ex)
 
 # Make the latent parameters lists
-scalelist = sample(scale_rng, num=n_examples, f_log=True)
-poslist = sample(pos_rng, num=n_examples)
-hprlist = sample(hpr_rng, num=n_examples)
-bgscalelist = sample(bgscale_rng, num=n_examples, f_log=True)
-bghplist = sample(bghp_rng, num=n_examples)
+scalelist = sample(scale_rng, num=n_ex, f_log=True)
+poslist = sample(pos_rng, num=n_ex)
+hprlist = sample(hpr_rng, num=n_ex)
+bgscalelist = sample(bgscale_rng, num=n_ex, f_log=True)
+bghplist = sample(bghp_rng, num=n_ex)
 
 # Make the list of latent states
 latents = zip(modellist, bglist, categorylist, 
@@ -210,7 +203,7 @@ for iimg, (args, out_path) in enumerate(zip(all_args, out_paths)[:3]):
     # Take a screenshot and save it
     lbase.screenshot(output, pth=out_path)
 
-    time.pause(3)
+    time.sleep(3)
     
     # if window_type == "offscreen":
     #     # Get the image
