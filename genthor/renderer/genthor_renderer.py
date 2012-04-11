@@ -7,19 +7,17 @@ from pandac.PandaModules import CullFaceAttrib
 from pandac.PandaModules import TexGenAttrib
 from pandac.PandaModules import TextureStage
 from pandac.PandaModules import NodePath
+import genthor as gt
 from lightbase import LightBase
 import pdb
 
 
-def setup_renderer(window_type):
+def setup_renderer(window_type, size=(512, 512)):
     """ Sets up the LightBase rendering stuff."""
 
     # Initialize
     lbase = LightBase()
     rootnode = lbase.rootnode
-
-    # Make a textureBuffer
-    size = (512, 512)
 
     if window_type == "onscreen":
         output = lbase.make_window(size, "window")
@@ -63,8 +61,7 @@ def read_file(func, filepth):
     return out
 
 
-def construct_scene(lbase, modelpth, envpth, scale, pos, hpr,
-                    phitheta, bgscale):
+def construct_scene(lbase, modelpth, bgpath, scale, pos, hpr, bgscale, bghp):
     """ Constructs the scene per the parameters. """
     
     # Modelpth points to the model .egg/.bam file
@@ -74,8 +71,8 @@ def construct_scene(lbase, modelpth, envpth, scale, pos, hpr,
     node.setHpr(*hpr)
 
     # Environment map
-    if envpth:
-        envtex = read_file(lbase.loader.loadTexture, envpth)
+    if bgpath:
+        envtex = read_file(lbase.loader.loadTexture, bgpath)
         bgtex = envtex.makeCopy()
         # Map onto object
         ts = TextureStage('env')
@@ -91,9 +88,9 @@ def construct_scene(lbase, modelpth, envpth, scale, pos, hpr,
             CullFaceAttrib.MCullCounterClockwise))
         scenenode.setTexture(bgtex, 2)
         scenenode.setPos(0., 0., 0.)
-        scenenode.setH(phitheta[0])
-        scenenode.setP(phitheta[1])
         scenenode.setScale(bgscale, bgscale, bgscale)
+        scenenode.setH(bghp[0])
+        scenenode.setP(bghp[1])
         # Detach point light
         plight1 = lbase.rootnode.find('**/plight1')
         plight1.detachNode()
@@ -104,7 +101,20 @@ def construct_scene(lbase, modelpth, envpth, scale, pos, hpr,
     scenenode.reparentTo(lbase.rootnode)
 
     return scenenode
+
+
+def model_name2path(modelname):
+    """ Take model name 'modelname' and return the path to it."""
+
+    modelpath = os.path.join(gt.MODEL_PATH, modelname, modelname + ".bam")
+    return modelpath
+
+
+def bg_name2path(bgname):
+    """ Take background name 'bgname' and return the path to it."""
     
+    bgpath = os.path.join(gt.BACKGROUND_PATH, bgname)
+    return bgpath
 
 
 def run(args):
@@ -120,9 +130,9 @@ def run(args):
         tex = output.getTexture()
     
     # Construct a scene
-    modelpath, envpth, scale, pos, hpr, phitheta, bgscale = args
-    scenenode = construct_scene(lbase, modelpath, envpth, scale, pos, hpr,
-                                phitheta, bgscale)
+    modelpath, bgpath, scale, pos, hpr, bgscale, bghp = args
+    scenenode = construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
+                                bgscale, bghp)
 
     # Render the scene
     lbase.render_frame()
@@ -141,10 +151,10 @@ if __name__ == "__main__":
     args = sys.argv[1:]
 
     # Defaults
-    #modelpath, envpth, scale, pos, hpr, phitheta, bgscale
+    # args = (modelpath, bgpath, scale, pos, hpr, bgscale, bghp)
     args = [
-        os.path.join(os.environ["HOME"],
-                     "work/genthor/processed_models/reptiles3/reptiles3.bam"),
+        model_name2path("reptiles3"),
+        #bg_name2path("DH201SN.hdr"),
         os.path.join(os.environ["HOME"],
                      "Dropbox/genthor/rendering/backgrounds/Hires_pano.jpg"),
         (1., 1., 1.),
