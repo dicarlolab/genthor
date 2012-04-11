@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import os
-import subprocess
 import sys
 
 
@@ -33,3 +32,21 @@ def convert(in_img, out_img, tonemap_alg=None, gamma=2.0):
     # Run it
     os.system(cmdstr)
 
+
+def run(path):
+    print path
+
+    hdrfiles = os.listdir(path)
+
+    for hdrfile in hdrfiles:
+        in_img = os.path.join(path, hdrfile)
+        out_img = os.path.splitext(in_img)[0] + ".jpg"
+        print in_img, os.path.isfile(in_img)
+        print out_img, os.path.isfile(out_img)
+        print
+        convert(in_img, out_img)
+    
+
+if __name__ == "__main__":
+
+    run(sys.argv[1])
