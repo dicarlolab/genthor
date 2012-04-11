@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
 import os
+from subprocess import Popen
+from subprocess import PIPE
 import sys
 
 
-def convert(in_img, out_img, tonemap_alg=None, gamma=2.0):
+def convert(in_img, out_img):
     """ Converts an hdr img to a jpg."""
 
     #in_img = "INTERIOR_44ST.hdr"
@@ -21,22 +23,28 @@ def convert(in_img, out_img, tonemap_alg=None, gamma=2.0):
         "reinhard05",
         )
 
-    # Default tonemap algorithm
-    if tonemap_alg is None:
-        tonemap_alg = pfstmo[1]
+    tonemap_alg = pfstmo[0]
+    bias = 0.6
+    gamma = 0.7
 
-    # Command
-    cmdstr = ("pfsin %s | pfstmo_%s | pfsgamma -g %.1f | pfsout %s"
-              % (in_img, tonemap_alg, gamma, out_img))
-
-    # Run it
-    os.system(cmdstr)
+    # Commands
+    p1 = Popen(["pfsin", in_img], bufsize=-1, stdout=PIPE)
+    p2 = Popen(["pfstmo_%s" % tonemap_alg, "-b", str(bias)],
+               bufsize=-1, stdin=p1.stdout, stdout=PIPE)
+    p3 = Popen(["pfsgamma", "-g", str(gamma)],
+               bufsize=-1, stdin=p2.stdout, stdout=PIPE)
+    p4 = Popen(["pfsout", out_img], bufsize=-1, stdin=p3.stdout)
+    p1.stdout.close()  # Allow p1 to receive a SIGPIPE if p2 exits.
+    p2.stdout.close()  # Allow p2 to receive a SIGPIPE if p3 exits.
+    p3.stdout.close()  # Allow p3 to receive a SIGPIPE if p4 exits.
+    output = p4.communicate()
 
 
 def run(path):
     print path
 
-    hdrfiles = os.listdir(path)
+    hdrfiles = [fn for fn in os.listdir(path)
+                if os.path.splitext(fn)[1] == ".hdr"]
 
     for hdrfile in hdrfiles:
         in_img = os.path.join(path, hdrfile)
