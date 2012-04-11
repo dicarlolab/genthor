@@ -11,11 +11,8 @@ import numpy as np
 from matplotlib.cbook import flatten
 import genthor as gt
 import genthor_renderer as gr
+import time
 import pdb
-
-
-# TODO: camera should be (-1.5, 1.5)
-
 
 
 def sample_model_bg(modelnames, bgnames, n_examples_per_model, n_examples):
@@ -116,14 +113,12 @@ def build_renderer_data(latents, out_root):
     the renderer 'all_args' arguments and the 'out_paths' output
     paths."""
 
-    pat = re.compile("\D+")
     all_args = []
     out_paths = []
     for ilatent, latent in enumerate(latents):
         # all_args
         all_args.append(latent2args(latent))
         # out_paths
-        category = pat.findall(latent[0])[0]
         filename = "scene%0*i" % (8, ilatent)
         out_paths.append(os.path.join(out_root, filename))
 
@@ -151,7 +146,7 @@ assert len(bgnames) == n_bg, "number of backgrounds is wrong"
 # Parameters that will define how the dataset is made
 n_examples_per_model = 100
 n_examples = n_examples_per_model * n_models
-image_size = (512, 512)
+image_size = (256, 256)
 
 # Ranges for latent states
 scale_rng = (0.5, 2.)
@@ -193,13 +188,13 @@ all_args, out_paths = build_renderer_data(latents, out_root)
 #
 
 # Here's the gist of running this thing to produce 10k images:
-window_type = "offscreen"
+window_type = "onscreen" #"offscreen"
 
 # Set up the renderer
-lbase, output = gr.setup_renderer(window_type)
+lbase, output = gr.setup_renderer(window_type, size=image_size)
 # if window_type == "offscreen":
 #     tex = output.getTexture()
-# Img = np.zeros((len(all_args), 512, 512, 3), "u1")
+# Img = np.zeros((len(all_args), image_size[0], image_size[1], 3), "u1")
 
 for iimg, (args, out_path) in enumerate(zip(all_args, out_paths)[:3]):
 
@@ -214,6 +209,8 @@ for iimg, (args, out_path) in enumerate(zip(all_args, out_paths)[:3]):
 
     # Take a screenshot and save it
     lbase.screenshot(output, pth=out_path)
+
+    time.pause(3)
     
     # if window_type == "offscreen":
     #     # Get the image

@@ -362,12 +362,13 @@ class LightBase(object):
         # Create point lights
         plight = PointLight('plight1')
         light = lights.attachNewNode(plight)
-        light.setPos((3, -10, 2))
+        plight.setColor((0.1, 0.1, 0.1, 1.0))
+        light.setPos((-2, -6, 4))
         light.lookAt(0, 0, 0)
 
         # Create ambient light
         alight = AmbientLight('alight')
-        alight.setColor((0.75, 0.75, 0.75, 1.0))
+        alight.setColor((1., 1., 1., 1.0))
         lights.attachNewNode(alight)
 
         return lights
