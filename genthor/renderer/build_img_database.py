@@ -3,13 +3,13 @@
 """ Create a dataset of images and latent state descriptions, based on
 models and backgrounds."""
 
+import cPickle
 import os
 import sys
 import numpy as np
 from matplotlib.cbook import flatten
 import genthor as gt
 import genthor_renderer as gr
-import time
 import pdb
 
 
@@ -93,7 +93,8 @@ def latent2args(latent):
     # Extract the values from 'latent'
     modelpath = gr.model_name2path(latent[0])
     bgpath = gr.bg_name2path(latent[1])
-    scale, pos, hpr, bgscale, bghp = latent[2:]
+    category = latent[2]
+    scale, pos, hpr, bgscale, bghp = latent[3:]
 
     # Put them into 'args'
     args = (modelpath, bgpath, scale, pos, hpr, bgscale, bghp)
@@ -145,8 +146,8 @@ image_size = (256, 256)
 scale_rng = (0.5, 2.)
 pos_rng = ((-1.0, 1.0), (-1.0, 1.0))
 hpr_rng = ((-180., 180.), (-180., 180.), (-180., 180.))
-bgscale_rng = (0.5, 2.0)
-bghp_rng = ((-180., 180.), (-180., 180.))
+bgscale_rng = (1.0, 1.0) #(0.5, 2.0)
+bghp_rng = ((-180., 180.), (0., 0.))
 
 # Make the 'n_ex' models and backgrounds list
 modellist, bglist, categorylist  = sample_model_bg(
@@ -164,8 +165,8 @@ latents = zip(modellist, bglist, categorylist,
               scalelist, poslist, hprlist, bgscalelist, bghplist)
 
 ## We could make this a dict, but hold off for now
-# dictkeys = ("modelname", "bgname", "scale", "pos", "hpr", "bgscale", "bghp")
-# latents_dict = [dict(zip(dictkeys, latent)) for latent in latents]
+dictkeys = ("modelname", "bgname", "category", "scale", "pos", "hpr", "bgscale", "bghp")
+latent_dicts = [dict(zip(dictkeys, latent)) for latent in latents]
 
 # Build the 'all_args' and 'out_paths' lists, which will be fed to
 # the rendering loop.
@@ -189,10 +190,10 @@ lbase, output = gr.setup_renderer(window_type, size=image_size)
 #     tex = output.getTexture()
 # Img = np.zeros((len(all_args), image_size[0], image_size[1], 3), "u1")
 
-for iimg, (args, out_path) in enumerate(zip(all_args, out_paths)[:3]):
+for args, out_path, latent_dict in zip(all_args, out_paths, latent_dicts):
 
     # Construct a scene
-    scenenode = gr.construct_scene(lbase, *args)
+    objnode, bgnode = gr.construct_scene(lbase, *args)
     #modelpath, bgpath, scale, pos, hpr, bgscale, bghp = args
     # scenenode = gr.construct_scene(lbase, modelpath, bgpath, scale, pos,
     #                                hpr, bgscale, bghp)
@@ -200,10 +201,16 @@ for iimg, (args, out_path) in enumerate(zip(all_args, out_paths)[:3]):
     # Render the scene
     lbase.render_frame()
 
-    # Take a screenshot and save it
-    lbase.screenshot(output, pth=out_path)
+    # Remove of the constructed nodes
+    objnode.removeNode()
+    bgnode.removeNode()
 
-    time.sleep(3)
+    # Take a screenshot and save it
+    lbase.screenshot(output, pth=out_path + ".jpg")
+
+    # Save latent state
+    with open(out_path + ".pkl", "w") as fid:
+        cPickle.dump(latent_dict, fid)
     
     # if window_type == "offscreen":
     #     # Get the image

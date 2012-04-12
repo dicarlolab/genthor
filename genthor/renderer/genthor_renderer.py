@@ -65,10 +65,11 @@ def construct_scene(lbase, modelpth, bgpath, scale, pos, hpr, bgscale, bghp):
     """ Constructs the scene per the parameters. """
     
     # Modelpth points to the model .egg/.bam file
-    node = read_file(lbase.loader.loadModel, modelpth)
-    node.setScale(scale[0], scale[0], scale[0])
-    node.setPos(pos[0], pos[1], 0.)
-    node.setHpr(hpr[0], hpr[1], hpr[2])
+    objnode = read_file(lbase.loader.loadModel, modelpth)
+    objnode.setScale(scale[0], scale[0], scale[0])
+    objnode.setPos(pos[0], pos[1], 0.)
+    objnode.setHpr(hpr[0], hpr[1], hpr[2])
+    objnode.setTwoSided(1)
 
     # Environment map
     if bgpath and False:
@@ -76,34 +77,34 @@ def construct_scene(lbase, modelpth, bgpath, scale, pos, hpr, bgscale, bghp):
         # Map onto object
         ts = TextureStage('env')
         ts.setMode(TextureStage.MBlendColorScale)
-        node.setTexGen(ts, TexGenAttrib.MEyeSphereMap)
-        node.setTexture(ts, envtex)
+        objnode.setTexGen(ts, TexGenAttrib.MEyeSphereMap)
+        objnode.setTexture(ts, envtex)
 
     if bgpath:
         bgtex = read_file(lbase.loader.loadTexture, bgpath)
         # Set as background
-        scenenode = lbase.loader.loadModel('smiley')
+        bgnode = lbase.loader.loadModel('smiley')
         # Get material list
-        scenenode.clearMaterial()
-        scenenode.clearTexture()
-        scenenode.setAttrib(CullFaceAttrib.make(
+        bgnode.clearMaterial()
+        bgnode.clearTexture()
+        bgnode.setAttrib(CullFaceAttrib.make(
             CullFaceAttrib.MCullCounterClockwise))
-        scenenode.setTexture(bgtex, 2)
-        scenenode.setScale(0.2 * bgscale[0], 0.2 * bgscale[0], 0.2 * bgscale[0])
-        scenenode.setPos(0, 1, 0) #0)
-        scenenode.setH(bghp[0])
-        scenenode.setP(bghp[1])
+        bgnode.setTexture(bgtex, 2)
+        c = 3.
+        bgnode.setScale(c * bgscale[0], c * bgscale[0], c * bgscale[0])
+        bgnode.setPos(0, 0, 0) #0)
+        bgnode.setHpr(bghp[0], bghp[1], 0.)
         # Detach point light
         plight1 = lbase.rootnode.find('**/plight1')
-        plight1.detachNode()
+        if plight1:
+            plight1.detachNode()
     else:
-        scenenode = NodePath("empty-scenenode")
+        bgnode = NodePath("empty-bgnode")
 
-    node.reparentTo(lbase.rootnode)
-    scenenode.reparentTo(lbase.rootnode)
+    objnode.reparentTo(lbase.rootnode)
+    bgnode.reparentTo(lbase.rootnode)
 
-    return scenenode
-
+    return objnode, bgnode
 
 
 def model_name2path(modelname):
@@ -134,8 +135,8 @@ def run(args):
     
     # Construct a scene
     modelpath, bgpath, scale, pos, hpr, bgscale, bghp = args
-    scenenode = construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
-                                bgscale, bghp)
+    objnode, bgnode = construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
+                                      bgscale, bghp)
 
     # Render the scene
     lbase.render_frame()
@@ -157,13 +158,13 @@ if __name__ == "__main__":
     # args = (modelpath, bgpath, scale, pos, hpr, bgscale, bghp)
     args = [
         model_name2path("MB26897"),
-        #bg_name2path("DH201SN.hdr"),
-        os.path.join(os.environ["HOME"],
-                     "Dropbox/genthor/rendering/backgrounds/Hires_pano.jpg"),
+        bg_name2path("DH201SN.jpg"),
+        # os.path.join(os.environ["HOME"],
+        #              "Dropbox/genthor/rendering/backgrounds/Hires_pano.jpg"),
         (1.,),
         (0., 0.),
         (0., 0., 0.),
-        (20.,),
+        (1.,),
         (0., 0.),
         ]
     #args[1] = ""
