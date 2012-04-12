@@ -44,7 +44,7 @@ class TrainingDataset(object):
     def meta(self):
         if not hasattr(self, '_meta'):
             self.fetch()
-            self._meta = self._get_meta(normalize=True)
+            self._meta = self._get_meta()
         return self._meta
         
     def _get_meta(self): 
@@ -55,7 +55,8 @@ class TrainingDataset(object):
         assert len(imgs) == len(pkls)
         recs = []
         for imfile, pklfile in zip(imgs, pkls):
-            pkl = cPickle.load(open(pklfile))
+            pkl = cPickle.load(open(os.path.join(homedir, pklfile)))
+            file_id = os.path.split(imfile)[-1]
             rec = (os.path.join(homedir, imfile), 
                    pkl['bgname'],
                    pkl['bghp'][0],
@@ -68,7 +69,8 @@ class TrainingDataset(object):
                    pkl['hpr'][2],
                    pkl['pos'][0],
                    pkl['pos'][1],
-                   pkl['scale'][0])
+                   pkl['scale'][0],
+                   file_id)
             recs.append(rec)
         meta = tb.tabarray(records=recs, names=['filename',
                                              'bgname',
@@ -82,7 +84,8 @@ class TrainingDataset(object):
                                              'rxy',
                                              'ty',
                                              'tz',
-                                             's'])
+                                             's',
+                                             'file_id'])
         return meta
         
     @property 
@@ -93,12 +96,55 @@ class TrainingDataset(object):
         self.fetch()
         size = tuple(preproc['size'])
         normalize = preproc['global_normalize']
+        mode = preproc['mode']
         return larray.lmap(ImgLoaderResizer(inshape=(256, 256),
                                             shape=size,
                                             dtype=dtype,
-                                            normalize=normalize),
+                                            normalize=normalize,
+                                            mode=mode),
                                 self.filenames)
-                                
+
+    ####TODO:  split-generating methods
+    def get_splits(self, ntrain, ntest, nvalidate, num_splits):
+        pass
+        
+
+#TODO: test splits
+def test_training_dataset():
+    dataset = TrainingDataset()
+    meta = dataset.meta
+    assert len(meta) == 11000
+    agg = meta[['model_id', 'category']].aggregate(['category'],
+                                             AggFunc=lambda x: len(x))
+    assert agg.tolist() == [('boats', 1000),
+                             ('buildings', 1000),
+                             ('cars', 1000),
+                             ('cats_and_dogs', 1000),
+                             ('chair', 1000),
+                             ('faces', 1000),
+                             ('guns', 1000),
+                             ('planes', 1000),
+                             ('plants', 1000),
+                             ('reptiles', 1000),
+                             ('table', 1000)]
+
+    agg2 = meta[['model_id', 'category']].aggregate(['category'], 
+           AggFunc=lambda x : len(np.unique(x)))       
+    assert agg2.tolist() == [('boats', 10),
+         ('buildings', 10),
+         ('cars', 10),
+         ('cats_and_dogs', 10),
+         ('chair', 10),
+         ('faces', 10),
+         ('guns', 10),
+         ('planes', 10),
+         ('plants', 10),
+         ('reptiles', 10),
+         ('table', 10)]
+         
+    imgs = dataset.get_images('float32', {'size':(256, 256),
+                          'global_normalize':False, 'mode':'L'})
+    assert imgs.shape == (11000, 256, 256)
 
 
 class ImgLoaderResizer(object):
@@ -110,6 +156,7 @@ class ImgLoaderResizer(object):
                  ndim=None,
                  dtype='float32',
                  normalize=True,
+                 mode='RGB',
                  crop=None,
                  mask=None):
         self.inshape = inshape
@@ -124,6 +171,7 @@ class ImgLoaderResizer(object):
         assert 0 <= t < b <= self.inshape[1]
         self._crop = crop   
         assert dtype == 'float32'
+        self.dtype=dtype
         self._shape = shape
         if ndim is None:
             self._ndim = None if (shape is None) else len(shape)
@@ -132,6 +180,9 @@ class ImgLoaderResizer(object):
         self._dtype = dtype
         self.normalize = normalize
         self.mask=mask
+        ##XXX:  To-do allow for other image modes (e.g. RGB)
+        assert mode == 'L'
+        self.mode=mode
 
     def rval_getattr(self, attr, objs):
         if attr == 'shape' and self._shape is not None:
@@ -144,8 +195,8 @@ class ImgLoaderResizer(object):
 
     def __call__(self, file_path):
         im = Image.open(file_path)
-        if im.mode != 'L':
-            im = im.convert('L')
+        if im.mode != self.mode:
+            im = im.convert(self.mode)
         assert im.size == self.inshape
         if self.mask is not None:
             im.paste(self.mask)
@@ -158,7 +209,7 @@ class ImgLoaderResizer(object):
             new_shape = (int(round(im.size[0]*m)), int(round(im.size[1]*m)))
             im = im.resize(new_shape, Image.ANTIALIAS)
         imval = np.asarray(im, 'float32')
-        rval = np.zeros(self._shape)
+        rval = np.zeros(self._shape, dtype=self.dtype)
         ctr = self._shape[0]/2
         cxmin = ctr - imval.shape[0] / 2
         cxmax = ctr - imval.shape[0] / 2 + imval.shape[0]
@@ -174,5 +225,3 @@ class ImgLoaderResizer(object):
         return rval
     
     
-def test_training_dataset():
-    dataset = TrainingDataset()
