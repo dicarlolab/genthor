@@ -83,39 +83,45 @@ def export_egg(pth):
 
 
 def transform_model(rot):
+    def calc_dim_loc(objs):
+        # Compute bounding box of selection in abs coords
+        BB0 = [999999., 999999., 999999.]
+        BB1 = [-999999., -999999., -999999.]
+        for obj in objs:
+            bb = obj.bound_box
+            for i in range(8):
+                vert = obj.matrix_world * mathutils.Vector(bb[i])
+                for j in range(3):
+                    BB0[j] = min(BB0[j], vert[j])
+                    BB1[j] = max(BB1[j], vert[j])
+        Dim = [bb1 - bb0 for bb0, bb1 in zip(BB0, BB1)]
+        Loc = [(bb1 + bb0) / 2. for bb0, bb1 in zip(BB0, BB1)]
+
+        return Dim, Loc
     
     ## Select the meshes, add them to active object
     bpy.ops.object.select_by_type(type="MESH")
 
-    ## Center model
-    #not sure how, not necessary at the moment
-    # bpy.ops.view3d.snap_cursor_to_center()
-    # bpy.ops.view3d.snap_selected_to_cursor()
-
-    ## Compute scale and location
-    # Compute bounding box of selection in abs coords
-    BB0 = [0., 0., 0.]
-    BB1 = [0., 0., 0.]
-    for obj in bpy.context.selected_objects:
-        for i in range(3):
-            BB0[i] = min(BB0[i], obj.location[i] - obj.dimensions[i] / 2.)
-            BB1[i] = max(BB1[i], obj.location[i] + obj.dimensions[i] / 2.)
-    Dim = [bb1 - bb0 for bb0, bb1 in zip(BB0, BB1)]
-    Loc = [(bb1 + bb0) / 2. for bb0, bb1 in zip(BB0, BB1)]
-
-    ## Re-locate
-    bpy.ops.transform.translate(value=(-Loc[0], -Loc[1], -Loc[2]))
-
-    ## Re-scale
-    scale = [1. / max(Dim)] * 3
-    bpy.ops.transform.resize(value=scale)
-
-    ## Rotate
+    ## Rotate using input angles
     bpy.ops.transform.rotate(value=(rot[0],), axis=(1., 0., 0.))
     bpy.ops.transform.rotate(value=(rot[1],), axis=(0., 1., 0.))
     bpy.ops.transform.rotate(value=(rot[2],), axis=(0., 0., 1.))
 
-    # # Swap coords
+    ## There is something funny about how the transformations get
+    ## applied, so I need to scale, then recompute location, then
+    ## translate. Ideally, I'd translate, then re-scale, but that
+    ## doesn't seem to work.
+    
+    ## Re-scale
+    Dim, Loc = calc_dim_loc(bpy.context.selected_objects)
+    scale = [1. / max(Dim)] * 3
+    bpy.ops.transform.resize(value=scale)
+
+    ## Re-locate 
+    Dim, Loc = calc_dim_loc(bpy.context.selected_objects)
+    bpy.ops.transform.translate(value=(-Loc[0], -Loc[1], -Loc[2]))
+
+    # ## Swap coords
     # bpy.ops.transform.rotate(value=(90.,), axis=(0., 1., 0.))
     # bpy.ops.transform.rotate(value=(90.,), axis=(1., 0., 0.))
 

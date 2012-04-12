@@ -19,7 +19,7 @@ import pdb
 def main():
 
     # Model root directory
-    model_path = os.path.join(os.environ["HOME"], "Dropbox/genthor/models/")
+    model_path = os.path.join(os.environ["HOME"], "work/genthor/models/")
 
     # Model info scripts
     model_categories_py = "model_categories"
@@ -98,7 +98,7 @@ def main():
         eggname = eggdict[modelname]
         egg_path = os.path.join(egg_root_path, eggname, eggname + '.egg')
 
-        # if eggname != "plants1":
+        # if eggname not in ("bloodhound", "MB29826"):
         #     continue
         # else:
         #     #pdb.set_trace()
@@ -111,10 +111,11 @@ def main():
         convert(obj_path, egg_path, blender_command_base, params)
 
         # Convert the .egg to a .tgz
-        outtgz_path = os.path.splitext(egg_path)[0] + ".tgz"
+        outtgz_path = os.path.splitext(egg_path)[0] + ".tbz2"
         with tarfile.open(outtgz_path, mode="w:bz2") as tf:
-            tf.add(egg_path)
-            tf.add(os.path.join(os.path.split(egg_path)[0], "tex"))
+            tf.add(egg_path, egg_path.split(egg_root_path + "/")[1])
+            tex_path = os.path.join(os.path.split(egg_path)[0], "tex")
+            tf.add(tex_path, tex_path.split(egg_root_path + "/")[1])
 
         # Remove tmp directory
         rm_path = os.path.join(
