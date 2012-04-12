@@ -26,13 +26,16 @@ def setup_renderer(window_type, size=(256, 256)):
                                                 mode='RTMCopyRam')
 
     # Set up a camera
+    scene_width = 3.
+    cam_z = -20.
+    fov = 2. * np.degrees(np.arctan(scene_width / (2. * np.abs(cam_z))))
     camera = lbase.make_camera(output)
     lens = camera.node().getLens()
-    lens.setMinFov(30)
+    lens.setMinFov(fov)
     # Position the camera
     camera_rot = rootnode.attachNewNode('camera_rot')
     lbase.cameras.reparentTo(camera_rot)
-    lbase.cameras.setPos(0, -5.8, 0)
+    lbase.cameras.setPos(0, cam_z, 0)
     lbase.cameras.lookAt(0, 0, 0)
     camera_rot.setH(0.)
     # Lights
@@ -90,7 +93,7 @@ def construct_scene(lbase, modelpth, bgpath, scale, pos, hpr, bgscale, bghp):
         bgnode.setAttrib(CullFaceAttrib.make(
             CullFaceAttrib.MCullCounterClockwise))
         bgnode.setTexture(bgtex, 2)
-        c = 3.
+        c = 5.
         bgnode.setScale(c * bgscale[0], c * bgscale[0], c * bgscale[0])
         bgnode.setPos(0, 0, 0) #0)
         bgnode.setHpr(bghp[0], bghp[1], 0.)
@@ -157,8 +160,8 @@ if __name__ == "__main__":
     # Defaults
     # args = (modelpath, bgpath, scale, pos, hpr, bgscale, bghp)
     args = [
-        model_name2path("MB26897"),
-        bg_name2path("DH201SN.jpg"),
+        model_name2path("bloodhound"), #MB26897"),
+        bg_name2path("DH214SN.jpg"), #DH201SN.jpg"),
         # os.path.join(os.environ["HOME"],
         #              "Dropbox/genthor/rendering/backgrounds/Hires_pano.jpg"),
         (1.,),

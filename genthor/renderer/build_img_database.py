@@ -123,17 +123,23 @@ def build_renderer_data(latents, out_root):
 # Set up the input for the renderer
 #
 
+# Bad backgrounds, do not use
+bad_bgs = ['INTERIOR_13SN.hdr', 'INTERIOR_12SN.hdr', 'INTERIOR_11SN.hdr',
+           'INTERIOR_10SN.hdr', 'INTERIOR_09SN.hdr', 'INTERIOR_08SN.hdr',
+           'INTERIOR_07SN.hdr', 'INTERIOR_06SN.hdr', 'INTERIOR_05SN.hdr']
+
 # Parameters of the models and background
 n_categories = 11
 n_model_per_category = 10
 n_models = n_categories * n_model_per_category
-n_bg = 136
+n_bg = 136 - len(bad_bgs)
 model_root = gt.MODEL_PATH
 bg_root = gt.BACKGROUND_PATH
 
+
 # Read modelnames and backgrounds from their root directories
 modelnames = sorted(os.listdir(model_root))
-bgnames = sorted(os.listdir(bg_root))
+bgnames = [bg for bg in sorted(os.listdir(bg_root)) if bg not in bad_bgs]
 assert len(modelnames) == n_models, "number of models is wrong"
 assert len(bgnames) == n_bg, "number of backgrounds is wrong"
 
