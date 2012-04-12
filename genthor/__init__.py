@@ -1,5 +1,6 @@
 import urllib
 import json
+import os
 
 BASE_URL = 'http://50.19.109.25'
 MODEL_URL = BASE_URL + ':9999/3dmodels?'
