@@ -34,7 +34,7 @@ def sample_model_bg(modelnames, bgnames, n_ex_per_model, n_ex):
 
     # Make category list
     # Model root directory
-    model_path = os.path.join(os.environ["HOME"], "Dropbox/genthor/models/")
+    model_path = os.path.join(gt.GENTHOR_PATH, "models")
     # Get the model info that's contained in the scripts
     sys.path.append(model_path)
     model_categories = __import__("model_categories").MODEL_CATEGORIES
@@ -107,6 +107,9 @@ def build_renderer_data(latents, out_root):
     the renderer 'all_args' arguments and the 'out_paths' output
     paths."""
 
+    if not os.path.exists(out_root):
+        os.mkdir(out_root)
+
     all_args = []
     out_paths = []
     for ilatent, latent in enumerate(latents):
@@ -124,9 +127,9 @@ def build_renderer_data(latents, out_root):
 #
 
 # Bad backgrounds, do not use
-bad_bgs = ['INTERIOR_13SN.hdr', 'INTERIOR_12SN.hdr', 'INTERIOR_11SN.hdr',
-           'INTERIOR_10SN.hdr', 'INTERIOR_09SN.hdr', 'INTERIOR_08SN.hdr',
-           'INTERIOR_07SN.hdr', 'INTERIOR_06SN.hdr', 'INTERIOR_05SN.hdr']
+bad_bgs = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg', 'INTERIOR_11ST.jpg',
+           'INTERIOR_10ST.jpg', 'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
+           'INTERIOR_07ST.jpg', 'INTERIOR_06ST.jpg', 'INTERIOR_05ST.jpg']
 
 # Parameters of the models and background
 n_categories = 11
@@ -177,7 +180,7 @@ latent_dicts = [dict(zip(dictkeys, latent)) for latent in latents]
 # Build the 'all_args' and 'out_paths' lists, which will be fed to
 # the rendering loop.
 # 'out_root' points to the directory to place the images.
-out_root = os.path.join(gt.GENTHOR_PATH, "images/training")
+out_root = os.path.join(gt.GENTHOR_PATH, "training_data")
 all_args, out_paths = build_renderer_data(latents, out_root)
 
 ######################################################################
