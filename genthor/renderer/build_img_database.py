@@ -6,6 +6,7 @@ models and backgrounds."""
 import cPickle
 import os
 import sys
+from collections import OrderedDict as dict
 import numpy as np
 from matplotlib.cbook import flatten
 import genthor as gt
@@ -29,7 +30,8 @@ def sample_model_bg(modelnames, bgnames, n_ex_per_model, n_ex):
     # Make model list
     modellist = [m for m in flatten(zip(*([modelnames] * n_ex_per_model)))]
     # Make background list
-    bgrand = np.random.randint(0, n_bg, n_ex)
+    prng = np.random.RandomState(seed=0)
+    bgrand = prng.randint(0, n_bg, n_ex)
     bglist = [bgnames[r] for r in bgrand]
 
     # Make category list
@@ -74,7 +76,8 @@ def sample(rng, num=1, f_log=False):
         arng = arng[:, None]
 
     # random values in [0, 1]
-    rand = np.random.rand(num, arng.shape[1])
+    prng = np.random.RandomState(seed=0)
+    rand = prng.rand(num, arng.shape[1])
 
     # fit them to the range
     val = rand * (arng[[1]] - arng[[0]]) + arng[[0]]
@@ -143,8 +146,12 @@ bg_root = gt.BACKGROUND_PATH
 # Read modelnames and backgrounds from their root directories
 modelnames = sorted(os.listdir(model_root))
 bgnames = [bg for bg in sorted(os.listdir(bg_root)) if bg not in bad_bgs]
-assert len(modelnames) == n_models, "number of models is wrong"
-assert len(bgnames) == n_bg, "number of backgrounds is wrong"
+assert len(modelnames) == n_models, ("Wrong number of models:"
+                                     "len(modelnames) != n_models (%i != %i)"
+                                     % (len(modelnames), n_models))
+assert len(bgnames) == n_bg, ("Wrong number of backgrounds:"
+                              "len(bgnames) != n_bg (%i != %i)"
+                              % (len(bgnames), n_bg))
 
 # Parameters that will define how the dataset is made
 n_ex_per_model = 100
@@ -195,17 +202,11 @@ window_type = "onscreen" #"offscreen"
 
 # Set up the renderer
 lbase, output = gr.setup_renderer(window_type, size=image_size)
-# if window_type == "offscreen":
-#     tex = output.getTexture()
-# Img = np.zeros((len(all_args), image_size[0], image_size[1], 3), "u1")
 
 for args, out_path, latent_dict in zip(all_args, out_paths, latent_dicts):
 
     # Construct a scene
     objnode, bgnode = gr.construct_scene(lbase, *args)
-    #modelpath, bgpath, scale, pos, hpr, bgscale, bghp = args
-    # scenenode = gr.construct_scene(lbase, modelpath, bgpath, scale, pos,
-    #                                hpr, bgscale, bghp)
 
     # Render the scene
     lbase.render_frame()
@@ -220,11 +221,3 @@ for args, out_path, latent_dict in zip(all_args, out_paths, latent_dicts):
     # Save latent state
     with open(out_path + ".pkl", "w") as fid:
         cPickle.dump(latent_dict, fid)
-    
-    # if window_type == "offscreen":
-    #     # Get the image
-    #     img = lbase.get_tex_image(tex)
-
-    # # Store the img
-    # Img[iimg] = img
-
