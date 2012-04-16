@@ -152,7 +152,7 @@ n_ex = n_ex_per_model * n_models
 image_size = (256, 256)
 
 # Ranges for latent states
-scale_rng = (0.5, 2.)
+scale_rng = (0.6667, 2.)
 pos_rng = ((-1.0, 1.0), (-1.0, 1.0))
 hpr_rng = ((-180., 180.), (-180., 180.), (-180., 180.))
 bgscale_rng = (1.0, 1.0) #(0.5, 2.0)
