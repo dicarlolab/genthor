@@ -146,12 +146,12 @@ bg_root = gt.BACKGROUND_PATH
 # Read modelnames and backgrounds from their root directories
 modelnames = sorted(os.listdir(model_root))
 bgnames = [bg for bg in sorted(os.listdir(bg_root)) if bg not in bad_bgs]
-assert(len(modelnames) == n_models,
-       "Wrong number of models: len(modelnames) != n_models (%i != %i)"
-       % (len(modelnames), n_models))
-assert(len(bgnames) == n_bg,
-       "Wrong number of backgrounds: len(bgnames) != n_bg (%i != %i)"
-       % (len(bgnames), n_bg))
+assert len(modelnames) == n_models, ("Wrong number of models:"
+                                     "len(modelnames) != n_models (%i != %i)"
+                                     % (len(modelnames), n_models))
+assert len(bgnames) == n_bg, ("Wrong number of backgrounds:"
+                              "len(bgnames) != n_bg (%i != %i)"
+                              % (len(bgnames), n_bg))
 
 # Parameters that will define how the dataset is made
 n_ex_per_model = 100
