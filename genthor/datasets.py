@@ -16,8 +16,8 @@ from skdata.utils.download_and_extract import download_boto, extract, download
 
 class TrainingDataset(object):
 
-    FILES = [('genthor_training_data_20120412.zip',
-              '6d711ed61513b16bf802fc43a2a99bb2f0f618ce')]
+    FILES = [('genthor_training_data_20120416.zip',
+              'cc5cbb5fd25cb469783e2494d7efdf1d189035a5')]
 
     name = 'GenthorTrainingDataset'
     
