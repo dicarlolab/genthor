@@ -5,13 +5,12 @@ import cPickle
 
 import numpy as np
 import Image
-import boto
 import tabular as tb
 from yamutils.fast import reorder_to, isin
 
 import skdata.larray as larray
 from skdata.data_home import get_data_home
-from skdata.utils.download_and_extract import download_boto, extract, download
+from skdata.utils.download_and_extract import extract, download
 
 
 class TrainingDataset(object):
