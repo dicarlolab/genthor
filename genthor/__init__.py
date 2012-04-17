@@ -1,36 +1,19 @@
-import inspect
 import os
-import subprocess
+import urllib
+import json
+import os
 
-# 
-# -- This is some hacky shit to make the bandit behave nicely when qsub'd
-#    on honeybadger.
-#
-def get_module_dir():
-    return os.path.dirname(inspect.getfile(inspect.currentframe())) # script direct
+BASE_URL = 'http://50.19.109.25'
+MODEL_URL = BASE_URL + ':9999/3dmodels?'
 
-# -- hacky stuff to configure theano prior to import when run via qsub
-if 'THEANO_FLAGS' not in os.environ:
-    proc = subprocess.Popen(
-        [os.path.join(get_module_dir(), 'hb_gpu_hack.sh')],
-        stdout=subprocess.PIPE,
-        #stderr=subprocess.PIPE,
-        )
-    my_gpu = proc.communicate()[0]
-    if my_gpu:
-        try:
-            my_gpu = int(my_gpu)
-        except ValueError:
-            THEANO_FLAGS=''
-        else:
-            THEANO_FLAGS = 'device=gpu%i' % int(my_gpu)
-    else:
-        THEANO_FLAGS = ''
-    scratchdir = '/scratch_local/' + os.environ['USER']
-    if os.path.exists(scratchdir):
-        THEANO_FLAGS += ',base_compiledir=' + scratchdir + '/eccv12.theano'
-    os.environ['THEANO_FLAGS'] = THEANO_FLAGS
+# Root genthor project path
+GENTHOR_PATH = os.path.abspath(os.environ["GENTHOR_PATH"])
+# Points to the models
+MODEL_PATH = os.path.join(GENTHOR_PATH, "processed_models")
+# Points to the backgrounds
+BACKGROUND_PATH = os.path.join(GENTHOR_PATH, "backgrounds")
 
-    print 'N.B. HACKING IN env["THEANO_FLAGS"] =', os.environ['THEANO_FLAGS']
-
-
+def get_canonical_view(m):
+    v = json.loads(urllib.urlopen(MODEL_URL + 'query={"id":"' + m + '"}&fields=["canonical_view"]').read())[0]
+    if v.get('canonical_view'):
+        return v['canonical_view']
