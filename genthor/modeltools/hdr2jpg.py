@@ -24,8 +24,8 @@ def convert(in_img, out_img):
         )
 
     tonemap_alg = pfstmo[0]
-    bias = 0.45
-    gamma = 0.5
+    bias = 0.4
+    gamma = 0.55
 
     # Commands
     p1 = Popen(["pfsin", in_img], bufsize=-1, stdout=PIPE)
