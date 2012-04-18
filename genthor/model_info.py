@@ -1,66 +1,67 @@
-from collections import OrderedDict
+import itertools
+import copy
+from math import pi
 
-MODEL_CATEGORIES = OrderedDict([('cars' , ['MB26897','MB28855','MB27827','MB28498',
-                              'MB28343','MB31083','MB31079','MB31620',
-                              'MB28490','MB31095']),
+try:
+    from collections import OrderedDict
+except ImportError:
+    print "Python 2.7+ OrderedDict collection not available"
+    try:
+        from ordereddict import OrderedDict
+    except ImportError:
+        raise ImportError("OrderedDict not available")
 
-                    ('cats_and_dogs' , ['shorthair_cat','leopard',
+MODEL_CATEGORIES = {'cars' : ['MB26897','MB28855','MB31518','MB28498',
+                              'MB28343','MB29642', 'MB31079','MB31620',
+                              'MB28490','MB31095'],
+
+                    'cats_and_dogs' : ['shorthair_cat','leopard',
                                        'lynx','oriental','panther',
                                        'doberman', 'schnauzer',
-                                       'dalmatian', 'bloodhound','bullmastiff']),
+                                       'dalmatian', 'bloodhound','bullmastiff'],
 
-                    ('reptiles' , ['MB30418','MB29694', 'chameleon',
+                    'reptiles' : ['MB30418','MB29694', 'chameleon',
                                   'crocodile','gecko','iguana','leatherback',
-                                  'terapin','tortoise','salamander']),
+                                  'terapin','tortoise','salamander'],
 
-                    ('guns' , ['MB27069','MB27350','MB30684','MB28771',
+                    'guns' : ['MB27069','MB27350','MB30684','MB28771',
                               'MB27860','MB29066','MB29726',
-                              'MB30472','MB30027','MB30680']),
+                              'MB30472','MB30027','MB30680'],
 
-                    ('boats' , ['MB27840','MB27239','MB28586','MB29022','MB28646',
+                    'boats' : ['MB27840','MB27239','MB28586','MB29022','MB28646',
                                'MB29366','MB29346','MB29698',
-                               'MB29762','MB31331']),
+                               'MB29762','MB31331'],
 
-                    ('planes' , ['MB26937','MB27203','MB27211',
+                    'planes' : ['MB26937','MB27203','MB27211',
                                 'MB27463','MB27876','MB27732',
                                 'MB27530','MB29650',
-                                'MB28651','MB28243']),
+                                'MB28651','MB28243'],
 
-                    ('faces' , ['face0001','face0002','face0003',
+                    'faces' : ['face0001','face0002','face0003',
                                'face0005','face0006',
                                'face1','face2','face3',
-                               'face5','face6']),
+                               'face5','face6'],
 
-                    ('chair' , ['MB29826','MB29342','MB28514','MB27139',
+                    'chair' : ['MB29826','MB29342','MB28514','MB27139',
                                'MB27680','MB27675','MB27692',
-                               'MB27684','MB27679','MB27696']),
+                               'MB27684','MB27679','MB27696'],
 
-                    ('table' , ['MB30374','MB30082','MB28811','MB27386',
+                    'table' : ['MB30374','MB30082','MB28811','MB27386',
                                'MB28462','MB28077','MB28049','MB30386',
-                               'MB30926','MB28214']),
+                               'MB30926','MB28214'],
 
-                    ('plants' , ['MB29862','MB30366','MB28415','MB30422',
+                    'plants' : ['MB29862','MB30366','MB28415','MB30422',
                                 'MB30150','MB31632','MB30370','MB30114',
-                                'MB30762','MB30814']),
+                                'MB30762','MB30814'],
 
-                    ('buildings' , ['MB27471','MB28886','MB28807',
+                    'buildings' : ['MB27471','MB28886','MB30794',
                                    'MB29870','MB27835','MB31131',
                                    'MB29802', 'MB30810','MB28921',
-                                   'MB28934'])])
-                                   
-MODEL_SUBSET_1 = ['MB26897','MB28855','MB27827','MB28498', 'MB28343', 'MB31083',
-                  'shorthair_cat','leopard','oriental', 'doberman', 'schnauzer','dalmatian',
-                  'MB30418','MB29694', 'chameleon','terapin','tortoise','salamander',
-                  'MB27069','MB27350','MB30684','MB28771','MB27860','MB29066',
-                  'MB27840','MB27239','MB28586','MB29022','MB28646','MB29366',
-                  'MB26937','MB27203','MB27211','MB27463','MB27876','MB27732',
-                  'face0001','face0002','face0003','face0005','face0006','face1',
-                  'MB29826','MB29342','MB28514','MB27139','MB27680','MB27675',
-                  'MB29826','MB29342','MB28514','MB27139','MB27680','MB27675',
-                  'MB30374','MB30082','MB28811','MB27386','MB28462','MB28077',
-                  'MB29862','MB30366','MB28415','MB30422','MB30150','MB31632',
-                  'MB27471','MB28886','MB28807','MB29870','MB27835','MB31131',]
+                                   'MB28934']}
                   
+                                   
+MODEL_SUBSET_1 = list(itertools.chain(*[v[::2] for v in MODEL_CATEGORIES.values()]))
+
 
 BACKGROUNDS = ['DH-ITALY01SN.jpg',
  'DH-ITALY02SN.jpg',
