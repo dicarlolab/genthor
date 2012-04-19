@@ -111,7 +111,8 @@ class GenerativeDatasetBase(object):
         lbase, output = gr.setup_renderer(window_type, size=size) 
         model_root = self.home(self.model_root)
         bg_root = self.home(self.bg_root)
-        return larray.lmap(ImgRendererResizer(model_root, bg_root, preproc, lbase, output), meta)
+        return larray.lmap(ImgRendererResizer(model_root, bg_root, preproc,
+                                            lbase, output), meta)
 
     def get_subset_splits(self, *args, **kwargs):
         return get_subset_splits(self.meta, *args, **kwargs)    
@@ -154,7 +155,8 @@ def get_subset_splits(meta, npc_train, npc_tests, num_splits,
             cat_test_inds = test_inds[categories[test_inds] == cat]
             ctils.append(len(cat_test_inds))
             if npc_validate > 0:
-                assert len(cat_test_inds) >= npc_validate, 'not enough to validate'
+                assert len(cat_test_inds) >= npc_validate, (
+                 'not enough to validate')
                 pv = rng.permutation(len(cat_test_inds))
                 cat_validate = cat_test_inds[pv[:npc_validate]]
                 validations[_ind] += cat_validate.tolist()
@@ -224,7 +226,7 @@ def get_tmpfilename():
     return 'tmpfile_' + str(np.random.randint(1e8))
 
 
-class GenerativeDataset1(GenerativeDatasetBase):    
+class GenerativeDatasetTest(GenerativeDatasetBase):    
     models = model_info.MODEL_SUBSET_1
     bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
                        'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
@@ -233,7 +235,7 @@ class GenerativeDataset1(GenerativeDatasetBase):
                        'INTERIOR_05ST.jpg']
     good_backgrounds = [_b for _b in model_info.BACKGROUNDS
                                                   if _b not in bad_backgrounds]
-    n_ex_per_model = 1
+    n_ex_per_model = 10
     template = {'bgname': choice(good_backgrounds),
                      'bgscale': 1.,
                      'bgpsi': uniform(-180.0, 180.),
@@ -385,47 +387,8 @@ class TrainingDataset(object):
                                             mode=mode),
                                 self.filenames)
 
-    ####TODO:  split-generating methods
-    def get_splits(self, ntrain, ntest, nvalidate, num_splits):
-        pass
-        
-
-#TODO: test splits
-def test_training_dataset():
-    dataset = TrainingDataset()
-    meta = dataset.meta
-    assert len(meta) == 11000
-    agg = meta[['model_id', 'category']].aggregate(['category'],
-                                             AggFunc=lambda x: len(x))
-    assert agg.tolist() == [('boats', 1000),
-                             ('buildings', 1000),
-                             ('cars', 1000),
-                             ('cats_and_dogs', 1000),
-                             ('chair', 1000),
-                             ('faces', 1000),
-                             ('guns', 1000),
-                             ('planes', 1000),
-                             ('plants', 1000),
-                             ('reptiles', 1000),
-                             ('table', 1000)]
-
-    agg2 = meta[['model_id', 'category']].aggregate(['category'], 
-           AggFunc=lambda x : len(np.unique(x)))       
-    assert agg2.tolist() == [('boats', 10),
-         ('buildings', 10),
-         ('cars', 10),
-         ('cats_and_dogs', 10),
-         ('chair', 10),
-         ('faces', 10),
-         ('guns', 10),
-         ('planes', 10),
-         ('plants', 10),
-         ('reptiles', 10),
-         ('table', 10)]
-         
-    imgs = dataset.get_images('float32', {'size':(256, 256),
-                          'global_normalize':False, 'mode':'L'})
-    assert imgs.shape == (11000, 256, 256)
+    def get_subset_splits(self, *args, **kwargs):
+        return get_subset_splits(self.meta, *args, **kwargs)    
 
 
 class ImgLoaderResizer(object):
@@ -506,3 +469,38 @@ class ImgLoaderResizer(object):
         return rval
     
     
+def test_training_dataset():
+    dataset = TrainingDataset()
+    meta = dataset.meta
+    assert len(meta) == 11000
+    agg = meta[['model_id', 'category']].aggregate(['category'],
+                                             AggFunc=lambda x: len(x))
+    assert agg.tolist() == [('boats', 1000),
+                             ('buildings', 1000),
+                             ('cars', 1000),
+                             ('cats_and_dogs', 1000),
+                             ('chair', 1000),
+                             ('faces', 1000),
+                             ('guns', 1000),
+                             ('planes', 1000),
+                             ('plants', 1000),
+                             ('reptiles', 1000),
+                             ('table', 1000)]
+
+    agg2 = meta[['model_id', 'category']].aggregate(['category'], 
+           AggFunc=lambda x : len(np.unique(x)))       
+    assert agg2.tolist() == [('boats', 10),
+         ('buildings', 10),
+         ('cars', 10),
+         ('cats_and_dogs', 10),
+         ('chair', 10),
+         ('faces', 10),
+         ('guns', 10),
+         ('planes', 10),
+         ('plants', 10),
+         ('reptiles', 10),
+         ('table', 10)]
+         
+    imgs = dataset.get_images('float32', {'size':(256, 256),
+                          'global_normalize':False, 'mode':'L'})
+    assert imgs.shape == (11000, 256, 256)
