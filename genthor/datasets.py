@@ -108,19 +108,16 @@ class GenerativeDatasetBase(object):
         name = self.specific_name
         basedir = self.home()
         cache_file = os.path.join(basedir, name)
-        if not os.path.exists(cache_file):
-            meta = self.meta
-            window_type = 'offscreen'
-            size = preproc['size']
-            lbase, output = gr.setup_renderer(window_type, size=size) 
-            model_root = self.home(self.model_root)
-            bg_root = self.home(self.bg_root)
-            images = larray.lmap(ImgRendererResizer(model_root, bg_root, preproc,
+        meta = self.meta
+        window_type = 'offscreen'
+        size = preproc['size']
+        lbase, output = gr.setup_renderer(window_type, size=size) 
+        model_root = self.home(self.model_root)
+        bg_root = self.home(self.bg_root)
+        images = larray.lmap(ImgRendererResizer(model_root, bg_root, preproc,
                                                 lbase, output), meta)
-            return larray.cache_memmap(images, name=name, basedir=basedir)
-        else:
-            return larray.cache_memmap(None, name=name, basedir=basedir)
-
+        return larray.cache_memmap(images, name=name, basedir=basedir)
+        
     def get_subset_splits(self, *args, **kwargs):
         return get_subset_splits(self.meta, *args, **kwargs)    
 
