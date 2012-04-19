@@ -511,6 +511,7 @@ def test_training_dataset():
     assert imgs.shape == (11000, 256, 256)
 
 
+##XXX TO DO:  TEST simultaneous reads more thoroughly
 def test_generative_dataset():
     dataset = GenerativeDatasetTest()
     meta = dataset.meta
@@ -524,3 +525,9 @@ def test_generative_dataset():
         assert len(s['train']) == 220
         assert len(s['test']) == 110 
         assert set(s['train']).intersection(s['test']) == set([])
+    
+    imgs = dataset.get_images('float32', {'size':(256, 256),
+               'mode': 'L', 'normalize': False, 'dtype':'float32'})
+    X = np.asarray(imgs[[0, 50]])
+    Y = cPickle.load(open('generative_datset_test_images_0_50.pkl'))
+    assert (X == Y).all()
