@@ -238,7 +238,7 @@ class GenerativeDatasetTest(GenerativeDatasetBase):
     n_ex_per_model = 10
     template = {'bgname': choice(good_backgrounds),
                      'bgscale': 1.,
-                     'bgpsi': uniform(-180.0, 180.),
+                     'bgpsi': 0,
                      'bgphi': uniform(-180.0, 180.),
                      'scale': loguniform(np.log(2./3), np.log(2.)),
                      'ty': uniform(-1.0, 1.0),
@@ -284,7 +284,7 @@ class ImgRendererResizer(object):
         self.lbase.render_frame()
         objnode.removeNode()
         bgnode.removeNode()
-        tmpfilename = get_tmpfilename() + '.jpg'
+        tmpfilename = get_tmpfilename() + '.png'
         self.lbase.screenshot(self.output, pth=tmpfilename)
         im = Image.open(tmpfilename)
         if im.mode != self.mode:
@@ -295,7 +295,7 @@ class ImgRendererResizer(object):
             rval /= max(rval.std(), 1e-3)
         else:
             rval /= 255.0
-        assert rval.shape == self._shape
+        assert rval.shape[:2] == self._shape[:2]
         os.remove(tmpfilename)
         return rval
         
