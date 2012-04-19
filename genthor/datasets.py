@@ -261,7 +261,7 @@ class ImgRendererResizer(object):
     def __init__(self, model_root, bg_root, preproc, lbase, output):
         self._shape = preproc['size']
         self._ndim = len(self._shape) 
-        self.dtype = preproc['dtype']
+        self._dtype = preproc['dtype']
         self.mode = preproc['mode']
         self.normalize = preproc['normalize']
         self.lbase = lbase
@@ -297,7 +297,7 @@ class ImgRendererResizer(object):
         im = Image.open(tmpfilename)
         if im.mode != self.mode:
             im = im.convert(self.mode)
-        rval = np.asarray(im, self.dtype)
+        rval = np.asarray(im, self._dtype)
         if self.normalize:
             rval -= rval.mean()
             rval /= max(rval.std(), 1e-3)
