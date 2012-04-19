@@ -504,3 +504,18 @@ def test_training_dataset():
     imgs = dataset.get_images('float32', {'size':(256, 256),
                           'global_normalize':False, 'mode':'L'})
     assert imgs.shape == (11000, 256, 256)
+
+
+def test_generative_dataset():
+    dataset = GenerativeDatasetTest()
+    meta = dataset.meta
+    ids = cPickle.load(open('dataset_ids.pkl'))
+    assert (meta['id'] == ids).all()
+    S, v = dataset.get_subset_splits(20, [10], 5, 
+                            lambda x : x['category'], None, None, None, 0)
+    assert len(S) == 5
+    for s in S:
+        assert sorted(s.keys()) == ['test', 'train']
+        assert len(s['train']) == 220
+        assert len(s['test']) == 110 
+        assert set(s['train']).intersection(s['test']) == set([])
