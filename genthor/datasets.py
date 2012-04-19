@@ -113,6 +113,108 @@ class GenerativeDatasetBase(object):
         bg_root = self.home(self.bg_root)
         return larray.lmap(ImgRendererResizer(model_root, bg_root, preproc, lbase, output), meta)
 
+    def get_subset_splits(self, *args, **kwargs):
+        return get_subset_splits(self.meta, *args, **kwargs)    
+
+
+def get_subset_splits(meta, npc_train, npc_tests, num_splits,
+                      catfunc, train_q=None, test_qs=None, test_names=None, 
+                      npc_validate=0):
+    train_inds = np.arange(len(meta)).astype(np.int)
+    if test_qs is None:
+        test_qs = [test_qs]
+    if test_names is None:
+        assert len(test_qs) == 1
+        test_names = ['test']
+    else:
+        assert len(test_names) == len(test_qs)
+        assert 'train' not in test_names
+    test_ind_list = [np.arange(len(meta)).astype(np.int) \
+                                              for _ in range(len(test_qs))]
+    if train_q is not None:
+        sub = np.array(map(train_q, meta)).astype(np.bool)
+        train_inds = train_inds[sub]
+    for _ind, test_q in enumerate(test_qs):
+        if test_q is not None:
+             sub = np.array(map(test_q, meta)).astype(np.bool)
+             test_ind_list[_ind] = test_ind_list[_ind][sub]
+    
+    all_test_inds = list(itertools.chain(*test_ind_list))
+    all_inds = np.sort(np.unique(train_inds.tolist() + all_test_inds))
+    categories = np.array(map(catfunc, meta))
+    ucategories = np.unique(categories[all_inds])    
+    rng = np.random.RandomState(0)  #or do you want control over the seed?
+    splits = [dict([('train', [])] + \
+                   [(tn, []) for tn in test_names]) for _ in range(num_splits)]
+    validations = [[] for _ in range(len(test_qs))]
+    for cat in ucategories:
+        cat_validates = []
+        ctils = []
+        for _ind, test_inds in enumerate(test_ind_list):
+            cat_test_inds = test_inds[categories[test_inds] == cat]
+            ctils.append(len(cat_test_inds))
+            if npc_validate > 0:
+                assert len(cat_test_inds) >= npc_validate, 'not enough to validate'
+                pv = rng.permutation(len(cat_test_inds))
+                cat_validate = cat_test_inds[pv[:npc_validate]]
+                validations[_ind] += cat_validate.tolist()
+            else:
+                cat_validate = []
+            cat_validates.extend(cat_validate)
+        cat_validates = np.sort(np.unique(cat_validates))
+        for split_ind in range(num_splits):
+            cat_train_inds = train_inds[categories[train_inds] == cat]
+            if len(cat_train_inds) < np.mean(ctils):    
+                cat_train_inds = train_inds[categories[train_inds] == cat]
+                cat_train_inds = np.array(
+                        list(set(cat_train_inds).difference(cat_validates)))            
+                assert len(cat_train_inds) >= npc_train, ( 
+                                    'not enough train for %s, %d, %d' % (cat,
+                                                len(cat_train_inds), npc_train))
+                cat_train_inds.sort()
+                p = rng.permutation(len(cat_train_inds))
+                cat_train_inds_split = cat_train_inds[p[:npc_train]]
+                splits[split_ind]['train'] += cat_train_inds_split.tolist()
+                for _ind, test_inds in enumerate(test_ind_list):
+                    npc_test = npc_tests[_ind]
+                    cat_test_inds = test_inds[categories[test_inds] == cat]
+                    cat_test_inds_c = np.array(list(
+                             set(cat_test_inds).difference(
+                             cat_train_inds_split).difference(cat_validates)))
+                    assert len(cat_test_inds_c) >= npc_test, (
+                                          'not enough test for %s %d %d' % 
+                                      (cat, len(cat_test_inds_c), npc_test))
+                    p = rng.permutation(len(cat_test_inds_c))
+                    cat_test_inds_split = cat_test_inds_c[p[: npc_test]]
+                    name = test_names[_ind]
+                    splits[split_ind][name] += cat_test_inds_split.tolist()
+            else:
+                all_cat_test_inds = []
+                for _ind, test_inds in enumerate(test_ind_list):
+                    npc_test = npc_tests[_ind]
+                    cat_test_inds = test_inds[categories[test_inds] == cat]
+                    cat_test_inds_c = np.sort(np.array(list(
+                             set(cat_test_inds).difference(cat_validates))))
+                    assert len(cat_test_inds_c) >= npc_test, (
+                                    'not enough test for %s %d %d' %
+                                      (cat, len(cat_test_inds_c), npc_test))
+                    p = rng.permutation(len(cat_test_inds_c))
+                    cat_test_inds_split = cat_test_inds_c[p[: npc_test]]
+                    name = test_names[_ind]
+                    splits[split_ind][name] += cat_test_inds_split.tolist()
+                    all_cat_test_inds.extend(cat_test_inds_split)
+                cat_train_inds = np.array(list(set(cat_train_inds).difference(
+                                 all_cat_test_inds).difference(cat_validates)))
+                assert len(cat_train_inds) >= npc_train, (
+                               'not enough train for %s, %d, %d' % 
+                               (cat, len(cat_train_inds), npc_train))
+                cat_train_inds.sort()
+                p = rng.permutation(len(cat_train_inds))
+                cat_train_inds_split = cat_train_inds[p[:npc_train]]
+                splits[split_ind]['train'] += cat_train_inds_split.tolist()
+            
+    return splits, validations
+
 
 def get_image_id(l):
     return hashlib.sha1(repr(l)).hexdigest()
@@ -124,10 +226,13 @@ def get_tmpfilename():
 
 class GenerativeDataset1(GenerativeDatasetBase):    
     models = model_info.MODEL_SUBSET_1
-    bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg', 'INTERIOR_11ST.jpg',
-           'INTERIOR_10ST.jpg', 'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
-           'INTERIOR_07ST.jpg', 'INTERIOR_06ST.jpg', 'INTERIOR_05ST.jpg']
-    good_backgrounds = [_b for _b in model_info.BACKGROUNDS if _b not in bad_backgrounds]
+    bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
+                       'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
+                       'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
+                       'INTERIOR_07ST.jpg', 'INTERIOR_06ST.jpg',
+                       'INTERIOR_05ST.jpg']
+    good_backgrounds = [_b for _b in model_info.BACKGROUNDS
+                                                  if _b not in bad_backgrounds]
     n_ex_per_model = 1
     template = {'bgname': choice(good_backgrounds),
                      'bgscale': 1.,
@@ -164,7 +269,8 @@ class ImgRendererResizer(object):
         raise AttributeError(attr)
         
     def __call__(self, m):
-        modelpath = os.path.join(self.model_root, m['modelname'], m['modelname'] + '.bam')
+        modelpath = os.path.join(self.model_root, 
+                                 m['modelname'], m['modelname'] + '.bam')
         bgpath = os.path.join(self.bg_root, m['bgname'])
         scale = [m['scale']]
         pos = [m['ty'], m['tz']]
