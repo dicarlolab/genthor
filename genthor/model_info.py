@@ -57,7 +57,7 @@ MODEL_CATEGORIES = OrderedDict([('cars' , ['MB26897','MB28855','MB31518','MB2849
                     ('buildings', ['MB27471','MB28886','MB30794',
                                    'MB29870','MB27835','MB31131',
                                    'MB29802', 'MB30810','MB28921',
-                                   'MB28934'])}
+                                   'MB28934'])])
                   
                                    
 MODEL_SUBSET_1 = list(itertools.chain(*[v[::2] + [v[5]] for v in MODEL_CATEGORIES.values()]))
