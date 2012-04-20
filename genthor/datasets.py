@@ -80,7 +80,7 @@ class GenerativeDatasetBase(DatasetBase):
                 print('Generating meta for %s' % model)
                 for _ind in range(n_ex_per_model):
                     l = stochastic.sample(template, rng)
-                    l['modelname'] = model
+                    l['obj'] = model
                     l['category'] = model_categories[model][0]
                     l['id'] = get_image_id(l)
                     rec = (l['bgname'],
@@ -88,13 +88,13 @@ class GenerativeDatasetBase(DatasetBase):
                            float(l['bgpsi']),
                            float(l['bgscale']),
                            l['category'],
-                           l['modelname'],
+                           l['obj'],
                            float(l['ryz']),
                            float(l['rxz']),
                            float(l['rxy']),
                            float(l['ty']),
                            float(l['tz']),
-                           float(l['scale']),
+                           float(l['s']),
                            tname,
                            l['id'])
                     latents.append(rec)
@@ -103,18 +103,18 @@ class GenerativeDatasetBase(DatasetBase):
                                                      'bgpsi',
                                                      'bgscale',
                                                      'category',
-                                                     'modelname',
+                                                     'obj',
                                                      'ryz',
                                                      'rxz',
                                                      'rxy',
                                                      'ty',
                                                      'tz',
-                                                     'scale',
+                                                     's',
                                                      'tname',
                                                      'id'])
         return meta
 
-    def get_images(self, dtype, preproc):
+    def get_images(self, preproc):
         name = self.specific_name
         basedir = self.home()
         cache_file = os.path.join(basedir, name)
@@ -252,7 +252,7 @@ class GenerativeDataset1(GenerativeDatasetBase):
                      'bgscale': 1.,
                      'bgpsi': 0,
                      'bgphi': uniform(-180.0, 180.),
-                     'scale': 1,
+                     's': 1,
                      'ty': 0,
                      'tz': 0,
                      'ryz': 0,
@@ -261,12 +261,12 @@ class GenerativeDataset1(GenerativeDatasetBase):
                      }
                  },
                  {'n_ex_per_model': 50,
-                  'name': 'translation', 
+                  'name': 'translation_scale', 
                   'template': {'bgname': choice(good_backgrounds),
                      'bgscale': 1.,
                      'bgpsi': 0,
                      'bgphi': uniform(-180.0, 180.),
-                     'scale': 1,
+                     's': loguniform(np.log(2./3), np.log(2.)),
                      'ty': uniform(-1.0, 1.0),
                      'tz': uniform(-1.0, 1.0),
                      'ryz': 0,
@@ -274,27 +274,13 @@ class GenerativeDataset1(GenerativeDatasetBase):
                      'rxz': 0,
                      }
                   },
-                 {'n_ex_per_model': 50,
-                  'name': 'scale', 
-                  'template': {'bgname': choice(good_backgrounds),
-                     'bgscale': 1.,
-                     'bgpsi': 0,
-                     'bgphi': uniform(-180.0, 180.),
-                     'scale': loguniform(np.log(2./3), np.log(2.)),
-                     'ty': 0,
-                     'tz': 0,
-                     'ryz': 0,
-                     'rxy': 0,
-                     'rxz': 0,
-                     }
-                  },
-                 {'n_ex_per_model': 50,
+                 {'n_ex_per_model': 30,
                   'name': 'rotation', 
                   'template': {'bgname': choice(good_backgrounds),
                      'bgscale': 1.,
                      'bgpsi': 0,
                      'bgphi': uniform(-180.0, 180.),
-                     'scale': 1,
+                     's': 1,
                      'ty': 0,
                      'tz': 0,
                      'ryz': uniform(-180., 180.),
@@ -303,19 +289,19 @@ class GenerativeDataset1(GenerativeDatasetBase):
                      }
                   },
                  {'n_ex_per_model': 100,
-                  'name': 'var_all', 
+                  'name': 'var1', 
                   'template': {'bgname': choice(good_backgrounds),
                      'bgscale': 1.,
                      'bgpsi': 0,
                      'bgphi': uniform(-180.0, 180.),
-                     'scale': loguniform(np.log(2./3), np.log(2.)),
+                     's': loguniform(np.log(2./3), np.log(2.)),
                      'ty': uniform(-1.0, 1.0),
                      'tz': uniform(-1.0, 1.0),
                      'ryz': uniform(-180., 180.),
                      'rxy': uniform(-180., 180.),
                      'rxz': uniform(-180., 180.),
                      }
-                  }]   
+                  }]
     specific_name = 'GenerativeDataset1'
     
 
@@ -334,7 +320,7 @@ class GenerativeDatasetTest(GenerativeDataset1):
                      'bgscale': 1.,
                      'bgpsi': 0,
                      'bgphi': uniform(-180.0, 180.),
-                     'scale': loguniform(np.log(2./3), np.log(2.)),
+                     's': loguniform(np.log(2./3), np.log(2.)),
                      'ty': uniform(-1.0, 1.0),
                      'tz': uniform(-1.0, 1.0),
                      'ryz': uniform(-180., 180.),
@@ -347,7 +333,7 @@ class GenerativeDatasetTest(GenerativeDataset1):
 
 class ImgRendererResizer(object):
     def __init__(self, model_root, bg_root, preproc, lbase, output):
-        self._shape = preproc['size']
+        self._shape = tuple(preproc['size'])
         self._ndim = len(self._shape) 
         self._dtype = preproc['dtype']
         self.mode = preproc['mode']
@@ -368,9 +354,9 @@ class ImgRendererResizer(object):
         
     def __call__(self, m):
         modelpath = os.path.join(self.model_root, 
-                                 m['modelname'], m['modelname'] + '.bam')
+                                 m['obj'], m['obj'] + '.bam')
         bgpath = os.path.join(self.bg_root, m['bgname'])
-        scale = [m['scale']]
+        scale = [m['s']]
         pos = [m['ty'], m['tz']]
         hpr = [m['ryz'], m['rxz'], m['rxy']]
         bgscale = [m['bgscale']]
@@ -434,7 +420,7 @@ class TrainingDataset(DatasetBase):
                                              'bgp',
                                              'bgscale',
                                              'category',
-                                             'model_id',
+                                             'obj',
                                              'ryz',
                                              'rxz',
                                              'rxy',
@@ -448,11 +434,12 @@ class TrainingDataset(DatasetBase):
     def filenames(self):
         return self.meta['filename']
 
-    def get_images(self, dtype, preproc):
+    def get_images(self, preproc):
         self.fetch()
         size = tuple(preproc['size'])
         normalize = preproc['global_normalize']
         mode = preproc['mode']
+        dtype = preproc['dtype']
         return larray.lmap(ImgLoaderResizer(inshape=(256, 256),
                                             shape=size,
                                             dtype=dtype,
@@ -473,7 +460,7 @@ class ImgLoaderResizer(object):
                  mode='RGB',
                  crop=None,
                  mask=None):
-        self.inshape = inshape
+        self.inshape = tuple(inshape)
         assert len(shape) == 2
         shape = tuple(shape)
         if crop is None:
@@ -543,7 +530,7 @@ def test_training_dataset():
     dataset = TrainingDataset()
     meta = dataset.meta
     assert len(meta) == 11000
-    agg = meta[['model_id', 'category']].aggregate(['category'],
+    agg = meta[['obj', 'category']].aggregate(['category'],
                                              AggFunc=lambda x: len(x))
     assert agg.tolist() == [('boats', 1000),
                              ('buildings', 1000),
@@ -557,7 +544,7 @@ def test_training_dataset():
                              ('reptiles', 1000),
                              ('table', 1000)]
 
-    agg2 = meta[['model_id', 'category']].aggregate(['category'], 
+    agg2 = meta[['obj', 'category']].aggregate(['category'], 
            AggFunc=lambda x : len(np.unique(x)))       
     assert agg2.tolist() == [('boats', 10),
          ('buildings', 10),
