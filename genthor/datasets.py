@@ -65,35 +65,39 @@ class GenerativeDatasetBase(DatasetBase):
     
     def _get_meta(self):
         #generate params 
-        n_ex_per_model = self.n_ex_per_model
         models = self.models
-        template = self.template
+        templates = self.templates
 
         latents = []
         rng = np.random.RandomState(seed=0)
 
         model_categories = dict_inverse(model_info.MODEL_CATEGORIES)
-        for model in models:
-            print('Generating meta for %s' % model)
-            for _ind in range(n_ex_per_model):
-                l = stochastic.sample(template, rng)
-                l['modelname'] = model
-                l['category'] = model_categories[model][0]
-                l['id'] = get_image_id(l)
-                rec = (l['bgname'],
-                       float(l['bgphi']),
-                       float(l['bgpsi']),
-                       float(l['bgscale']),
-                       l['category'],
-                       l['modelname'],
-                       float(l['ryz']),
-                       float(l['rxz']),
-                       float(l['rxy']),
-                       float(l['ty']),
-                       float(l['tz']),
-                       float(l['scale']),
-                       l['id'])
-                latents.append(rec)
+        for tdict in templates:
+            n_ex_per_model = tdict['n_ex_per_model']
+            template = tdict['template']
+            tname = tdict['name']
+            for model in models:
+                print('Generating meta for %s' % model)
+                for _ind in range(n_ex_per_model):
+                    l = stochastic.sample(template, rng)
+                    l['modelname'] = model
+                    l['category'] = model_categories[model][0]
+                    l['id'] = get_image_id(l)
+                    rec = (l['bgname'],
+                           float(l['bgphi']),
+                           float(l['bgpsi']),
+                           float(l['bgscale']),
+                           l['category'],
+                           l['modelname'],
+                           float(l['ryz']),
+                           float(l['rxz']),
+                           float(l['rxy']),
+                           float(l['ty']),
+                           float(l['tz']),
+                           float(l['scale']),
+                           tname,
+                           l['id'])
+                    latents.append(rec)
         meta = tb.tabarray(records=latents, names = ['bgname',
                                                      'bgphi',
                                                      'bgpsi',
@@ -106,6 +110,7 @@ class GenerativeDatasetBase(DatasetBase):
                                                      'ty',
                                                      'tz',
                                                      'scale',
+                                                     'tname',
                                                      'id'])
         return meta
 
@@ -231,8 +236,8 @@ def get_image_id(l):
 def get_tmpfilename():
     return 'tmpfile_' + str(np.random.randint(1e8))
 
-
-class GenerativeDatasetTest(GenerativeDatasetBase):    
+    
+class GenerativeDataset1(GenerativeDatasetBase):    
     models = model_info.MODEL_SUBSET_1
     bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
                        'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
@@ -241,8 +246,23 @@ class GenerativeDatasetTest(GenerativeDatasetBase):
                        'INTERIOR_05ST.jpg']
     good_backgrounds = [_b for _b in model_info.BACKGROUNDS
                                                   if _b not in bad_backgrounds]
-    n_ex_per_model = 10
-    template = {'bgname': choice(good_backgrounds),
+    templates = [{'n_ex_per_model': 10,
+                  'name': 'var0',  
+                  'template': {'bgname': choice(good_backgrounds),
+                     'bgscale': 1.,
+                     'bgpsi': 0,
+                     'bgphi': uniform(-180.0, 180.),
+                     'scale': 1,
+                     'ty': 0,
+                     'tz': 0,
+                     'ryz': 0,
+                     'rxy': 0,
+                     'rxz': 0,
+                     }
+                 },
+                 {'n_ex_per_model': 100,
+                  'name': 'var1', 
+                  'template': {'bgname': choice(good_backgrounds),
                      'bgscale': 1.,
                      'bgpsi': 0,
                      'bgphi': uniform(-180.0, 180.),
@@ -253,8 +273,35 @@ class GenerativeDatasetTest(GenerativeDatasetBase):
                      'rxy': uniform(-180., 180.),
                      'rxz': uniform(-180., 180.),
                      }
-    specific_name = 'GenerativeDatasetTest'
+                  }]   
+    specific_name = 'GenerativeDataset1'
+    
 
+class GenerativeDatasetTest(GenerativeDataset1):    
+    models = model_info.MODEL_SUBSET_1
+    bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
+                       'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
+                       'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
+                       'INTERIOR_07ST.jpg', 'INTERIOR_06ST.jpg',
+                       'INTERIOR_05ST.jpg']
+    good_backgrounds = [_b for _b in model_info.BACKGROUNDS
+                                                  if _b not in bad_backgrounds]
+    templates = [{'n_ex_per_model': 10,
+                  'name': 'var1', 
+                  'template': {'bgname': choice(good_backgrounds),
+                     'bgscale': 1.,
+                     'bgpsi': 0,
+                     'bgphi': uniform(-180.0, 180.),
+                     'scale': loguniform(np.log(2./3), np.log(2.)),
+                     'ty': uniform(-1.0, 1.0),
+                     'tz': uniform(-1.0, 1.0),
+                     'ryz': uniform(-180., 180.),
+                     'rxy': uniform(-180., 180.),
+                     'rxz': uniform(-180., 180.),
+                     }
+                  }]  
+    specific_name = 'GenerativeDatasetTest'
+    
 
 class ImgRendererResizer(object):
     def __init__(self, model_root, bg_root, preproc, lbase, output):
