@@ -60,9 +60,8 @@ MODEL_CATEGORIES = OrderedDict([('cars' , ['MB26897','MB28855','MB31518','MB2849
                                    'MB28934'])}
                   
                                    
-MODEL_SUBSET_1 = list(itertools.chain(*[v[::2] for v in MODEL_CATEGORIES.values()]))
-MODEL_SUBSET_2 = list(itertools.chain(*[v[::2][::2] for v in MODEL_CATEGORIES.values()]))
-
+MODEL_SUBSET_1 = list(itertools.chain(*[v[::2] + [v[5]] for v in MODEL_CATEGORIES.values()]))
+MODEL_SUBSET_2 = MODEL_SUBSET_1[::2]
 
 BACKGROUNDS = ['DH-ITALY01SN.jpg',
  'DH-ITALY02SN.jpg',
