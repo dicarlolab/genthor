@@ -24,17 +24,7 @@ import genthor.renderer.genthor_renderer as gr
 import genthor.model_info as model_info
 
 
-class GenerativeDatasetBase(object):
-    bg_root = 'genthor_backgrounds_20120418'
-    model_root = 'genthor_processed_models_20120418'
-    FILES = [('genthor_backgrounds_20120418.zip',
-              '17c5dd97be0775a7e6ec5de07592a44fb4551b76'),
-              ('genthor_processed_models_20120418.tar.gz',
-               'fd9a26a2b8198a7745ff642c4351f5206fc7d550'
-               )]
-
-    base_name = 'GenthorGenerative'
-    
+class DatasetBase(object):
     def home(self, *suffix_paths):
         return os.path.join(get_data_home(), self.base_name, *suffix_paths)
 
@@ -58,6 +48,21 @@ class GenerativeDatasetBase(object):
             self._meta = self._get_meta()
         return self._meta
 
+    def get_subset_splits(self, *args, **kwargs):
+        return get_subset_splits(self.meta, *args, **kwargs) 
+
+
+class GenerativeDatasetBase(DatasetBase):
+    bg_root = 'genthor_backgrounds_20120418'
+    model_root = 'genthor_processed_models_20120418'
+    FILES = [('genthor_backgrounds_20120418.zip',
+              '17c5dd97be0775a7e6ec5de07592a44fb4551b76'),
+              ('genthor_processed_models_20120418.tar.gz',
+               'fd9a26a2b8198a7745ff642c4351f5206fc7d550'
+               )]
+
+    base_name = 'GenthorGenerative'
+    
     def _get_meta(self):
         #generate params 
         n_ex_per_model = self.n_ex_per_model
@@ -118,9 +123,6 @@ class GenerativeDatasetBase(object):
                                                 lbase, output), meta)
         return larray.cache_memmap(images, name=name, basedir=basedir)
         
-    def get_subset_splits(self, *args, **kwargs):
-        return get_subset_splits(self.meta, *args, **kwargs)    
-
 
 def get_subset_splits(meta, npc_train, npc_tests, num_splits,
                       catfunc, train_q=None, test_qs=None, test_names=None, 
@@ -305,36 +307,13 @@ class ImgRendererResizer(object):
         return rval
         
 
-class TrainingDataset(object):
+class TrainingDataset(DatasetBase):
 
     FILES = [('genthor_training_data_20120416.zip',
               'cc5cbb5fd25cb469783e2494d7efdf1d189035a5')]
 
     name = 'GenthorTrainingDataset'
     
-    def home(self, *suffix_paths):
-        return os.path.join(get_data_home(), self.name, *suffix_paths)
-
-    def fetch(self):
-        """Download and extract the dataset."""
-        home = self.home()
-        if not os.path.exists(home):
-            os.makedirs(home)
-        for base, sha1 in self.FILES:
-            archive_filename = os.path.join(home, base)  
-            if not os.path.exists(archive_filename):
-                url = 'http://dicarlocox-datasets.s3.amazonaws.com/' + base
-                print ('downloading %s' % url)
-                download(url, archive_filename, sha1=sha1, verbose=True)                
-                extract(archive_filename, home, sha1=sha1, verbose=True)
-                           
-    @property
-    def meta(self):
-        if not hasattr(self, '_meta'):
-            self.fetch()
-            self._meta = self._get_meta()
-        return self._meta
-        
     def _get_meta(self): 
         homedir = os.path.join(self.home(), 'genthor_training_data_20120412')
         L = sorted(os.listdir(homedir))
@@ -391,9 +370,6 @@ class TrainingDataset(object):
                                             normalize=normalize,
                                             mode=mode),
                                 self.filenames)
-
-    def get_subset_splits(self, *args, **kwargs):
-        return get_subset_splits(self.meta, *args, **kwargs)    
 
 
 class ImgLoaderResizer(object):
