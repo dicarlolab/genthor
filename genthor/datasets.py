@@ -115,7 +115,7 @@ class GenerativeDatasetBase(DatasetBase):
         return meta
 
     def get_images(self, preproc):
-        name = self.specific_name
+        name = self.specific_name + '_' + get_image_id(preproc)
         basedir = self.home()
         cache_file = os.path.join(basedir, name)
         meta = self.meta
