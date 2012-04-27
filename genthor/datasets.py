@@ -619,8 +619,8 @@ def test_generative_dataset():
         assert len(s['test']) == 110 
         assert set(s['train']).intersection(s['test']) == set([])
     
-    imgs = dataset.get_images('float32', {'size':(256, 256),
+    imgs = dataset.get_images({'size':(256, 256),
                'mode': 'L', 'normalize': False, 'dtype':'float32'})
     X = np.asarray(imgs[[0, 50]])
-    Y = cPickle.load(open('generative_datset_test_images_0_50.pkl'))
+    Y = cPickle.load(open('generative_dataset_test_images_0_50.pkl'))
     assert (X == Y).all()
