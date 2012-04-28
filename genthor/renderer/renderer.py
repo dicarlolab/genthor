@@ -72,8 +72,13 @@ def read_file(func, filepth):
     return out
 
 
-def construct_scene(lbase, modelpth, bgpath, scale, pos, hpr, bgscale, bghp):
+def construct_scene(lbase, modelpth, bgpath, scale, pos, hpr, bgscale, bghp,
+                    scene=None):
     """ Constructs the scene per the parameters. """
+
+    # Default scene is lbase's rootnode
+    if scene is None:
+        scene = lbase.rootnode
     
     # Modelpth points to the model .egg/.bam file
     objnode = read_file(lbase.loader.loadModel, modelpth)
@@ -112,8 +117,9 @@ def construct_scene(lbase, modelpth, bgpath, scale, pos, hpr, bgscale, bghp):
     else:
         bgnode = NodePath("empty-bgnode")
 
-    objnode.reparentTo(lbase.rootnode)
-    bgnode.reparentTo(lbase.rootnode)
+    # Reparent to a single scene node
+    objnode.reparentTo(scene)
+    bgnode.reparentTo(scene)
 
     return objnode, bgnode
 

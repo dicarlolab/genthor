@@ -1,6 +1,17 @@
 import numpy as np
 import pandac.PandaModules as pm
-from rendering.lightbase import LightBase
+from genthor.renderer.lightbase import LightBase
+import genthor.renderer.renderer as gr
+
+def initialize_rand(rand):
+    """ Takes either an existing mtrand.RandomState object, or a seed,
+    and returns an mtrand.RandomState object."""
+    
+    # Random state
+    if not isinstance(rand, np.random.mtrand.RandomState):
+        # rand is a seed
+        rand = np.random.RandomState(seed=rand)
+    return rand
 
 class ImageProcessor(object):
 
@@ -16,75 +27,240 @@ class ImageProcessor(object):
     
     
 class Renderer(object):
-    """ Turns states into scenes, renders them and gets the
-    images. Perhaps this class should be sub-classed from LightBase."""
+    """ Turns states into scenes, renders them and gets the images.
+
+    Currently this is used for the within-inference image
+    synthesizing, though it should probably be made copasetic with
+    ImgRendererResize.
+
+    Also, this class should probably be sub-classed from LightBase.
+    """
     
-    def __init__(self):
+    def __init__(self, size=(256, 256), lbase=None, output=None):
         """ Prepares graphics context in which to render synthetic
         images."""
-    
-        self.lbase = LightBase()
-        self.output, self.tex = self.lbase.make_texture_buffer(size=(256, 256))
 
-        # Create lights
-        # Create camera
-
+        if lbase is None:
+            # Create the renderer
+            window_type = "texture"
+            self.lbase, self.output = gr.setup_renderer(window_type, size=size)
+        else:
+            # Use the supplied lbase instance
+            self.lbase = lbase
+            if output is None:
+                # Default to last output in lbase.output_list
+                self.output = self.lbase.output_list[-1]
+        # Get the RTT target
+        self.tex = self.output.getTexture()
 
     def state2scene(self, state):
-        # Create a NodePath to hold the scene
+        """ Input a state and return a scene node."""
+
+        # Just assume it is a dict for now
+        modelpth = state["modelpth"]
+        bgpath = state["bgpth"]
+        scale = state["scale"]
+        pos = state["pos"]
+        hpr = state["hpr"]
+        bgscale = state["bgscale"]
+        bghp = state["bghp"]
+
+        # Make the scene and attach it to a new NodePath
         scene = pm.NodePath("scene")
-        # ... make the scene from the state
-        # ...
+        gr.construct_scene(self.lbase, modelpth, bgpath,
+                           scale, pos, hpr, bgscale, bghp, scene=scene)
         return scene
 
     def render(self, state):
         """ Take the state, create a scene, render it and get the
         image."""
         
-        # Set up scene
+        # Set up scene and attach it to the renderer's scenegraph
         scene = self.state2scene(state)
-        
-        # Add to graphics scene
         scene.reparentTo(self.lbase.rootnode)
-        # Render it
+        # Render the scene
         self.lbase.render_frame()
-        # Remove the scene from the self.lbase.rootnode
+        # Remove/destroy the scene
         scene.removeNode()
         # Get the image (it's a numpy.ndarray)
         img = self.lbase.get_tex_image(self.tex)
-
         return img
 
 
-class BayesianSampler(object):
-    pass
+    def __del__(self):
+        self.lbase.destroy()
 
+
+
+
+
+
+class BayesianSampler(object):
+    """ Basic MCMC sampler for visual inference."""
     
+    def __init__(self, image, rand=0):
+        # Initialize a random object
+        self.rand = initialize_rand(rand)
+        # Initial/null values
+        self.image = image
+        self.state0 = None
+        self.state = None
+        self.score = None
+        self.states = []
+        self.proposals = []
+        self.scores = []
+        self.proposal_scores = []
+        self.accepteds = []
+        # Create a renderer object
+        self.renderer = Renderer()
+        # Create a proposal generation object
+        self.proposer = Proposer()
+        # Initialize the sampler
+        self.initialize_state()
+        
+    def initialize_state(self, state=None):
+        """ Initialize the sampler's state to 'state'."""
+
+        # Store it (state is the current state, state0 is a record of
+        # the initial state
+        self.state0 = state
+        self.state = state
+
+        if state is None:
+            # If state is None, self.score=-inf will force the first
+            # proposal to be accepted.
+            self.score = -np.inf
+        else:
+            # Compute and store the initial state's score
+            self.score = self.lposterior(state)
+
+    def loop(self, n_samples, verbose=True):
+        """ Runs the sampler for 'n_samples' MCMC steps. The results
+        are stored in self.{states,proposals,scores,proposal_scores}."""
+
+        if verbose:
+            print("Running %i samples" % n_samples)
+
+        for ind in xrange(n_samples):
+            # Draw a proposal and its fwd/bak probabilities
+            proposal, fwdprob, bakprob = self.proposer.draw(self.state)
+            # Determine whether to accept or reject the sample
+            accepted = self.accept_reject(proposal, fwdprob, bakprob)
+            # If the proposal is accepted, update the sampler's state
+            if accepted:
+                self.score = proposal_score
+                self.state = proposal
+            # Store
+            self.states.append(self.state)
+            self.proposals.append(proposal)
+            self.scores.append(self.score)
+            self.proposal_scores.append(proposal_score)
+            self.accepteds.append(accepted)
+            # Verbose status report
+            if verbose:
+                n_accepted = sum(self.accepteds)
+                total = ind + 1
+                percent = float(n_accepted) / total
+                print("Accepted %i/%i (%.2f%%)" % (n_accepted, total, percent)
+             
+    def accept_reject(self, proposal, fwdprob, bakprob):
+        """ Inputs a proposal and fwd/bak probs, and returns a boolean
+        indicating accept or reject, based on the Metropolis-Hastings
+        ratio. Also returns proposal and current scores, as well as
+        the MH ratio"""
+
+        # Get posterior of proposal
+        proposal_score = self.lposterior(proposal)
+        # Get posterior of current state (just use the one computed last time)
+        score = self.lposterior() #self.lposterior(self.state)
+        # MH ratio
+        ratio = proposal_score - score - fwdprob + bakprob
+        # random flip
+        r = np.log(self.rand.rand())
+        # Boolean indicating accept vs reject
+        accepted = ratio >= r
+        return accepted, proposal_score, score, ratio
+
+    def get_features(self, synth_image):
+        """ Basic feature transform for the images. This could be
+        replaced with some filtering op, SIFT, etc."""
+
+        # The features of the image (here, it's trivially just the
+        # synth_image)
+        synth_features = synth_image
+        return synth_features
+        
+    def lposterior(self, state=None):
+        """ Inputs state, returns unnormalized log posterior
+        probability. If state is None, then it returns that current
+        state's score, stored in self.score."""
+
+        if state is None:
+            # If None was passed in, use the sampler's current score
+            lpost = self.score
+        else:
+            # Compute the state's score:
+            # Render an image
+            synth_image = self.renderer.render(state)
+            # Transform the image into features
+            synth_features = self.get_features(synth_image)
+            # Compute the likelihood, prior and posterior
+            llik = self.llikelihood(synth_features, self.true_features)
+            lpr = self.lprior(state)
+            lpost = llik + lpr
+        return lpost
+
+    @staticmethod
+    def llikelihood(f1, f2):
+        """ Inputs latent state, returns log prior probability."""
+
+        llik = np.sum(f1 - f2)
+        return llik
+
+    @staticmethod
+    def lprior(state):
+        """ Inputs latent state, returns log prior probability."""
+        
+        # TODO: make this more interesting
+        lpr = 0
+        return lpr
+
+
+
 class BayesianSamplerWithModel(BayesianSampler):
     """ Main MCMC sampler class when a feedforward model is used to
     drive proposals and provide approximate likelihoods."""
     
-    def __init__(self, image, get_features, get_margins, seed=0):
-        self.rand = np.random.RandomState(seed=seed)
+    def __init__(self, image, get_features, get_margins, rand=0):
+        # Call parent constructor
+        super(type(self), self).__init__(image, rand=rand)
+        # Make self copies of the get_features and get_margins functions
         self.get_features = get_features
         self.get_margins = get_margins
-        self.image = image
-        self.states = []
-        self.proposals = []
-        self.initialize_state()
-        self.renderer = Renderer()
+        # Compute the input image's features and their margins
+        self.true_features = self.get_features(self.image)
+        self.margins = self.get_margins(self.true_features)
     
     def initialize_state(self, state=None):
-        """ Initialize the sampler's state using the feedforward
-        predictions."""
-        
-        features = self.get_features(self.image)
-        self.true_features = features
-        self.margins = self.get_margins(self.true_features)
+        """ Use the feedforward model to initialize, when state is not
+        supplied."""
+       
         if state is None:
-            self.state = np.argmax(self.margins)
+            # Initialize the sampler's state using the feedforward
+            # predictions.
+            state = np.argmax(self.margins)
 
-    def propose(self):
+        # initialize with the base's version and the locally-selected
+        # state
+        super(type(self), self).initialize_state(state=state)
+
+
+class Proposer(object):
+    """ Draw proposals conditioned on latent states."""
+    def __init__(self, rand=0):
+        self.rand = initialize_rand(rand)
+
+    def draw(self, state):
         """ Draws a proposal."""
         
         reference_state = self.rand.multinomial(self.margins)
@@ -99,67 +275,37 @@ class BayesianSamplerWithModel(BayesianSampler):
         diff = reference_state - self.state
         proposal = self.rand.rand() * diff + self.state
         return proposal
-        
+
     def compute_proposal_probs(self, proposal):
         """ Inputs proposed state, returns fwd/bak probabilities."""
         
-        # not implemented...
-        fwdprob = 0
-        bakprob = 0
+        # TODO: Not currently implemented...
+        fwdprob = bakprob = 0
         
         return fwdprob, bakprob
-                    
-    def loop(self, N):
-        """ Inputs 'N' corresponding to a number of MCMC steps, which
-        are performed. The results are stored in self.states and
-        self.proposals."""
-        
-        for ind in xrange(N):
-            proposal, fwdprob, bakprob = self.propose()
-            accepted = self.accept_reject(proposal, fwdprob, bakprob)
-            if accepted:
-                self.state = proposal
-            self.states.append(self.state)
-            self.proposals.append(proposal)
-             
-    def accept_reject(self, proposal, fwdprob, bakprob):
-        """ Inputs a proposal and fwd/bak probs, and returns a boolean
-        indicating accept or reject. The proposal is used to compute
-        an unnormalized posterior, which is compared to the current
-        state's unnormalized posterior, which are used to compute a
-        Metropolis-Hastings ratio."""
-        
-        proposal_score = self.lposterior(proposal)
-        current_score = self.lposterior(self.state)
-        alpha = proposal_score - current_score - fwdprob + bakprob
-        r = np.log(self.rand.rand())
-        if alpha > r:
-            return True
-        else:
-            return False
-        
-    def lposterior(self, state):
-        """ Inputs latent state, returns unnormalized log posterior
-        probability."""
 
-        synth_image = self.renderer.render(state)
-        synth_features = self.get_features(synth_image)
-        llik = self.llikelihood(synth_features, self.true_features)
-        lpr = self.lprior(state)
-        lpost = llik + lpr
-        return lpost
-        
-    def llikelihood(self, f1, f2):
-        """ Inputs latent state, returns log prior probability.
-        (could be made @staticmethod)"""
 
-        llik = np.sum(f1 - f2)
-        return llik
-        
-    def lprior(self, state):
-        """ Inputs latent state, returns log prior probability.
-        (could be made @staticmethod)"""
-        
-        # make this more interesting later
-        lpr = 0
-        return lpr
+
+##
+if False:
+
+    # 
+    n_samples = 100
+
+    image = self.renderer.render(state)
+
+    # Dumb inference
+    sampler0 = BayesianSampler(image)
+    # Initialize the sampler's state
+    sampler0.initialize_state()
+    # Run it
+    sampler0.loop(n_samples, verbose=True)
+    print("Done with sampler0.")
+
+    # Smart inference
+    sampler1 = BayesianSamplerWithModel(image)
+    # Initialize the sampler's state
+    sampler1.initialize_state()
+    # Run it
+    sampler1.loop(n_samples, verbose=True)
+    print("Done with sampler1.")
