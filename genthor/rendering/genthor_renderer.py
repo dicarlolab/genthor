@@ -21,9 +21,17 @@ def setup_renderer(window_type, size=(256, 256)):
 
     if window_type == "onscreen":
         output = lbase.make_window(size, "window")
-    else:
-        output, tex = lbase.make_texture_buffer(size, "buffer",
+    elif window_type == "offscreen":
+        output = lbase.make_buffer(size, "buffer")
+    elif window_type == "texture":
+        output, tex = lbase.make_texture_buffer(size, "texturebuffer",
                                                 mode='RTMCopyRam')
+    else:
+        raise ValueError("Unknown window type: %s" % window_type)
+
+    # Clear out frame contents
+    lbase.render_frame()
+    lbase.render_frame()
 
     # Set up a camera
     scene_width = 3.
