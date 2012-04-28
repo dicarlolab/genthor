@@ -20,7 +20,7 @@ import skdata.larray as larray
 from skdata.data_home import get_data_home
 from skdata.utils.download_and_extract import extract, download
 
-import genthor.renderer.genthor_renderer as gr
+import genthor.renderer.renderer as gr
 import genthor.model_info as model_info
 
 
