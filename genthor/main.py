@@ -3,18 +3,8 @@ import os
 import pandac.PandaModules as pm
 from genthor.renderer.lightbase import LightBase
 import genthor.renderer.renderer as gr
-
-
-def init_rand(rand):
-    """ Takes either an existing mtrand.RandomState object, or a seed,
-    and returns an mtrand.RandomState object."""
-    
-    # Random state
-    if not isinstance(rand, np.random.mtrand.RandomState):
-        # rand is a seed
-        rand = np.random.RandomState(seed=rand)
-    return rand
-
+import genthor.tools as tools
+import pdb
 
 class ImageProcessor(object):
 
@@ -107,7 +97,7 @@ class BayesianSampler(object):
     
     def __init__(self, image, rand=0):
         # Initialize a random object
-        self.rand = init_rand(rand)
+        self.rand = tools.init_rand(rand)
         # Initial/null values
         self.image = image
         self.state0 = None
@@ -120,11 +110,17 @@ class BayesianSampler(object):
         self.accepteds = []
         # Create a renderer object
         self.renderer = Renderer()
-        # Create a proposal generation object
-        self.proposer = Proposer()
+        self.true_features = self.get_features(self.image)
+        # Initialize proposal mechanism
+        self.init_proposer(rand=rand)
         # Initialize the sampler
         self.init_state()
-        
+
+    def init_proposer(self, rand=0):
+        """ Initialize the proposal mechanism."""
+        # Create a proposal generation object
+        self.proposer = Proposer(rand=rand)
+
     def init_state(self, state=None):
         """ Initialize the sampler's state to 'state'."""
 
@@ -141,6 +137,15 @@ class BayesianSampler(object):
             # Compute and store the initial state's score
             self.score = self.lposterior(state)
 
+    def get_features(self, synth_image):
+        """ Basic feature transform for the images. This could be
+        replaced with some filtering op, SIFT, etc."""
+
+        # The features of the image (here, it's trivially just the
+        # synth_image)
+        synth_features = synth_image
+        return synth_features
+
     def loop(self, n_samples, verbose=True):
         """ Runs the sampler for 'n_samples' MCMC steps. The results
         are stored in self.{states,proposals,scores,proposal_scores}."""
@@ -152,7 +157,8 @@ class BayesianSampler(object):
             # Draw a proposal and its fwd/bak probabilities
             proposal, fwdprob, bakprob = self.proposer.draw(self.state)
             # Determine whether to accept or reject the sample
-            accepted = self.accept_reject(proposal, fwdprob, bakprob)
+            accepted, proposal_score, score, ratio = self.accept_reject(
+                proposal, fwdprob, bakprob)
             # If the proposal is accepted, update the sampler's state
             if accepted:
                 self.score = proposal_score
@@ -168,7 +174,8 @@ class BayesianSampler(object):
                 n_accepted = sum(self.accepteds)
                 total = ind + 1
                 percent = float(n_accepted) / total
-                print("Accepted %i/%i (%.2f%%)" % (n_accepted, total, percent))
+                print("# acc, # sampled, # total, acc rate %i/%i/%i (%.2f%%)"
+                      % (n_accepted, total, n_samples, percent))
              
     def accept_reject(self, proposal, fwdprob, bakprob):
         """ Inputs a proposal and fwd/bak probs, and returns a boolean
@@ -187,15 +194,6 @@ class BayesianSampler(object):
         # Boolean indicating accept vs reject
         accepted = ratio >= r
         return accepted, proposal_score, score, ratio
-
-    def get_features(self, synth_image):
-        """ Basic feature transform for the images. This could be
-        replaced with some filtering op, SIFT, etc."""
-
-        # The features of the image (here, it's trivially just the
-        # synth_image)
-        synth_features = synth_image
-        return synth_features
         
     def lposterior(self, state=None):
         """ Inputs state, returns unnormalized log posterior
@@ -239,15 +237,20 @@ class BayesianSamplerWithModel(BayesianSampler):
     drive proposals and provide approximate likelihoods."""
     
     def __init__(self, image, get_features, get_margins, rand=0):
-        # Call parent constructor
-        super(type(self), self).__init__(image, rand=rand)
         # Make self copies of the get_features and get_margins functions
         self.get_features = get_features
         self.get_margins = get_margins
-        # Compute the input image's features and their margins
-        self.true_features = self.get_features(self.image)
-        self.margins = self.get_margins(self.true_features)
+        # Call parent constructor
+        super(type(self), self).__init__(image, rand=rand)
     
+    def init_proposer(self, rand=0):
+        """ Initialize the proposal mechanism."""
+
+        # Compute the margins
+        self.margins = self.get_margins(self.true_features)
+        # Create a proposal generation object
+        self.proposer = ThorProposer(rand=rand)
+
     def init_state(self, state=None):
         """ Use the feedforward model to initialize, when state is not
         supplied."""
@@ -262,11 +265,12 @@ class BayesianSamplerWithModel(BayesianSampler):
         super(type(self), self).init_state(state=state)
 
 
+
 class Proposer(object):
     """ Draw proposals conditioned on latent states."""
     
     def __init__(self, rand=0):
-        self.rand = init_rand(rand)
+        self.rand = tools.init_rand(rand)
         self.init_state_info()
 
     def init_state_info(self):
@@ -279,42 +283,79 @@ class Proposer(object):
         bg_root = "../backgrounds" #"~/work/genthor/backgrounds"
 
         self._state_info = {
-            "modelnames": os.listdir(model_root),
-            "bgnames": os.listdir(bg_root),
-            "scale_rng": (0.6667, 2.),
-            "pos_rng": ((-1.0, 1.0), (-1.0, 1.0)),
-            "hpr_rng": ((-180., 180.), (-180., 180.), (-180., 180.)),
-            "bgscale_rng": (1.0, 1.0), #(0.5, 2.0)
-            "bghp_rng": ((-180., 180.), (0., 0.)),
+            "modelname": os.listdir(model_root),
+            "bgname": os.listdir(bg_root),
+            "category": (), # TODO: fill in
+            "scale": (0.6667, 2.),
+            "pos": ((-1.0, 1.0), (-1.0, 1.0)),
+            "hpr": ((-180., 180.), (-180., 180.), (-180., 180.)),
+            "bgscale": (1.0, 1.0), #(0.5, 2.0)
+            "bghp": ((-180., 180.), (0., 0.)),
             }
         
 
-    def draw(self, *args):
-        """ Draws a proposal."""
-        
-        proposal = self.propose(*args)
-        fwdprob, bakprob = self.compute_proposal_probs(proposal)
-        return proposal, fwdprob, bakprob
-        
     def propose(self, state=None):
         """ Draws proposal conditioned on 'state' (if 'state' is None,
         just draw an independent proposal)."""
 
+        # initialize
         proposal = {}
-        if state is None:
-            # Independent proposal
 
-            # Specific proposers for each state
-            proposal["modelname"] = "hey"
+        if state is None:
+            # Independent proposals
+
+            # modelname and bgname
+            sn = "modelname"
+            r = self.rand.randint(len(self._state_info[sn]))
+            proposal[sn] = self._state_info[sn][r]
+            sn = "bgname"
+            r = self.rand.randint(len(self._state_info[sn]))
+            proposal[sn] = self._state_info[sn][r]
             
+            # the remaining states
+            sample = tools.sample
+            statenames = ("scale", "pos", "hpr", "bgscale", "bghp")
+            for sn in statenames:
+                proposal[sn] = sample(self._state_info[sn]).ravel()
 
         else:
             # Proposal conditioned on state
-            
-            # Specific proposers for each state
-            proposal["modelname"] = "hey"
 
+            # scale factors ([d]iscrete states, [c]ontinuous states)
+            # on proximity of proposal from state
+            Sd = 0.2
+            Sc = 0.1
 
+            # modelname
+            sn = "modelname"
+            if self.rand.rand() < Sd:
+                r = self.rand.randint(len(self._state_info[sn]))
+                proposal[sn] = self._state_info[sn][r]
+            else:
+                proposal[sn] = state[sn]
+
+            # bgname
+            sn = "bgname"
+            if self.rand.rand() < Sd:
+                r = self.rand.randint(len(self._state_info[sn]))
+                proposal[sn] = self._state_info[sn][r]
+            else:
+                proposal[sn] = state[sn]
+
+            sample = tools.sample
+            statenames = ("scale", "pos", "hpr", "bgscale", "bghp")
+            for sn in statenames:
+                # Full range
+                rng0 = np.array(self._state_info[sn])
+                # Scaled proximity
+                delta = (Sc * np.diff(rng0)).T
+                # Proximal range
+                rng = rng0.copy().T
+                rng[0] = np.max(np.vstack((state[sn] - delta, rng[0])), 0)
+                rng[1] = np.min(np.vstack((state[sn] + delta, rng[1])), 0)
+                # Draw the proposal
+                proposal[sn] = sample(rng.T).ravel()
+        
         return proposal
 
     def compute_proposal_probs(self, proposal):
@@ -324,6 +365,14 @@ class Proposer(object):
         fwdprob = bakprob = 0
         
         return fwdprob, bakprob
+
+
+    def draw(self, *args):
+        """ Draws a proposal."""
+        
+        proposal = self.propose(*args)
+        fwdprob, bakprob = self.compute_proposal_probs(proposal)
+        return proposal, fwdprob, bakprob
 
 
 
@@ -355,11 +404,14 @@ class ThorProposer(Proposer):
 ##
 if __name__ == "__main__":
     import cPickle as pickle
+    import matplotlib.pyplot as plt
+    import time
 
     # # Hand-picked test state
     # state = {
-    #     "modelname": "MB29195",
-    #     "bgname": "DH-ITALY06SN.jpg",
+    #     "modelname": "MB26897",
+    #     "bgname": "DH-ITALY33SN.jpg",
+    #     "category": "cars", 
     #     "scale": 1.,
     #     "pos": (0., 0.),
     #     "hpr": (0., 0., 0.),
@@ -381,17 +433,22 @@ if __name__ == "__main__":
     # Display the test image and state
     plt.figure(10)
     plt.clf()
+    plt.show()
     print("original state:")
     print(state)
     print("")
     plt.subplot(1, 3, 1)
-    plt.imshow(image)
-
+    plt.axis("off")
+    plt.imshow(image[::-1])
+    plt.draw()
+    time.sleep(0.1)
+    
     # Number of MCMC samples
-    n_samples = 100
+    n_samples = 1000
+    seed = 1
 
     # Dumb inference
-    sampler0 = BayesianSampler(image)
+    sampler0 = BayesianSampler(image, rand=seed)
     # Initialize the sampler's state
     sampler0.init_state()
     # Run it
@@ -401,17 +458,28 @@ if __name__ == "__main__":
     print(sampler0.states[-1])
     print("")
     plt.subplot(1, 3, 2)
-    plt.imshow(R.render(sampler0.states[-1]))
+    plt.axis("off")
+    plt.imshow(R.render(sampler0.states[-1])[::-1])
+    plt.draw()
+    time.sleep(0.1)
 
-    # Smart inference
-    sampler1 = BayesianSamplerWithModel(image)
-    # Initialize the sampler's state
-    sampler1.init_state()
-    # Run it
-    sampler1.loop(n_samples, verbose=True)
-    print("")
-    print("sampler1 done.")
-    print(sampler1.states[-1])
-    print("")
+
     plt.subplot(1, 3, 3)
-    plt.imshow(R.render(sampler1.states[-1]))
+    plt.axis("off")
+    for st in sampler0.states[::10]:
+        plt.imshow(R.render(st)[::-1])
+        plt.draw()
+        time.sleep(0.1)
+
+    # # Smart inference
+    # sampler1 = BayesianSamplerWithModel(image, rand=seed)
+    # # Initialize the sampler's state
+    # sampler1.init_state()
+    # # Run it
+    # sampler1.loop(n_samples, verbose=True)
+    # print("")
+    # print("sampler1 done.")
+    # print(sampler1.states[-1])
+    # print("")
+    # plt.subplot(1, 3, 3)
+    # plt.imshow(R.render(sampler1.states[-1])[::-1])
