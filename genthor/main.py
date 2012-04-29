@@ -5,7 +5,7 @@ from genthor.renderer.lightbase import LightBase
 import genthor.renderer.renderer as gr
 
 
-def initialize_rand(rand):
+def init_rand(rand):
     """ Takes either an existing mtrand.RandomState object, or a seed,
     and returns an mtrand.RandomState object."""
     
@@ -107,7 +107,7 @@ class BayesianSampler(object):
     
     def __init__(self, image, rand=0):
         # Initialize a random object
-        self.rand = initialize_rand(rand)
+        self.rand = init_rand(rand)
         # Initial/null values
         self.image = image
         self.state0 = None
@@ -123,9 +123,9 @@ class BayesianSampler(object):
         # Create a proposal generation object
         self.proposer = Proposer()
         # Initialize the sampler
-        self.initialize_state()
+        self.init_state()
         
-    def initialize_state(self, state=None):
+    def init_state(self, state=None):
         """ Initialize the sampler's state to 'state'."""
 
         # Store it (state is the current state, state0 is a record of
@@ -248,7 +248,7 @@ class BayesianSamplerWithModel(BayesianSampler):
         self.true_features = self.get_features(self.image)
         self.margins = self.get_margins(self.true_features)
     
-    def initialize_state(self, state=None):
+    def init_state(self, state=None):
         """ Use the feedforward model to initialize, when state is not
         supplied."""
        
@@ -259,14 +259,35 @@ class BayesianSamplerWithModel(BayesianSampler):
 
         # initialize with the base's version and the locally-selected
         # state
-        super(type(self), self).initialize_state(state=state)
+        super(type(self), self).init_state(state=state)
 
 
 class Proposer(object):
     """ Draw proposals conditioned on latent states."""
     
     def __init__(self, rand=0):
-        self.rand = initialize_rand(rand)
+        self.rand = init_rand(rand)
+        self.init_state_info()
+
+    def init_state_info(self):
+        """ Gets info about the states and the ranges over which they
+        can be sampled."""
+
+        # TODO: do this right -- the rngs, below, and copied from
+        # build_img_database, which is not a good way to do this...
+        model_root = "../processed_models" #"~/work/genthor/processed_models"
+        bg_root = "../backgrounds" #"~/work/genthor/backgrounds"
+
+        self._state_info = {
+            "modelnames": os.listdir(model_root),
+            "bgnames": os.listdir(bg_root),
+            "scale_rng": (0.6667, 2.),
+            "pos_rng": ((-1.0, 1.0), (-1.0, 1.0)),
+            "hpr_rng": ((-180., 180.), (-180., 180.), (-180., 180.)),
+            "bgscale_rng": (1.0, 1.0), #(0.5, 2.0)
+            "bghp_rng": ((-180., 180.), (0., 0.)),
+            }
+        
 
     def draw(self, *args):
         """ Draws a proposal."""
@@ -283,12 +304,16 @@ class Proposer(object):
         if state is None:
             # Independent proposal
 
+            # Specific proposers for each state
+            proposal["modelname"] = "hey"
+            
 
         else:
             # Proposal conditioned on state
             
             # Specific proposers for each state
             proposal["modelname"] = "hey"
+
 
         return proposal
 
@@ -368,7 +393,7 @@ if __name__ == "__main__":
     # Dumb inference
     sampler0 = BayesianSampler(image)
     # Initialize the sampler's state
-    sampler0.initialize_state()
+    sampler0.init_state()
     # Run it
     sampler0.loop(n_samples, verbose=True)
     print("")
@@ -381,7 +406,7 @@ if __name__ == "__main__":
     # Smart inference
     sampler1 = BayesianSamplerWithModel(image)
     # Initialize the sampler's state
-    sampler1.initialize_state()
+    sampler1.init_state()
     # Run it
     sampler1.loop(n_samples, verbose=True)
     print("")
