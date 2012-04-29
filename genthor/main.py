@@ -1,7 +1,9 @@
 import numpy as np
+import os
 import pandac.PandaModules as pm
 from genthor.renderer.lightbase import LightBase
 import genthor.renderer.renderer as gr
+
 
 def initialize_rand(rand):
     """ Takes either an existing mtrand.RandomState object, or a seed,
@@ -12,6 +14,7 @@ def initialize_rand(rand):
         # rand is a seed
         rand = np.random.RandomState(seed=rand)
     return rand
+
 
 class ImageProcessor(object):
 
@@ -53,12 +56,17 @@ class Renderer(object):
         # Get the RTT target
         self.tex = self.output.getTexture()
 
-    def state2scene(self, state):
+    def _state2scene(self, state):
         """ Input a state and return a scene node."""
 
-        # Just assume it is a dict for now
-        modelpth = state["modelpth"]
-        bgpath = state["bgpth"]
+        # TODO: get rid of this hack, and connect to Dan's fancy system
+        model_root = "../processed_models" #"~/work/genthor/processed_models"
+        bg_root = "../backgrounds" #"~/work/genthor/backgrounds"
+
+        # TODO: Just assume it is a dict for now, but fix soon
+        modelpth = os.path.join(model_root, state["modelname"],
+                                state["modelname"] + ".bam")
+        bgpth = os.path.join(bg_root, state["bgname"])
         scale = state["scale"]
         pos = state["pos"]
         hpr = state["hpr"]
@@ -67,7 +75,7 @@ class Renderer(object):
 
         # Make the scene and attach it to a new NodePath
         scene = pm.NodePath("scene")
-        gr.construct_scene(self.lbase, modelpth, bgpath,
+        gr.construct_scene(self.lbase, modelpth, bgpth,
                            scale, pos, hpr, bgscale, bghp, scene=scene)
         return scene
 
@@ -76,7 +84,7 @@ class Renderer(object):
         image."""
         
         # Set up scene and attach it to the renderer's scenegraph
-        scene = self.state2scene(state)
+        scene = self._state2scene(state)
         scene.reparentTo(self.lbase.rootnode)
         # Render the scene
         self.lbase.render_frame()
@@ -85,7 +93,6 @@ class Renderer(object):
         # Get the image (it's a numpy.ndarray)
         img = self.lbase.get_tex_image(self.tex)
         return img
-
 
     def __del__(self):
         self.lbase.destroy()
@@ -161,7 +168,7 @@ class BayesianSampler(object):
                 n_accepted = sum(self.accepteds)
                 total = ind + 1
                 percent = float(n_accepted) / total
-                print("Accepted %i/%i (%.2f%%)" % (n_accepted, total, percent)
+                print("Accepted %i/%i (%.2f%%)" % (n_accepted, total, percent))
              
     def accept_reject(self, proposal, fwdprob, bakprob):
         """ Inputs a proposal and fwd/bak probs, and returns a boolean
@@ -257,23 +264,57 @@ class BayesianSamplerWithModel(BayesianSampler):
 
 class Proposer(object):
     """ Draw proposals conditioned on latent states."""
+    
     def __init__(self, rand=0):
         self.rand = initialize_rand(rand)
 
-    def draw(self, state):
+    def draw(self, *args):
         """ Draws a proposal."""
         
-        reference_state = self.rand.multinomial(self.margins)
-        proposal = self.propose_from_reference(reference_state)
+        proposal = self.propose(*args)
         fwdprob, bakprob = self.compute_proposal_probs(proposal)
         return proposal, fwdprob, bakprob
         
-    def propose_from_reference(self, reference_state):
-        """ Draws proposal by consulting current self.state and a
-        reference state, presumably provided by the feedforward model."""
+    def propose(self, state=None):
+        """ Draws proposal conditioned on 'state' (if 'state' is None,
+        just draw an independent proposal)."""
+
+        proposal = {}
+        if state is None:
+            # Independent proposal
+
+
+        else:
+            # Proposal conditioned on state
+            
+            # Specific proposers for each state
+            proposal["modelname"] = "hey"
+
+        return proposal
+
+    def compute_proposal_probs(self, proposal):
+        """ Inputs proposed state, returns fwd/bak probabilities."""
         
-        diff = reference_state - self.state
-        proposal = self.rand.rand() * diff + self.state
+        # TODO: Not currently implemented...
+        fwdprob = bakprob = 0
+        
+        return fwdprob, bakprob
+
+
+
+class ThorProposer(Proposer):
+    """ Draw proposals conditioned on latent states, using Thor."""
+    
+    def __init__(self, rand=0):
+        super(type(self), self).__init__(rand=rand)
+        
+    def propose(self, state, margins):
+        """ Draws proposal conditioned on 'state' and
+        'reference_state', presumably using the feedforward model."""
+
+        reference_state = self.rand.multinomial(margins)
+        diff = reference_state - state
+        proposal = self.rand.rand() * diff + state
         return proposal
 
     def compute_proposal_probs(self, proposal):
@@ -287,12 +328,42 @@ class Proposer(object):
 
 
 ##
-if False:
+if __name__ == "__main__":
+    import cPickle as pickle
 
-    # 
+    # # Hand-picked test state
+    # state = {
+    #     "modelname": "MB29195",
+    #     "bgname": "DH-ITALY06SN.jpg",
+    #     "scale": 1.,
+    #     "pos": (0., 0.),
+    #     "hpr": (0., 0., 0.),
+    #     "bgscale": 1.,
+    #     "bghp": (0., 0.),
+    #     }
+
+    # Test state from training set
+    iscene = 0
+    state_path = os.path.join(os.environ["GENTHOR"],
+                              "training_data/scene%08i" % iscene)
+    with open(state_path + ".pkl", "rb") as fid:
+        state = pickle.load(fid)
+
+    # Make a test image
+    R = Renderer()
+    image = R.render(state)
+
+    # Display the test image and state
+    plt.figure(10)
+    plt.clf()
+    print("original state:")
+    print(state)
+    print("")
+    plt.subplot(1, 3, 1)
+    plt.imshow(image)
+
+    # Number of MCMC samples
     n_samples = 100
-
-    image = self.renderer.render(state)
 
     # Dumb inference
     sampler0 = BayesianSampler(image)
@@ -300,7 +371,12 @@ if False:
     sampler0.initialize_state()
     # Run it
     sampler0.loop(n_samples, verbose=True)
-    print("Done with sampler0.")
+    print("")
+    print("sampler0 done.")
+    print(sampler0.states[-1])
+    print("")
+    plt.subplot(1, 3, 2)
+    plt.imshow(R.render(sampler0.states[-1]))
 
     # Smart inference
     sampler1 = BayesianSamplerWithModel(image)
@@ -308,4 +384,9 @@ if False:
     sampler1.initialize_state()
     # Run it
     sampler1.loop(n_samples, verbose=True)
-    print("Done with sampler1.")
+    print("")
+    print("sampler1 done.")
+    print(sampler1.states[-1])
+    print("")
+    plt.subplot(1, 3, 3)
+    plt.imshow(R.render(sampler1.states[-1]))
