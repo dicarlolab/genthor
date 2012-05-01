@@ -6,6 +6,50 @@ import genthor.renderer.renderer as gr
 import genthor.tools as tools
 import pdb
 
+
+def normlpdf(x, mu, sigma):
+    x = x.ravel()
+    mu = mu.ravel()
+    n = x.size
+    c = -np.log(sigma) - 0.5 * np.log(2. * np.pi)
+    y = x - mu
+    lp = n * c - np.dot(y.T, y) / (2. * sigma ** 2)
+    #lp = n * c - y**2 / (2. * sigma ** 2)
+    return lp
+
+def mlmlpdf(x, mu, sigma):
+    x = x.ravel()
+    mu = mu.ravel()
+    n = x.size
+    c = -np.log(sigma) - 0.5 * np.log(2. * np.pi)
+    y = x - mu
+    #lp = n * c + np.exp(-y ** 2 / (2 * sigma ** 2))
+    lp = np.sum(n * c + np.exp(-y ** 2 / (2. * sigma ** 2)))
+    return lp
+
+# def mvnlpdf(x, mu, cov):
+#     import scipy.linalg as la
+#     from scikits.learn.utils import extmath
+    
+#     n, k = x.shape
+#     ldet = extmath.fast_logdet(cov)
+#     c = -0.5 * (ldet + k * np.log(2. * np.pi))
+#     y = x - mu
+#     icov = la.inv(cov)
+#     lp = n * c - 0.5 * np.sum(np.dot(y, icov) * y)
+#     return lp
+
+# plt.figure(10)
+# plt.clf()
+# s = 24
+# x = np.linspace(-255, 255, 100)
+# #y0 = normlpdf(x, np.zeros_like(x), s)
+# y1 = mlmlpdf(x, np.zeros_like(x), s)
+# #plt.plot(x, y0)
+# plt.plot(x, y1)
+
+
+
 class ImageProcessor(object):
 
     def __init__(self, thor_params, training_set):
@@ -45,50 +89,107 @@ class Renderer(object):
                 self.output = self.lbase.output_list[-1]
         # Get the RTT target
         self.tex = self.output.getTexture()
+        # Initialization
+        self.models = {}
+        self.bgs = {}
+        # Make the scene and attach it to lbase's rootnode
+        self.scene = pm.NodePath("scene")
+        self.scene.reparentTo(self.lbase.rootnode)
+        # Initialize local copies of all of the models and bgs
+        self.init_models()
+        self.init_bgs()
 
+    def init_models(self, modelnames=None):
+        """ Loads the models into RAM."""
+
+        if modelnames is None:
+            # Root model directory
+            model_root = os.path.join(os.environ["GENTHOR"], "processed_models")
+            # The names of the sub-directories are the models' names
+            modelnames = os.listdir(model_root)
+            
+        # Iterate, loading
+        load_func = self.lbase.loader.loadModel
+        for modelname in modelnames:
+            # put together the modelpth
+            modelpth = os.path.join(model_root, modelname, modelname + ".bam")
+            # load and store it
+            self.models[modelname] = tools.read_file(load_func, modelpth)
+            self.models[modelname].setTwoSided(1)
+
+    def init_bgs(self, bgnames=None):
+        """ Loads the backgrounds into RAM."""
+        
+        if bgnames is None:
+            # Root model directory
+            bg_root = os.path.join(os.environ["GENTHOR"], "backgrounds")
+            # The bg names are the filenames
+            bgnames = os.listdir(bg_root)
+            
+        # Iterate, loading
+        loader = self.lbase.loader
+        load_func = loader.loadTexture
+        for bgname in bgnames:
+            # put together the bgpath
+            bgpth = os.path.join(bg_root, state["bgname"])
+            # load the texture
+            bgtex = tools.read_file(loader.loadTexture, bgpth)
+            # Set as background on a sphere (smiley is good for now)
+            bgnode = loader.loadModel('smiley')
+            # kill smiley's smiling face
+            bgnode.clearMaterial()
+            bgnode.clearTexture()
+            bgnode.setAttrib(pm.CullFaceAttrib.make(
+                pm.CullFaceAttrib.MCullCounterClockwise))
+            # set the tex
+            bgnode.setTexture(bgtex, 2)
+            # store it
+            self.bgs[bgname] = bgnode
+        
     def _state2scene(self, state):
         """ Input a state and return a scene node."""
 
-        # TODO: get rid of this hack, and connect to Dan's fancy system
-        model_root = "../processed_models" #"~/work/genthor/processed_models"
-        bg_root = "../backgrounds" #"~/work/genthor/backgrounds"
-
-        # TODO: Just assume it is a dict for now, but fix soon
-        modelpth = os.path.join(model_root, state["modelname"],
-                                state["modelname"] + ".bam")
-        bgpth = os.path.join(bg_root, state["bgname"])
+        # Local copies of the state elements
+        model = self.models[state["modelname"]]
+        bgnode = self.bgs[state["bgname"]]
         scale = state["scale"]
         pos = state["pos"]
         hpr = state["hpr"]
         bgscale = state["bgscale"]
         bghp = state["bghp"]
 
-        # Make the scene and attach it to a new NodePath
-        scene = pm.NodePath("scene")
-        gr.construct_scene(self.lbase, modelpth, bgpth,
-                           scale, pos, hpr, bgscale, bghp, scene=scene)
-        return scene
+        # Set model state
+        model.setScale(scale[0], scale[0], scale[0])
+        model.setPos(pos[0], pos[1], 0.)
+        model.setHpr(hpr[0], hpr[1], hpr[2])
+        # Set bg state
+        c = 5.
+        bgnode.setScale(c * bgscale[0], c * bgscale[0], c * bgscale[0])
+        bgnode.setPos(0, 0, 0)
+        bgnode.setHpr(bghp[0], bghp[1], 0.)
+        
+        # Reparent model and bg nodes to the scene node
+        model.reparentTo(self.scene)
+        bgnode.reparentTo(self.scene)
 
     def render(self, state):
         """ Take the state, create a scene, render it and get the
         image."""
         
-        # Set up scene and attach it to the renderer's scenegraph
-        scene = self._state2scene(state)
-        scene.reparentTo(self.lbase.rootnode)
+        # Detach the children
+        self.scene.getChildren().detach()
+        # Set up scene defined in state
+        self._state2scene(state)
         # Render the scene
         self.lbase.render_frame()
-        # Remove/destroy the scene
-        scene.removeNode()
         # Get the image (it's a numpy.ndarray)
-        img = self.lbase.get_tex_image(self.tex)
+        img0 = self.lbase.get_tex_image(self.tex)
+        # Make it grayscale
+        img = np.mean(img0[:, :, :3], 2)
         return img
 
     def __del__(self):
         self.lbase.destroy()
-
-
-
 
 
 
@@ -105,9 +206,11 @@ class BayesianSampler(object):
         self.score = None
         self.states = []
         self.proposals = []
-        self.scores = []
-        self.proposal_scores = []
-        self.accepteds = []
+        self._store_dtype = np.dtype([
+            ("score", ("f8", 1)), ("proposal_score", ("f8", 1)),
+            ("fwdprob", ("f8", 1)), ("bakprob", ("f8", 1)),
+            ("flip", ("f8", 1)), ("accepted", ("b", 1))])
+        self.store_info = None
         # Create a renderer object
         self.renderer = Renderer()
         self.true_features = self.get_features(self.image)
@@ -115,6 +218,8 @@ class BayesianSampler(object):
         self.init_proposer(rand=rand)
         # Initialize the sampler
         self.init_state()
+        # Parameters
+        self.param = {"llik_sigma": 200.,}
 
     def init_proposer(self, rand=0):
         """ Initialize the proposal mechanism."""
@@ -153,12 +258,16 @@ class BayesianSampler(object):
         if verbose:
             print("Running %i samples" % n_samples)
 
+        # Allocate
+        self.store_info = np.empty(n_samples, dtype=self._store_dtype)
+
         for ind in xrange(n_samples):
             # Draw a proposal and its fwd/bak probabilities
             proposal, fwdprob, bakprob = self.proposer.draw(self.state)
             # Determine whether to accept or reject the sample
-            accepted, proposal_score, score, ratio = self.accept_reject(
-                proposal, fwdprob, bakprob)
+            accepted, proposal_score  = self.accept_reject(
+                proposal, fwdprob, bakprob, store_info=self.store_info[ind],
+                temperature=0.1)
             # If the proposal is accepted, update the sampler's state
             if accepted:
                 self.score = proposal_score
@@ -166,36 +275,42 @@ class BayesianSampler(object):
             # Store
             self.states.append(self.state)
             self.proposals.append(proposal)
-            self.scores.append(self.score)
-            self.proposal_scores.append(proposal_score)
-            self.accepteds.append(accepted)
             # Verbose status report
             if verbose:
-                n_accepted = sum(self.accepteds)
+                n_accepted = np.sum(self.store_info[:ind + 1]["accepted"])
                 total = ind + 1
-                percent = float(n_accepted) / total
+                percent = 100 * float(n_accepted) / total
                 print("# acc, # sampled, # total, acc rate %i/%i/%i (%.2f%%)"
                       % (n_accepted, total, n_samples, percent))
              
-    def accept_reject(self, proposal, fwdprob, bakprob):
+    def accept_reject(self, proposal, fwdprob, bakprob, store_info=None,
+                      temperature=1.):
         """ Inputs a proposal and fwd/bak probs, and returns a boolean
         indicating accept or reject, based on the Metropolis-Hastings
         ratio. Also returns proposal and current scores, as well as
         the MH ratio"""
 
         # Get posterior of proposal
-        proposal_score = self.lposterior(proposal)
+        proposal_score = self.lposterior(proposal, temperature=temperature)
         # Get posterior of current state (just use the one computed last time)
-        score = self.lposterior() #self.lposterior(self.state)
+        score = self.lposterior(temperature=temperature)
         # MH ratio
         ratio = proposal_score - score - fwdprob + bakprob
         # random flip
-        r = np.log(self.rand.rand())
+        flip = np.log(self.rand.rand())
         # Boolean indicating accept vs reject
-        accepted = ratio >= r
-        return accepted, proposal_score, score, ratio
+        accepted = ratio >= flip
+        # Extra info useful to store
+        if store_info is not None:
+            store_info["score"] = score
+            store_info["proposal_score"] = proposal_score
+            store_info["fwdprob"] = fwdprob
+            store_info["bakprob"] = bakprob
+            store_info["flip"] = flip
+            store_info["accepted"] = accepted
+        return accepted, proposal_score
         
-    def lposterior(self, state=None):
+    def lposterior(self, state=None, temperature=1.):
         """ Inputs state, returns unnormalized log posterior
         probability. If state is None, then it returns that current
         state's score, stored in self.score."""
@@ -212,14 +327,14 @@ class BayesianSampler(object):
             # Compute the likelihood, prior and posterior
             llik = self.llikelihood(synth_features, self.true_features)
             lpr = self.lprior(state)
-            lpost = llik + lpr
+            lpost = temperature * (llik + lpr)
         return lpost
 
-    @staticmethod
-    def llikelihood(f1, f2):
+    def llikelihood(self, f1, f2):
         """ Inputs latent state, returns log prior probability."""
 
-        llik = np.sum(f1 - f2)
+        llik = normlpdf(f1, f2, self.param["llik_sigma"])
+        #llik = mlmlpdf(f1, f2, self.param["llik_sigma"])
         return llik
 
     @staticmethod
@@ -279,8 +394,8 @@ class Proposer(object):
 
         # TODO: do this right -- the rngs, below, and copied from
         # build_img_database, which is not a good way to do this...
-        model_root = "../processed_models" #"~/work/genthor/processed_models"
-        bg_root = "../backgrounds" #"~/work/genthor/backgrounds"
+        model_root = os.path.join(os.environ["GENTHOR"], "processed_models")
+        bg_root = os.path.join(os.environ["GENTHOR"], "backgrounds")
 
         self._state_info = {
             "modelname": os.listdir(model_root),
@@ -324,7 +439,7 @@ class Proposer(object):
             # scale factors ([d]iscrete states, [c]ontinuous states)
             # on proximity of proposal from state
             Sd = 0.2
-            Sc = 0.1
+            Sc = 0.05
 
             # modelname
             sn = "modelname"
@@ -354,7 +469,12 @@ class Proposer(object):
                 rng[0] = np.max(np.vstack((state[sn] - delta, rng[0])), 0)
                 rng[1] = np.min(np.vstack((state[sn] + delta, rng[1])), 0)
                 # Draw the proposal
-                proposal[sn] = sample(rng.T).ravel()
+                proposal[sn] = sample(rng.T, rand=self.rand).ravel()
+
+        # # TODO: remove
+        # proposal["modelname"] = "MB26897"
+        # proposal["bgname"] = "MOUNT_33SN.jpg" #"DH209SN.jpg" #"DH-ITALY33SN.jpg" 
+        # proposal["bghp"] = np.array([115.27785513, 0.]) #27.26587075 #-172.12066367
         
         return proposal
 
@@ -405,7 +525,32 @@ class ThorProposer(Proposer):
 if __name__ == "__main__":
     import cPickle as pickle
     import matplotlib.pyplot as plt
+    import matplotlib.cm as cm   
     import time
+
+    LightBase.destroy_windows()
+
+    def plot_scores(sampler):
+        scores = sampler.store_info["score"]
+        proposal_scores = sampler.store_info["proposal_score"]
+        accepted = sampler.store_info["accepted"]
+        accepted_idx = np.flatnonzero(accepted)
+        N = scores.size
+        # Plot
+        plt.figure(20)
+        plt.clf()
+        plt.subplot(2, 1, 1)
+        plt.plot(np.vstack((proposal_scores, scores)).T)
+        plt.plot(accepted_idx, scores[accepted_idx], "go")
+        plt.subplot(2, 1, 2)
+        plt.plot(np.zeros(N), "k")
+        y = proposal_scores - scores
+        d = y[~np.isinf(y)][1:].ptp() / 16.
+        plt.plot(y, "b")
+        plt.plot(accepted_idx, np.zeros(np.sum(accepted)), "go")
+        plt.axis((0, N, y[~np.isinf(y)].min() - d, y[~np.isinf(y)].max() + d))
+        #
+        plt.draw()
 
     # # Hand-picked test state
     # state = {
@@ -420,7 +565,7 @@ if __name__ == "__main__":
     #     }
 
     # Test state from training set
-    iscene = 0
+    iscene = 2
     state_path = os.path.join(os.environ["GENTHOR"],
                               "training_data/scene%08i" % iscene)
     with open(state_path + ".pkl", "rb") as fid:
@@ -439,13 +584,14 @@ if __name__ == "__main__":
     print("")
     plt.subplot(1, 3, 1)
     plt.axis("off")
-    plt.imshow(image[::-1])
+    plt.imshow(image[::-1], cmap=cm.gray)
+    plt.title("Original")
     plt.draw()
     time.sleep(0.1)
     
     # Number of MCMC samples
     n_samples = 1000
-    seed = 1
+    seed = 5
 
     # Dumb inference
     sampler0 = BayesianSampler(image, rand=seed)
@@ -459,15 +605,31 @@ if __name__ == "__main__":
     print("")
     plt.subplot(1, 3, 2)
     plt.axis("off")
-    plt.imshow(R.render(sampler0.states[-1])[::-1])
+    plt.imshow(R.render(sampler0.states[-1])[::-1], cmap=cm.gray)
+    plt.title("Last sample")
     plt.draw()
     time.sleep(0.1)
 
+    plot_scores(sampler0)
 
+    plt.figure(10)
     plt.subplot(1, 3, 3)
     plt.axis("off")
-    for st in sampler0.states[::10]:
-        plt.imshow(R.render(st)[::-1])
+    last_st = None
+    for i, (st, pr) in enumerate(
+        zip(sampler0.states[::10], sampler0.proposals[::10])):
+        #if i < 700: continue
+        if last_st is not st:
+            plt.subplot(1, 3, 2)
+            plt.cla()
+            plt.axis("off")
+            plt.imshow(R.render(st)[::-1], cmap=cm.gray)
+            last_st = st
+        plt.subplot(1, 3, 3)
+        plt.cla()
+        plt.axis("off")
+        plt.imshow(R.render(pr)[::-1], cmap=cm.gray)
+        plt.title("Proposal #%i" % (i * 10))
         plt.draw()
         time.sleep(0.1)
 
@@ -483,3 +645,10 @@ if __name__ == "__main__":
     # print("")
     # plt.subplot(1, 3, 3)
     # plt.imshow(R.render(sampler1.states[-1])[::-1])
+
+
+
+# 1. Importance sampling
+# 2. interpolation proposals
+# 3. Unidimensional Gaussian process -- adaptive/sequential importance sampling
+# 4. Multidimensional Gaussian process 
