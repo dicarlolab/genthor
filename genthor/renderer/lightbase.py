@@ -473,3 +473,7 @@ class LightBase(object):
         self.__exitfunc()
         sys.exit()
         
+    @classmethod
+    def destroy_windows(cls):
+        """ General destroy windows method."""
+        GraphicsEngine.getGlobalPtr().removeAllWindows()
