@@ -1,6 +1,21 @@
 """ Utilities."""
 
 import numpy as np
+import os
+
+
+def read_file(func, filepth):
+    """ Returns func(filepath), first trying absolute path, then
+    relative."""
+
+    try:
+        out = func(filepth)
+    except IOError:
+        try:
+            out = func(os.path.join(os.getcwd(), filepth))
+        except IOError as exc:
+            raise exc
+    return out
 
 
 def init_rand(rand):
