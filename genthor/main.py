@@ -131,7 +131,7 @@ class Renderer(object):
         load_func = loader.loadTexture
         for bgname in bgnames:
             # put together the bgpath
-            bgpth = os.path.join(bg_root, state["bgname"])
+            bgpth = os.path.join(bg_root, bgname)
             # load the texture
             bgtex = tools.read_file(loader.loadTexture, bgpth)
             # Set as background on a sphere (smiley is good for now)
@@ -196,7 +196,7 @@ class Renderer(object):
 class BayesianSampler(object):
     """ Basic MCMC sampler for visual inference."""
     
-    def __init__(self, image, rand=0):
+    def __init__(self, image, renderer=None, rand=0):
         # Initialize a random object
         self.rand = tools.init_rand(rand)
         # Initial/null values
@@ -211,8 +211,12 @@ class BayesianSampler(object):
             ("fwdprob", ("f8", 1)), ("bakprob", ("f8", 1)),
             ("flip", ("f8", 1)), ("accepted", ("b", 1))])
         self.store_info = None
-        # Create a renderer object
-        self.renderer = Renderer()
+        if renderer is None:
+            # Create a renderer object
+            self.renderer = Renderer()
+        else:
+            # Use the input renderer object
+            self.renderer = renderer
         self.true_features = self.get_features(self.image)
         # Initialize proposal mechanism
         self.init_proposer(rand=rand)
@@ -351,12 +355,12 @@ class BayesianSamplerWithModel(BayesianSampler):
     """ Main MCMC sampler class when a feedforward model is used to
     drive proposals and provide approximate likelihoods."""
     
-    def __init__(self, image, get_features, get_margins, rand=0):
+    def __init__(self, image, get_features, get_margins, renderer=None, rand=0):
         # Make self copies of the get_features and get_margins functions
         self.get_features = get_features
         self.get_margins = get_margins
         # Call parent constructor
-        super(type(self), self).__init__(image, rand=rand)
+        super(type(self), self).__init__(image, renderer=renderer, rand=rand)
     
     def init_proposer(self, rand=0):
         """ Initialize the proposal mechanism."""
@@ -473,7 +477,7 @@ class Proposer(object):
 
         # # TODO: remove
         # proposal["modelname"] = "MB26897"
-        # proposal["bgname"] = "MOUNT_33SN.jpg" #"DH209SN.jpg" #"DH-ITALY33SN.jpg" 
+        # proposal["bgname"] = "MOUNT_33SN.jpg" #"DH209SN.jpg"#"DH-ITALY33SN.jpg" 
         # proposal["bghp"] = np.array([115.27785513, 0.]) #27.26587075 #-172.12066367
         
         return proposal
@@ -574,7 +578,7 @@ if __name__ == "__main__":
     # Make a test image
     R = Renderer()
     image = R.render(state)
-
+    
     # Display the test image and state
     plt.figure(10)
     plt.clf()
@@ -591,10 +595,10 @@ if __name__ == "__main__":
     
     # Number of MCMC samples
     n_samples = 1000
-    seed = 5
+    seed = 1
 
     # Dumb inference
-    sampler0 = BayesianSampler(image, rand=seed)
+    sampler0 = BayesianSampler(image, renderer=R, rand=seed)
     # Initialize the sampler's state
     sampler0.init_state()
     # Run it
@@ -634,7 +638,7 @@ if __name__ == "__main__":
         time.sleep(0.1)
 
     # # Smart inference
-    # sampler1 = BayesianSamplerWithModel(image, rand=seed)
+    # sampler1 = BayesianSamplerWithModel(image, renderer=R, rand=seed)
     # # Initialize the sampler's state
     # sampler1.init_state()
     # # Run it
