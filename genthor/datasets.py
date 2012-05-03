@@ -119,7 +119,7 @@ class GenerativeDatasetBase(DatasetBase):
         basedir = self.home()
         cache_file = os.path.join(basedir, name)
         meta = self.meta
-        window_type = 'offscreen'
+        window_type = 'texture'
         size = preproc['size']
         lbase, output = gr.setup_renderer(window_type, size=size) 
         model_root = self.home(self.model_root)
@@ -434,9 +434,8 @@ class ImgRendererResizer(object):
         self.lbase.render_frame()
         objnode.removeNode()
         bgnode.removeNode()
-        tmpfilename = get_tmpfilename() + '.png'
-        self.lbase.screenshot(self.output, pth=tmpfilename)
-        im = Image.open(tmpfilename)
+        tex = self.output.getTexture()
+        im = Image.fromarray(self.lbase.get_tex_image(tex))
         if im.mode != self.mode:
             im = im.convert(self.mode)
         rval = np.asarray(im, self._dtype)
@@ -446,7 +445,6 @@ class ImgRendererResizer(object):
         else:
             rval /= 255.0
         assert rval.shape[:2] == self._shape[:2]
-        os.remove(tmpfilename)
         return rval
         
 
@@ -646,8 +644,8 @@ def test_generative_dataset():
         assert len(s['test']) == 110 
         assert set(s['train']).intersection(s['test']) == set([])
     
-    imgs = dataset.get_images('float32', {'size':(256, 256),
+    imgs = dataset.get_images({'size':(256, 256),
                'mode': 'L', 'normalize': False, 'dtype':'float32'})
     X = np.asarray(imgs[[0, 50]])
-    Y = cPickle.load(open('generative_datset_test_images_0_50.pkl'))
+    Y = cPickle.load(open('generative_dataset_test_images_0_50.pkl'))
     assert (X == Y).all()
