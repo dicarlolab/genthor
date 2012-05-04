@@ -4,6 +4,7 @@ import re
 import hashlib
 import cPickle
 
+import lockfile
 import numpy as np
 import Image
 import tabular as tb
@@ -33,13 +34,15 @@ class DatasetBase(object):
         home = self.home()
         if not os.path.exists(home):
             os.makedirs(home)
-        for base, sha1 in self.FILES:
-            archive_filename = os.path.join(home, base)  
-            if not os.path.exists(archive_filename):
-                url = 'http://dicarlocox-datasets.s3.amazonaws.com/' + base
-                print ('downloading %s' % url)
-                download(url, archive_filename, sha1=sha1, verbose=True)                
-                extract(archive_filename, home, sha1=sha1, verbose=True)
+        lock = lockfile.FileLock(home)
+        with lock:
+            for base, sha1 in self.FILES:
+                archive_filename = os.path.join(home, base)  
+                if not os.path.exists(archive_filename):
+                    url = 'http://dicarlocox-datasets.s3.amazonaws.com/' + base
+                    print ('downloading %s' % url)
+                    download(url, archive_filename, sha1=sha1, verbose=True)                
+                    extract(archive_filename, home, sha1=sha1, verbose=True)
 
     @property
     def meta(self):
@@ -369,10 +372,9 @@ class GenerativeDataset3(GenerativeDatasetBase):
                      'rxz': uniform(-180., 180.),
                      }
                   }]
-    specific_name = 'GenerativeDataset2'
+    specific_name = 'GenerativeDataset3'
 
     
-
 class GenerativeDatasetTest(GenerativeDataset1):    
     models = model_info.MODEL_SUBSET_1
     bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
