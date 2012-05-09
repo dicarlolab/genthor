@@ -64,6 +64,8 @@ MODEL_SUBSET_1 = list(itertools.chain(*[v[::2] + [v[5]] for v in MODEL_CATEGORIE
 MODEL_SUBSET_2 = MODEL_SUBSET_1[::2]
 MODEL_SUBSET_3 = MODEL_SUBSET_1[::3]
 MODEL_SUBSET_4 = MODEL_SUBSET_1[::6]
+MODEL_SUBSET_5 = list(itertools.chain(*[v[:-2:2] for k,v in MODEL_CATEGORIES.items() if k not in ['plants', 'buildings']]))
+
 
 BACKGROUNDS = ['DH-ITALY01SN.jpg',
  'DH-ITALY02SN.jpg',
