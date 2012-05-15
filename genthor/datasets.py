@@ -420,11 +420,11 @@ class GenerativeDatasetLowres(GenerativeDatasetBase):
                      'bgpsi': 0,
                      'bgphi': uniform(-180.0, 180.),
                      's': loguniform(np.log(1.5), np.log(5.)),
-                     'ty': uniform(-1.0, 1.0),
-                     'tz': uniform(-1.0, 1.0),
-                     'ryz': uniform(-180., 180.),
-                     'rxy': uniform(-180., 180.),
-                     'rxz': uniform(-180., 180.),
+                     'ty': uniform(-0.2, 0.2),
+                     'tz': uniform(-0.2, 0.2),
+                     'ryz': uniform(-45., 45.),
+                     'rxy': uniform(-45., 45.),
+                     'rxz': uniform(-45., 45.),
                      }
                   }]
     specific_name = 'GenerativeDatasetLowres'
