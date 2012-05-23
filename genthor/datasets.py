@@ -426,7 +426,7 @@ class GenerativeDataset4(GenerativeDatasetBase):
                      'rxz': uniform(-180., 180.),
                      }
                   }]
-    specific_name = 'GenerativeDataset3a'
+    specific_name = 'GenerativeDataset4'
 
 
 class GenerativeDatasetLowres(GenerativeDatasetBase):    
