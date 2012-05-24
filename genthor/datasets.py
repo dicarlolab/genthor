@@ -426,7 +426,7 @@ class GenerativeDataset4(GenerativeDatasetBase):
                      'rxz': uniform(-180., 180.),
                      }
                   }]
-    specific_name = 'GenerativeDataset3a'
+    specific_name = 'GenerativeDataset4'
 
 
 class GenerativeDatasetLowres(GenerativeDatasetBase):    
@@ -485,7 +485,12 @@ class GenerativeDatasetTest(GenerativeDataset1):
 
 class ImgRendererResizer(object):
     def __init__(self, model_root, bg_root, preproc, lbase, output):
-        self._shape = tuple(preproc['size'])
+        size = tuple(preproc['size'])
+        self.transpose = preproc.get('transpose', False)
+        if self.transpose:
+            self._shape = tuple(np.array(size)[list(self.transpose)])
+        else:
+            self._shape = size
         self._ndim = len(self._shape) 
         self._dtype = preproc['dtype']
         self.mode = preproc['mode']
@@ -494,6 +499,7 @@ class ImgRendererResizer(object):
         self.output = output
         self.model_root = model_root
         self.bg_root = bg_root
+
     
     def rval_getattr(self, attr, objs):
         if attr == 'shape' and self._shape is not None:
@@ -528,7 +534,9 @@ class ImgRendererResizer(object):
             rval /= max(rval.std(), 1e-3)
         else:
             rval /= 255.0
-        assert rval.shape[:2] == self._shape[:2]
+        if self.transpose:
+            rval = rval.transpose(*tuple(self.transpose))
+        assert rval.shape[:2] == self._shape[:2], (rval.shape, self._shape)
         return rval
         
 
