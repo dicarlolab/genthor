@@ -533,7 +533,8 @@ class ImgRendererResizer(object):
             rval -= rval.mean()
             rval /= max(rval.std(), 1e-3)
         else:
-            rval /= 255.0
+            if 'float' in str(self._dtype):
+                rval /= 255.0
         if self.transpose:
             rval = rval.transpose(*tuple(self.transpose))
         assert rval.shape[:2] == self._shape[:2], (rval.shape, self._shape)
