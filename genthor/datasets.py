@@ -78,10 +78,10 @@ class GenerativeDatasetBase(DatasetBase):
         for tdict in templates:
             template = tdict['template']
             tname = tdict['name']
-            if haskey(tdict, 'n_ex_dict'):
+            if tdict.has_key('n_ex_dict'):
                 n_ex_dict = tdict['n_ex_dict']
             else:
-                n_ex_dict = dict([(m, tdict['n_ex_per_model']) for m in model])
+                n_ex_dict = dict([(m, tdict['n_ex_per_model']) for m in models])
             for model in models:
                 print('Generating meta for %s' % model)
                 for _ind in range(n_ex_dict[model]):
@@ -430,11 +430,13 @@ class GenerativeDataset4(GenerativeDatasetBase):
                      }
                   }]
     specific_name = 'GenerativeDataset4'
-    
+
+
+MODEL_CATEGORIES = model_info.MODEL_CATEGORIES
 
 class GenerativeDatasetBoatsVsReptiles(GenerativeDatasetBase):    
     models = [_x for _x in model_info.MODEL_SUBSET_5 
-                     if _x in model_info['boats'] + model_info['reptiles']]
+                     if _x in MODEL_CATEGORIES['boats'] + MODEL_CATEGORIES['reptiles']]
     bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
                        'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
                        'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
