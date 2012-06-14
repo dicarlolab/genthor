@@ -76,12 +76,15 @@ class GenerativeDatasetBase(DatasetBase):
 
         model_categories = dict_inverse(model_info.MODEL_CATEGORIES)
         for tdict in templates:
-            n_ex_per_model = tdict['n_ex_per_model']
             template = tdict['template']
             tname = tdict['name']
+            if tdict.has_key('n_ex_dict'):
+                n_ex_dict = tdict['n_ex_dict']
+            else:
+                n_ex_dict = dict([(m, tdict['n_ex_per_model']) for m in models])
             for model in models:
                 print('Generating meta for %s' % model)
-                for _ind in range(n_ex_per_model):
+                for _ind in range(n_ex_dict[model]):
                     l = stochastic.sample(template, rng)
                     l['obj'] = model
                     l['category'] = model_categories[model][0]
@@ -427,6 +430,36 @@ class GenerativeDataset4(GenerativeDatasetBase):
                      }
                   }]
     specific_name = 'GenerativeDataset4'
+
+
+MODEL_CATEGORIES = model_info.MODEL_CATEGORIES
+
+class GenerativeDatasetBoatsVsReptiles(GenerativeDatasetBase):    
+    models = [_x for _x in model_info.MODEL_SUBSET_5 
+                     if _x in MODEL_CATEGORIES['boats'] + MODEL_CATEGORIES['reptiles']]
+    bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
+                       'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
+                       'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
+                       'INTERIOR_07ST.jpg', 'INTERIOR_06ST.jpg',
+                       'INTERIOR_05ST.jpg']
+    good_backgrounds = [_b for _b in model_info.BACKGROUNDS
+                                                  if _b not in bad_backgrounds]
+    templates = [
+                 {'n_ex_per_model': 1000,
+                  'name': 'var1', 
+                  'template': {'bgname': choice(good_backgrounds),
+                     'bgscale': 1.,
+                     'bgpsi': 0,
+                     'bgphi': uniform(-180.0, 180.),
+                     's': uniform(2./3, 3),
+                     'ty': uniform(-1.0, 1.0),
+                     'tz': uniform(-1.0, 1.0),
+                     'ryz': uniform(-180., 180.),
+                     'rxy': uniform(-180., 180.),
+                     'rxz': uniform(-180., 180.),
+                     }
+                  }]
+    specific_name = 'GenerativeDatasetBoatsVsReptiles'
 
 
 class GenerativeDatasetLowres(GenerativeDatasetBase):    
