@@ -442,7 +442,7 @@ class GenerativeDatasetBoatsVsAll(GenerativeDatasetBase):
     good_backgrounds = [_b for _b in model_info.BACKGROUNDS
                                                   if _b not in bad_backgrounds]
     templates = [
-                 {'n_ex_dict': dict([(m, 1125 if m in MODEL_CATEGORIES['boats'] else 140) for m in models]),
+                 {'n_ex_dict': dict([(m, 1125 if m in model_info.MODEL_CATEGORIES['boats'] else 140) for m in models]),
                   'name': 'var1', 
                   'template': {'bgname': choice(good_backgrounds),
                      'bgscale': 1.,
@@ -456,7 +456,7 @@ class GenerativeDatasetBoatsVsAll(GenerativeDatasetBase):
                      'rxz': uniform(-180., 180.),
                      }
                   }]
-    specific_name = 'GenerativeDataset4'
+    specific_name = 'GenerativeDatasetBoatsVsAll'
 
 
 MODEL_CATEGORIES = model_info.MODEL_CATEGORIES
