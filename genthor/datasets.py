@@ -469,7 +469,7 @@ class GenerativeDatasetPlanesVsAll(GenerativeDatasetBase):
     good_backgrounds = [_b for _b in model_info.BACKGROUNDS
                                                   if _b not in bad_backgrounds]
     templates = [
-                 {'n_ex_dict': dict([(m, 750 if m in model_info.MODEL_CATEGORIES['boats'] else 93) for m in models]),
+                 {'n_ex_dict': dict([(m, 750 if m in model_info.MODEL_CATEGORIES['planes'] else 93) for m in models]),
                   'name': 'var1', 
                   'template': {'bgname': choice(good_backgrounds),
                      'bgscale': 1.,
@@ -483,7 +483,7 @@ class GenerativeDatasetPlanesVsAll(GenerativeDatasetBase):
                      'rxz': uniform(-180., 180.),
                      }
                   }]
-    specific_name = 'GenerativeDatasetPlanesVsAll'
+    specific_name = 'GenerativeDatasetPlanesVsAll2'
 
 
 MODEL_CATEGORIES = model_info.MODEL_CATEGORIES
