@@ -459,6 +459,36 @@ class GenerativeDatasetBoatsVsAll(GenerativeDatasetBase):
     specific_name = 'GenerativeDatasetBoatsVsAll'
 
 
+class GenerativeDatasetTwoBadBoats(GenerativeDatasetBase):    
+    models = model_info.MODEL_SUBSET_5
+    models.remove('MB27840')
+    models.remove('MB28586')
+    bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
+                       'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
+                       'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
+                       'INTERIOR_07ST.jpg', 'INTERIOR_06ST.jpg',
+                       'INTERIOR_05ST.jpg']
+    good_backgrounds = [_b for _b in model_info.BACKGROUNDS
+                                                  if _b not in bad_backgrounds]
+    templates = [
+                 {'n_ex_dict': dict([('MB28646', 1500), ('MB29346', 1500)] + \
+                                    [(m , 94) for m in models if m not in model_info.MODEL_CATEGORIES['boats']]),
+                  'name': 'var1', 
+                  'template': {'bgname': choice(good_backgrounds),
+                     'bgscale': 1.,
+                     'bgpsi': 0,
+                     'bgphi': uniform(-180.0, 180.),
+                     's': uniform(2./3, 3),
+                     'ty': uniform(-1.0, 1.0),
+                     'tz': uniform(-1.0, 1.0),
+                     'ryz': uniform(-180., 180.),
+                     'rxy': uniform(-180., 180.),
+                     'rxz': uniform(-180., 180.),
+                     }
+                  }]
+    specific_name = 'GenerativeDatasetTwoBadBoats'
+
+
 class GenerativeDatasetPlanesVsAll(GenerativeDatasetBase):    
     models = model_info.MODEL_SUBSET_5
     bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
@@ -484,6 +514,33 @@ class GenerativeDatasetPlanesVsAll(GenerativeDatasetBase):
                      }
                   }]
     specific_name = 'GenerativeDatasetPlanesVsAll2'
+
+
+class GenerativeDatasetTablesVsAll(GenerativeDatasetBase):    
+    models = model_info.MODEL_SUBSET_5
+    bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
+                       'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
+                       'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
+                       'INTERIOR_07ST.jpg', 'INTERIOR_06ST.jpg',
+                       'INTERIOR_05ST.jpg']
+    good_backgrounds = [_b for _b in model_info.BACKGROUNDS
+                                                  if _b not in bad_backgrounds]
+    templates = [
+                 {'n_ex_dict': dict([(m, 750 if m in model_info.MODEL_CATEGORIES['tables'] else 93) for m in models]),
+                  'name': 'var1', 
+                  'template': {'bgname': choice(good_backgrounds),
+                     'bgscale': 1.,
+                     'bgpsi': 0,
+                     'bgphi': uniform(-180.0, 180.),
+                     's': uniform(2./3, 3),
+                     'ty': uniform(-1.0, 1.0),
+                     'tz': uniform(-1.0, 1.0),
+                     'ryz': uniform(-180., 180.),
+                     'rxy': uniform(-180., 180.),
+                     'rxz': uniform(-180., 180.),
+                     }
+                  }]
+    specific_name = 'GenerativeDatasetTablesVsAll'
 
 
 MODEL_CATEGORIES = model_info.MODEL_CATEGORIES
