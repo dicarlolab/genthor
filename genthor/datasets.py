@@ -66,6 +66,10 @@ class GenerativeDatasetBase(DatasetBase):
 
     base_name = 'GenthorGenerative'
     
+    def __init__(self, data=None):
+        self.data = data
+        self.specific_name = self.__class__.__name__ + '_' + get_image_id(data)
+    
     def _get_meta(self):
         #generate params 
         models = self.models
@@ -308,7 +312,6 @@ class GenerativeDataset1(GenerativeDatasetBase):
                      'rxz': uniform(-180., 180.),
                      }
                   }]
-    specific_name = 'GenerativeDataset1'
 
 
 class GenerativeDataset2(GenerativeDatasetBase):    
@@ -348,7 +351,6 @@ class GenerativeDataset2(GenerativeDatasetBase):
                      'rxz': uniform(-180., 180.),
                      }
                   }]
-    specific_name = 'GenerativeDataset2'
 
 
 class GenerativeDataset3(GenerativeDatasetBase):    
@@ -375,7 +377,6 @@ class GenerativeDataset3(GenerativeDatasetBase):
                      'rxz': uniform(-180., 180.),
                      }
                   }]
-    specific_name = 'GenerativeDataset3'
 
 
 class GenerativeDataset3a(GenerativeDatasetBase):    
@@ -402,7 +403,6 @@ class GenerativeDataset3a(GenerativeDatasetBase):
                      'rxz': uniform(-180., 180.),
                      }
                   }]
-    specific_name = 'GenerativeDataset3a'
     
 
 class GenerativeDataset4(GenerativeDatasetBase):    
@@ -429,7 +429,16 @@ class GenerativeDataset4(GenerativeDatasetBase):
                      'rxz': uniform(-180., 180.),
                      }
                   }]
-    specific_name = 'GenerativeDataset4'
+    
+    def __init__(self, data):
+        GenerativeDatasetBase.__init__(self, data)
+        if self.data and self.data.get('bias_file') is not None:
+            bias = cPickle.load(open(self.data['bias_file']))
+            models = self.models
+            n_ex = self.templates[0].pop('n_ex_per_model')
+            total = len(models) * n_ex
+            self.templates[0]['n_ex_dict'] = dict(zip(models,
+                                      [total * bias[m] for m in models]))
 
 
 class GenerativeDatasetBoatsVsAll(GenerativeDatasetBase):    
@@ -456,7 +465,6 @@ class GenerativeDatasetBoatsVsAll(GenerativeDatasetBase):
                      'rxz': uniform(-180., 180.),
                      }
                   }]
-    specific_name = 'GenerativeDatasetBoatsVsAll'
 
 
 class GenerativeDatasetTwoBadBoats(GenerativeDatasetBase):    
@@ -486,7 +494,6 @@ class GenerativeDatasetTwoBadBoats(GenerativeDatasetBase):
                      'rxz': uniform(-180., 180.),
                      }
                   }]
-    specific_name = 'GenerativeDatasetTwoBadBoats'
 
 
 class GenerativeDatasetPlanesVsAll(GenerativeDatasetBase):    
@@ -513,7 +520,6 @@ class GenerativeDatasetPlanesVsAll(GenerativeDatasetBase):
                      'rxz': uniform(-180., 180.),
                      }
                   }]
-    specific_name = 'GenerativeDatasetPlanesVsAll2'
 
 
 class GenerativeDatasetTablesVsAll(GenerativeDatasetBase):    
@@ -540,7 +546,6 @@ class GenerativeDatasetTablesVsAll(GenerativeDatasetBase):
                      'rxz': uniform(-180., 180.),
                      }
                   }]
-    specific_name = 'GenerativeDatasetTablesVsAll'
 
 
 MODEL_CATEGORIES = model_info.MODEL_CATEGORIES
@@ -570,7 +575,6 @@ class GenerativeDatasetBoatsVsReptiles(GenerativeDatasetBase):
                      'rxz': uniform(-180., 180.),
                      }
                   }]
-    specific_name = 'GenerativeDatasetBoatsVsReptiles'
 
 
 class GenerativeDatasetLowres(GenerativeDatasetBase):    
@@ -598,7 +602,7 @@ class GenerativeDatasetLowres(GenerativeDatasetBase):
                      'rxz': uniform(-180., 180.),
                      }
                   }]
-    specific_name = 'GenerativeDatasetLowres'
+
     
     
 class GenerativeDatasetTest(GenerativeDataset1):    
@@ -624,7 +628,6 @@ class GenerativeDatasetTest(GenerativeDataset1):
                      'rxz': uniform(-180., 180.),
                      }
                   }]  
-    specific_name = 'GenerativeDatasetTest'
     
 
 class ImgRendererResizer(object):
