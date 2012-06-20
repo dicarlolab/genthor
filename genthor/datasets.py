@@ -460,7 +460,7 @@ class GenerativeDatasetBoatsVsAll(GenerativeDatasetBase):
 
 
 class GenerativeDatasetTwoBadBoats(GenerativeDatasetBase):    
-    models = model_info.MODEL_SUBSET_5
+    models = model_info.MODEL_SUBSET_5[:]
     models.remove('MB27840')
     models.remove('MB28586')
     bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
