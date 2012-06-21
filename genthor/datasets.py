@@ -430,15 +430,16 @@ class GenerativeDataset4(GenerativeDatasetBase):
                      }
                   }]
     
-    def __init__(self, data):
+    def __init__(self, data=None):
         GenerativeDatasetBase.__init__(self, data)
         if self.data and self.data.get('bias_file') is not None:
-            bias = cPickle.load(open(self.data['bias_file']))
+            froot = os.environ.get('FILEROOT','')
+            bias = cPickle.load(open(os.path.join(froot, self.data['bias_file'])))
             models = self.models
             n_ex = self.templates[0].pop('n_ex_per_model')
             total = len(models) * n_ex
             self.templates[0]['n_ex_dict'] = dict(zip(models,
-                                      [total * bias[m] for m in models]))
+                               [int(round(total * bias[m])) for m in models]))
 
 
 class GenerativeDatasetBoatsVsAll(GenerativeDatasetBase):    
