@@ -988,3 +988,76 @@ class GPGenerativeDatasetTest(GPGenerativeDatasetBase):
                 'bgscale': 1.,
                 'bgpsi': 0,
                 'bgphi': uniform(-180.0, 180.)}
+
+
+class ResampleGenerativeDataset(GenerativeDatasetBase):
+
+    def _get_meta(self, seed=0):
+        #generate params
+        rng = np.random.RandomState(seed=seed)                
+        data = self.data
+        bias_meta, bias_weights = data['bias_data']
+        ranges = data['ranges']
+        N = data['num_images']
+
+        J = sample_with_replacement(bias_weights, N, rng)
+
+        latents = []        
+        for j in J:
+            l = get_nearby_sample(bias_meta[j], ranges, rng)     
+            l['id'] = get_image_id(l)
+            rec = (l['bgname'],
+                   float(l['bgphi']),
+                   float(l['bgpsi']),
+                   float(l['bgscale']),
+                   l['category'],
+                   l['obj'],
+                   float(l['ryz']),
+                   float(l['rxz']),
+                   float(l['rxy']),
+                   float(l['ty']),
+                   float(l['tz']),
+                   float(l['s']),
+                   l['id'])
+            latents.append(rec)
+        meta = tb.tabarray(records=latents, names = ['bgname',
+                                                     'bgphi',
+                                                     'bgpsi',
+                                                     'bgscale',
+                                                     'category',
+                                                     'obj',
+                                                     'ryz',
+                                                     'rxz',
+                                                     'rxy',
+                                                     'ty',
+                                                     'tz',
+                                                     's',
+                                                     'id'])
+        return meta
+
+
+def sample_with_replacement(w, N, rng):
+    assert (w >= 0).all()
+    assert np.abs(w.sum() - 1) < 1e-4, w.sum()
+    assert w.ndim == 1
+    return w.cumsum().searchsorted(rng.uniform(size=(N,)))
+    
+
+def get_nearby_sample(s, ranges, rng):
+    news = {}
+    news['bgname'] = s['bgname']
+    news['category'] = s['category']
+    news['obj'] = s['obj']
+    post = {'bgphi': lambda x: mod(x, 360, 180),
+            'bgpsi': lambda x: mod(x, 360, 180),
+            'rxy': lambda x: mod(x, 360, 180),
+            'ryz': lambda x: mod(x, 360, 180),
+            'rxz': lambda x: mod(x, 360, 180)}
+    for k in ['bgphi', 'bgpsi', 'bgscale', 'rxy', 'rxz', 'ryz', 'ty', 'tz', 's']:
+        delta = rng.uniform(high=ranges[k][1], low=ranges[k][0])
+        news[k] = post.get(l, lambda x: x)(s[k] + delta)
+    return news    
+                
+    
+def mod (x, y, a):
+    return (x + a) % y - a
