@@ -1055,7 +1055,7 @@ def get_nearby_sample(s, ranges, rng):
             'rxz': lambda x: mod(x, 360, 180)}
     for k in ['bgphi', 'bgpsi', 'bgscale', 'rxy', 'rxz', 'ryz', 'ty', 'tz', 's']:
         delta = rng.uniform(high=ranges[k][1], low=ranges[k][0])
-        news[k] = post.get(l, lambda x: x)(s[k] + delta)
+        news[k] = post.get(k, lambda x: x)(s[k] + delta)
     return news    
                 
     
