@@ -897,3 +897,83 @@ def test_generative_dataset():
     X = np.asarray(imgs[[0, 50]])
     Y = cPickle.load(open('generative_dataset_test_images_0_50.pkl'))
     assert (X == Y).all()
+    
+    
+#####GP generative
+class GPGenerativeDatasetBase(GenerativeDatasetBase):
+
+    def _get_meta(self):
+        #generate params 
+        models = self.models
+        template = self.template
+
+        model_categories = dict_inverse(model_info.MODEL_CATEGORIES)
+        
+        import sklearn.gaussian_process as gaussian_process 
+        
+        gps = [gaussian_process.GaussianProcess(theta0=1e-2, thetaL=1e-4,
+                     thetaU=1e-1, corr='linear')  for _i in range(len(models))]
+        
+        data = self.data
+        X, y = data['bias_data']
+        M = data['num_to_sample']
+        N = data['num_images']
+        
+        [gps[i].fit(X[i], y[i]) for i in range(len(models))]
+        
+        mx = X.max(0)
+        mn = X.min(0)
+        Ts = [np.random.random((M, 6)) * (mx - mn) + mn for i in range(len(models))]
+        Tps = [gps[i].predict(Ts[i]) for i in range(len(models))]
+        Tps = [np.minimum(t, 0) for t in Tps]
+        Tps = [(t / t.sum()) * y[i].sum() for i, t in enumerate(Tps)]
+        
+        W = tb.tab_rowstack([tb.tabarray(records=[(tt, i, j) for (j, tt) in enumerate(t)],
+                   names=['w', 'o', 'j']) for i, t in enumerate(Tps)])
+        
+        L = sample_without_replacement(W['w'], N, rng)
+        
+        latents = []
+        for w in W[L]:
+            obj = models[w['o']]
+            cat = model_categories[obj]
+            l = Ts[w['o']][w['j']]
+            l1 = stochastic.sample(template, rng)
+            rec = (l1['bgname'],
+                   float(l1['bgphi']),
+                   float(l1['bgpsi']),
+                   float(l1['bgscale']),
+                   cat,
+                   obj) + tuple(l)
+            idval = get_image_id(rec)
+            rec = rec + (idval,)
+            latents.append(rec)
+                    
+        return tb.tabarray(records=latents, names = ['bgname',
+                                                     'bgphi',
+                                                     'bgpsi',
+                                                     'bgscale',
+                                                     'category',
+                                                     'obj',
+                                                     'ryz',
+                                                     'rxz',
+                                                     'rxy',
+                                                     'ty',
+                                                     'tz',
+                                                     's',
+                                                     'id'])
+        
+def sample_without_replacement(w, N, rng):
+    w = w.copy()
+    assert (w >= 0).all()
+    assert np.abs(w.sum() - 1) < 1e-4, w.sum()
+    assert w.ndim == 1
+    samples = []
+    for ind in xrange(N):
+        r = rng.uniform()
+        j = w.cumsum().searchsorted(r)
+        samples.append(j)
+        w[j] = 0
+        w = w / w.sum()
+    return samples
+
