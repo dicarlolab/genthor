@@ -913,8 +913,8 @@ class GPGenerativeDatasetBase(GenerativeDatasetBase):
         
         import sklearn.gaussian_process as gaussian_process 
         
-        gps = self.gps = [gaussian_process.GaussianProcess(theta0=[1e-2]*6, thetaL=[1e-4]*6,
-                     thetaU=[1e-1]*6, corr='linear')  for _i in range(len(models))]
+        gps = self.gps = [gaussian_process.GaussianProcess(theta0=1e-2, thetaL=1e-4,
+                     thetaU=1e-1, corr='linear')  for _i in range(len(models))]
         
         data = self.data
         X, y = data['bias_data']
