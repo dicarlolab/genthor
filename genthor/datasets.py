@@ -435,6 +435,13 @@ class GenerativeDataset4(GenerativeDatasetBase):
         if self.data and self.data.get('bias_file') is not None:
             froot = os.environ.get('FILEROOT','')
             bias = cPickle.load(open(os.path.join(froot, self.data['bias_file'])))
+        elif self.data and self.data.get('bias') is not None:
+            bias = self.data['bias']
+        else:
+            bias = None
+        if self.data and self.data.get('n_ex_per_model'):
+            self.templates[0]['n_ex_per_model'] = self.data['n_ex_per_model']
+        if bias is not None:
             models = self.models
             n_ex = self.templates[0]['n_ex_per_model']
             total = len(models) * n_ex
@@ -890,3 +897,186 @@ def test_generative_dataset():
     X = np.asarray(imgs[[0, 50]])
     Y = cPickle.load(open('generative_dataset_test_images_0_50.pkl'))
     assert (X == Y).all()
+    
+    
+#####GP generative
+class GPGenerativeDatasetBase(GenerativeDatasetBase):
+
+    def _get_meta(self, seed=0):
+        #generate params
+        rng = np.random.RandomState(seed=seed)
+        
+        models = self.models
+        template = self.template
+
+        model_categories = dict_inverse(model_info.MODEL_CATEGORIES)
+        
+        import sklearn.gaussian_process as gaussian_process 
+        
+        gps = self.gps = [gaussian_process.GaussianProcess(theta0=1e-2, thetaL=1e-4,
+                     thetaU=1e-1, corr='linear')  for _i in range(len(models))]
+        
+        data = self.data
+        X, y = data['bias_data']
+        M = data['num_to_sample']
+        N = data['num_images']
+        
+        [self.gps[i].fit(X[i], y[i]) for i in range(len(models))]
+        
+        mx = X.max(1)
+        mn = X.min(1)
+        Ts = [rng.uniform(size=(M, 6)) * (mx[i] - mn[i]) + mn[i] for i in range(len(models))]
+        Tps = [gps[i].predict(Ts[i]) for i in range(len(models))]
+        Tps = [np.minimum(t, 0) for t in Tps]
+        Tps = [(t / t.sum()) * y[i].sum() for i, t in enumerate(Tps)]
+        
+        W = tb.tab_rowstack([tb.tabarray(records=[(tt, i, j) for (j, tt) in enumerate(t)],
+                   names=['w', 'o', 'j']) for i, t in enumerate(Tps)])
+    
+        L = sample_without_replacement(W['w'], N, rng)
+        
+        latents = []
+        for w in W[L]:
+            obj = models[w['o']]
+            cat = model_categories[obj][0]
+            l = Ts[w['o']][w['j']]
+            l1 = stochastic.sample(template, rng)
+            rec = (l1['bgname'],
+                   float(l1['bgphi']),
+                   float(l1['bgpsi']),
+                   float(l1['bgscale']),
+                   cat,
+                   obj) + tuple(l)
+            idval = get_image_id(rec)
+            rec = rec + (idval,)
+            latents.append(rec)
+
+        return tb.tabarray(records=latents, names = ['bgname',
+                                                     'bgphi',
+                                                     'bgpsi',
+                                                     'bgscale',
+                                                     'category',
+                                                     'obj',
+                                                     'ryz',
+                                                     'rxz',
+                                                     'rxy',
+                                                     'ty',
+                                                     'tz',
+                                                     's',
+                                                     'id'])
+        
+def sample_without_replacement(w, N, rng):
+    w = w.copy()
+    assert (w >= 0).all()
+    assert np.abs(w.sum() - 1) < 1e-4, w.sum()
+    assert w.ndim == 1
+    assert len((w > 0).nonzero()[0]) >= N, (len((w >0).nonzero()[0]), N)
+    samples = []
+    for ind in xrange(N):
+        r = rng.uniform()
+        j = w.cumsum().searchsorted(r)
+        samples.append(j)
+        w[j] = 0
+        w = w / w.sum()
+    return samples
+
+
+class GPGenerativeDatasetTest(GPGenerativeDatasetBase):
+    models = GenerativeDataset4.models[:]
+    good_backgrounds = GenerativeDataset4.good_backgrounds[:]
+    template = {'bgname': choice(good_backgrounds),
+                'bgscale': 1.,
+                'bgpsi': 0,
+                'bgphi': uniform(-180.0, 180.)}
+
+
+class ResampleGenerativeDataset(GenerativeDatasetBase):
+    def _get_meta(self, seed=0):
+        #generate params
+        rng = np.random.RandomState(seed=seed)                
+        data = self.data
+        bias_meta, bias_weights = data['bias_data']
+        ranges = data['ranges']
+        N = data['num_images']
+
+        J = sample_with_replacement(bias_weights, N, rng)
+
+        latents = []        
+        for j in J:
+            l = get_nearby_sample(bias_meta[j], ranges, rng)     
+            l['id'] = get_image_id(l)
+            rec = (l['bgname'],
+                   float(l['bgphi']),
+                   float(l['bgpsi']),
+                   float(l['bgscale']),
+                   l['category'],
+                   l['obj'],
+                   float(l['ryz']),
+                   float(l['rxz']),
+                   float(l['rxy']),
+                   float(l['ty']),
+                   float(l['tz']),
+                   float(l['s']),
+                   l['id'])
+            latents.append(rec)
+        meta = tb.tabarray(records=latents, names = ['bgname',
+                                                     'bgphi',
+                                                     'bgpsi',
+                                                     'bgscale',
+                                                     'category',
+                                                     'obj',
+                                                     'ryz',
+                                                     'rxz',
+                                                     'rxy',
+                                                     'ty',
+                                                     'tz',
+                                                     's',
+                                                     'id'])
+        return meta
+
+
+def sample_with_replacement(w, N, rng):
+    assert (w >= 0).all()
+    assert np.abs(w.sum() - 1) < 1e-4, w.sum()
+    assert w.ndim == 1
+    return w.cumsum().searchsorted(rng.uniform(size=(N,)))
+    
+
+def get_nearby_sample(s, ranges, rng):
+    news = {}
+    news['bgname'] = s['bgname']
+    news['category'] = s['category']
+    news['obj'] = s['obj']
+    post = {'bgphi': lambda x: mod(x, 360, 180),
+            'bgpsi': lambda x: mod(x, 360, 180),
+            'rxy': lambda x: mod(x, 360, 180),
+            'ryz': lambda x: mod(x, 360, 180),
+            'rxz': lambda x: mod(x, 360, 180)}
+    for k in ['bgphi', 'bgpsi', 'bgscale', 'rxy', 'rxz', 'ryz', 'ty', 'tz', 's']:
+        delta = rng.uniform(high=ranges[k][1], low=ranges[k][0])
+        news[k] = post.get(k, lambda x: x)(s[k] + delta)
+    return news    
+                
+    
+def mod (x, y, a):
+    return (x + a) % y - a
+
+
+class ResampleGenerativeDataset4(ResampleGenerativeDataset):    
+    def _get_meta(self):
+        dset = GenerativeDataset4()
+        meta = dset.meta
+        froot = os.environ.get('FILEROOT','')
+        bias = cPickle.load(open(os.path.join(froot, self.data['bias_file'])))
+        self.data['bias_data'] = (meta, bias)
+        self.data['num_images'] = len(meta)
+        self.data['ranges'] = {'bgphi': (-1, 1),
+                               'bgpsi': (-1, 1),
+                               'bgscale': (0, 0),
+                               'rxy': (-1, 1),
+                               'rxz': (-1, 1),
+                               'ryz': (-1, 1),
+                               's': (-0.01, 0.01),
+                               'ty': (-0.01, 0.01),
+                               'tz': (-0.01, 0.01)}
+        return ResampleGenerativeDataset._get_meta(self)
