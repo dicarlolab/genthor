@@ -991,7 +991,6 @@ class GPGenerativeDatasetTest(GPGenerativeDatasetBase):
 
 
 class ResampleGenerativeDataset(GenerativeDatasetBase):
-
     def _get_meta(self, seed=0):
         #generate params
         rng = np.random.RandomState(seed=seed)                
@@ -1061,3 +1060,23 @@ def get_nearby_sample(s, ranges, rng):
     
 def mod (x, y, a):
     return (x + a) % y - a
+
+
+class ResampleGenerativeDataset4(ResampleGenerativeDataset):    
+    def _get_meta(self):
+        dset = GenerativeDataset4()
+        meta = dset.meta
+        froot = os.environ.get('FILEROOT','')
+        bias = cPickle.load(open(os.path.join(froot, self.data['bias_file'])))
+        self.data['bias_data'] = (meta, bias)
+        self.data['num_images'] = len(meta)
+        self.data['ranges'] = {'bgphi': (-1, 1),
+                               'bgpsi': (-1, 1),
+                               'bgscale': (0, 0),
+                               'rxy': (-1, 1),
+                               'rxz': (-1, 1),
+                               'ryz': (-1, 1),
+                               's': (-0.01, 0.01),
+                               'ty': (-0.01, 0.01),
+                               'tz': (-0.01, 0.01)}
+        return ResampleGenerativeDataset._get_meta(self)
