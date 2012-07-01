@@ -1062,16 +1062,17 @@ def mod (x, y, a):
     return (x + a) % y - a
 
 
-class ResampleGenerativeDataset4(ResampleGenerativeDataset):    
+class ResampleGenerativeDataset4a(ResampleGenerativeDataset):    
     def _get_meta(self):
         dset = GenerativeDataset4()
+        dset.templates[0]['n_ex_per_model'] = 125
+        meta1 = dset.meta
+        dset = GenerativeDataset4()
+        dset.templates[0]['n_ex_per_model'] = 250
         meta = dset.meta
         froot = os.environ.get('FILEROOT','')
         bias = cPickle.load(open(os.path.join(froot, self.data['bias_file'])))
-        inds = bias > 0
-        n = len(inds.nonzero()[0])
-        bias[inds] += 1. / n
-        bias /= bias.sum()
         self.data['bias_data'] = (meta, bias)
-        self.data['num_images'] = len(meta)
-        return ResampleGenerativeDataset._get_meta(self)
+        self.data['num_images'] = len(meta)/2
+        meta2 = ResampleGenerativeDataset._get_meta(self)
+        return tb.tab_rowstack([meta1, meta2])
