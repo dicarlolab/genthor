@@ -1068,6 +1068,10 @@ class ResampleGenerativeDataset4(ResampleGenerativeDataset):
         meta = dset.meta
         froot = os.environ.get('FILEROOT','')
         bias = cPickle.load(open(os.path.join(froot, self.data['bias_file'])))
+        inds = bias > 0
+        n = len(inds.nonzero()[0])
+        bias[inds] += 1. / n
+        bias /= bias.sum()
         self.data['bias_data'] = (meta, bias)
         self.data['num_images'] = len(meta)
         return ResampleGenerativeDataset._get_meta(self)
