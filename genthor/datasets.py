@@ -1076,3 +1076,16 @@ class ResampleGenerativeDataset4a(ResampleGenerativeDataset):
         self.data['num_images'] = len(meta)/2
         meta2 = ResampleGenerativeDataset._get_meta(self)
         return tb.tab_rowstack([meta1, meta2])
+
+
+class ResampleGenerativeDataset4plus(ResampleGenerativeDataset):    
+    def _get_meta(self):
+        dset = GenerativeDataset4()
+        dset.templates[0]['n_ex_per_model'] = 125
+        meta1 = dset.meta
+        froot = os.environ.get('FILEROOT','')
+        self.data['bias_data'] = cPickle.load(open(os.path.join(froot,
+                       self.data['bias_file'])))
+        self.data['num_images'] = len(meta1)
+        meta2 = ResampleGenerativeDataset._get_meta(self)
+        return tb.tab_rowstack([meta1, meta2])
