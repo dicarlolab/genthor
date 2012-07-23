@@ -23,7 +23,7 @@ from skdata.utils.download_and_extract import extract, download
 
 import genthor.renderer.genthor_renderer as gr
 import genthor.model_info as model_info
-
+import genthor.jxx_model_info as jxx_model_info
 
 class DatasetBase(object):
     def home(self, *suffix_paths):
@@ -65,6 +65,7 @@ class GenerativeDatasetBase(DatasetBase):
                )]
 
     base_name = 'GenthorGenerative'
+    model_categories = dict_inverse(model_info.MODEL_CATEGORIES)
     
     def __init__(self, data=None):
         self.data = data
@@ -77,8 +78,7 @@ class GenerativeDatasetBase(DatasetBase):
 
         latents = []
         rng = np.random.RandomState(seed=0)
-
-        model_categories = dict_inverse(model_info.MODEL_CATEGORIES)
+        model_categories = self.model_categories
         for tdict in templates:
             template = tdict['template']
             tname = tdict['name']
@@ -1062,21 +1062,70 @@ def mod (x, y, a):
     return (x + a) % y - a
 
 
-class ResampleGenerativeDataset4(ResampleGenerativeDataset):    
+class ResampleGenerativeDataset4a(ResampleGenerativeDataset):    
     def _get_meta(self):
         dset = GenerativeDataset4()
+        dset.templates[0]['n_ex_per_model'] = 125
+        meta1 = dset.meta
+        dset = GenerativeDataset4()
+        dset.templates[0]['n_ex_per_model'] = 250
         meta = dset.meta
         froot = os.environ.get('FILEROOT','')
         bias = cPickle.load(open(os.path.join(froot, self.data['bias_file'])))
         self.data['bias_data'] = (meta, bias)
-        self.data['num_images'] = len(meta)
-        self.data['ranges'] = {'bgphi': (-1, 1),
-                               'bgpsi': (-1, 1),
-                               'bgscale': (0, 0),
-                               'rxy': (-1, 1),
-                               'rxz': (-1, 1),
-                               'ryz': (-1, 1),
-                               's': (-0.01, 0.01),
-                               'ty': (-0.01, 0.01),
-                               'tz': (-0.01, 0.01)}
-        return ResampleGenerativeDataset._get_meta(self)
+        self.data['num_images'] = len(meta)/2
+        meta2 = ResampleGenerativeDataset._get_meta(self)
+        return tb.tab_rowstack([meta1, meta2])
+
+
+class ResampleGenerativeDataset4plus(ResampleGenerativeDataset):    
+    def _get_meta(self):
+        dset = GenerativeDataset4()
+        dset.templates[0]['n_ex_per_model'] = 125
+        meta1 = dset.meta
+        froot = os.environ.get('FILEROOT','')
+        self.data['bias_data'] = cPickle.load(open(os.path.join(froot,
+                       self.data['bias_file'])))
+        self.data['num_images'] = len(meta1)
+        meta2 = ResampleGenerativeDataset._get_meta(self)
+        return tb.tab_rowstack([meta1, meta2])
+
+
+class JXXDatasetBase(GenerativeDatasetBase):
+    bg_root = 'genthor_backgrounds_20120418'
+    model_root = 'jxx_processed_models_20120723'
+    FILES = [('genthor_backgrounds_20120418.zip',
+              '17c5dd97be0775a7e6ec5de07592a44fb4551b76'),
+              ('jxx_processed_models_20120723.tar.gz',
+               '1fadce011893e7f0bc18ad14047b30b9800e5d71'
+               )]
+
+    base_name = 'JXXGenerative'
+    model_categories = dict_inverse(jxx_model_info.MODEL_CATEGORIES)
+
+
+class JXXDatasetTest(JXXDatasetBase):    
+    models = ['test1']
+    bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
+                       'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
+                       'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
+                       'INTERIOR_07ST.jpg', 'INTERIOR_06ST.jpg',
+                       'INTERIOR_05ST.jpg']
+    good_backgrounds = [_b for _b in model_info.BACKGROUNDS
+                                                  if _b not in bad_backgrounds]
+    templates = [
+                 {'n_ex_per_model': 10,
+                  'name': 'var1', 
+                  'template': {'bgname': choice(good_backgrounds),
+                     'bgscale': 1.,
+                     'bgpsi': 0,
+                     'bgphi': uniform(-180.0, 180.),
+                     's': loguniform(np.log(2./3), np.log(2.)),
+                     'ty': uniform(-1.0, 1.0),
+                     'tz': uniform(-1.0, 1.0),
+                     'ryz': uniform(-180., 180.),
+                     'rxy': uniform(-180., 180.),
+                     'rxz': uniform(-180., 180.),
+                     }
+                  }]
+>>>>>>> 6dbc917da2502e268d278648bdc37acf81390078
