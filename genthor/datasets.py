@@ -1128,4 +1128,4 @@ class JXXDatasetTest(JXXDatasetBase):
                      'rxz': uniform(-180., 180.),
                      }
                   }]
->>>>>>> 6dbc917da2502e268d278648bdc37acf81390078
+
