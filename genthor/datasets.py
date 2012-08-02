@@ -450,6 +450,14 @@ class GenerativeDataset4(GenerativeDatasetBase):
 
 
 class GenerativeDataset5(GenerativeDataset4):   
+    models = model_info.MODEL_SUBSET_5
+    bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
+                       'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
+                       'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
+                       'INTERIOR_07ST.jpg', 'INTERIOR_06ST.jpg',
+                       'INTERIOR_05ST.jpg']
+    good_backgrounds = [_b for _b in model_info.BACKGROUNDS
+                                                  if _b not in bad_backgrounds]
 
     templates = [
                  {'n_ex_per_model': 250,
@@ -460,6 +468,33 @@ class GenerativeDataset5(GenerativeDataset4):
                      'bgphi': uniform(-180.0, 180.),
                      's': uniform(2./3, 3),
                      'ty': uniform(-0.5, 0.5),
+                     'tz': uniform(-1.0, 1.0),
+                     'ryz': uniform(-180., 180.),
+                     'rxy': uniform(-180., 180.),
+                     'rxz': uniform(-180., 180.),
+                     }
+                  }]   
+
+
+class GenerativeDatasetLoTrans(GenerativeDataset4):   
+    models = model_info.MODEL_SUBSET_5
+    bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
+                       'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
+                       'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
+                       'INTERIOR_07ST.jpg', 'INTERIOR_06ST.jpg',
+                       'INTERIOR_05ST.jpg']
+    good_backgrounds = [_b for _b in model_info.BACKGROUNDS
+                                                  if _b not in bad_backgrounds]
+
+    templates = [
+                 {'n_ex_per_model': 250,
+                  'name': 'var1', 
+                  'template': {'bgname': choice(good_backgrounds),
+                     'bgscale': 1.,
+                     'bgpsi': 0,
+                     'bgphi': uniform(-180.0, 180.),
+                     's': uniform(2./3, 3),
+                     'ty': uniform(-0.05, 0.05),
                      'tz': uniform(-1.0, 1.0),
                      'ryz': uniform(-180., 180.),
                      'rxy': uniform(-180., 180.),
