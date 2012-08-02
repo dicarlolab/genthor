@@ -78,7 +78,8 @@ def construct_scene(lbase, modelpth, bgpath, scale, pos, hpr, bgscale, bghp):
     # Modelpth points to the model .egg/.bam file
     objnode = read_file(lbase.loader.loadModel, modelpth)
     objnode.setScale(scale[0], scale[0], scale[0])
-    objnode.setPos(pos[0], pos[1], 0.)
+    #objnode.setPos(pos[0], pos[1], 0.)
+    objnode.setPos(pos[0], 0., pos[1])
     objnode.setHpr(hpr[0], hpr[1], hpr[2])
     objnode.setTwoSided(1)
 
