@@ -1,2 +1,2 @@
-Genthor is about integrating generative model and bayesian techniques 
+Genthor is about integrating generative models and Bayesian techniques 
 with thor.
