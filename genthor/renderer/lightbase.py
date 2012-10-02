@@ -1,9 +1,9 @@
 """ Class definition for LightBase. """
 
-import sys
-import numpy as np
 from direct.showbase import Loader
 from libpanda import BitMask32
+import numpy as np
+import os
 from pandac.PandaModules import AmbientLight
 from pandac.PandaModules import Camera
 from pandac.PandaModules import Filename
@@ -19,7 +19,8 @@ from pandac.PandaModules import PointLight
 from pandac.PandaModules import RescaleNormalAttrib
 from pandac.PandaModules import Texture
 from pandac.PandaModules import WindowProperties
-
+import pdb
+import sys
 
 class LightBase(object):
     
@@ -38,9 +39,20 @@ class LightBase(object):
         
     def init_graphics(self):
         """ Creates GraphicsEngine, GraphicsPipe, and loader """
+        # Get a handle to the graphics pipe selector
         selection = GraphicsPipeSelection.getGlobalPtr()
-        self.pipe = selection.makePipe(selection.getPipeTypes()[0])
+        # Check for DISPLAY
+        if "DISPLAY" in os.environ:
+            # Use the first option (should be glx)
+            pipe_type = selection.getPipeTypes()[0]
+        else:
+            # Use the last option (should be some fallback module)
+            pipe_type = selection.getPipeTypes()[-1]
+        # Create the graphics pipe
+        self.pipe = selection.makePipe(pipe_type)
+        # Get the graphics engine
         self.engine = GraphicsEngine.getGlobalPtr()
+        # Get the model loader object and assign it to the engine
         self.loader = Loader.Loader(self)
         self.engine.setDefaultLoader(self.loader.loader)
 
@@ -260,13 +272,13 @@ class LightBase(object):
             dr = output.getDisplayRegion(i)                   
             dr.setCamera(NodePath())
 
-        engine = output.getEngine()
+        # Remove this output from the list
+        self.remove_from_output_gsg_lists(output)
         # Now we can actually close the window.
+        engine = output.getEngine()
         engine.removeWindow(output)
         # Give the window a chance to actually close before continuing.
         engine.renderFrame()   
-        # Remove this output from the list
-        self.remove_from_output_gsg_lists(output)
 
     def close_all_outputs(self):
         """ Closes all of this instance's outputs """
@@ -410,11 +422,6 @@ class LightBase(object):
         # If you're trying to read the texture buffer, remember to
         # call self.triggerCopy()
 
-    # def flipFrame(self):
-    #     # Flip frame.
-    #     self.engine.readyFlip()
-    #     self.engine.flipFrame()
-
     @staticmethod
     def get_tex_image(tex, freshape=True):
         """ Returns numpy arr containing image in tex """
@@ -443,15 +450,17 @@ class LightBase(object):
             filename = Filename(pth)
 
         if isinstance(output, GraphicsOutput):
-            output.saveScreenshot(filename)
+            f_success = output.saveScreenshot(filename)
         elif isinstance(output, Texture):
             if output.getZSize() > 1:
-                output.write(filename, 0, 0, 1, 0)
+                f_success = output.write(filename, 0, 0, 1, 0)
             else:
-                output.write(filename)
+                f_success = output.write(filename)
         else:
             raise TypeError('Unhandled output type: ' + type(output))
 
+        return f_success
+    
     def destroy(self):
         """ self.__exitfunc() calls this automatically """
         self.close_all_outputs()

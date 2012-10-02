@@ -64,19 +64,26 @@ def export_egg(pth):
                    "gloss": (512, True),    # specular
                    "glow": (512, False)      # emission
                    }
+    MERGE_ACTOR_MESH = False
+    APPLY_MOD = True
+    PVIEW = False
 
     egg_writer = io_scene_egg.yabee_libs.egg_writer
+
     egg_writer.write_out(pth, 
-                        ANIMATIONS,
-                        EXPORT_UV_IMAGE_AS_TEXTURE, 
-                        SEPARATE_ANIM_FILE, 
-                        ANIM_ONLY,
-                        COPY_TEX_FILES, 
-                        TEX_PATH, 
-                        FLOATING_POINT_ACCURACY,
-                        CALC_TBS,
-                        TEXTURE_PROCESSOR,
-                        BAKE_LAYERS)
+                         ANIMATIONS,
+                         EXPORT_UV_IMAGE_AS_TEXTURE, 
+                         SEPARATE_ANIM_FILE, 
+                         ANIM_ONLY,
+                         COPY_TEX_FILES, 
+                         TEX_PATH, 
+                         FLOATING_POINT_ACCURACY,
+                         CALC_TBS,
+                         TEXTURE_PROCESSOR,
+                         BAKE_LAYERS,
+                         MERGE_ACTOR_MESH,
+                         APPLY_MOD,
+                         PVIEW)
 
     #bpy.ops.wm.addon_enable(module="io_scene_egg")
     #bpy.ops.export.panda3d_egg(pth)

@@ -10,7 +10,7 @@ import os
 import shutil
 import sys
 import tarfile
-from math import pi
+#from math import pi
 from subprocess import call
 from subprocess import check_call
 import pdb
@@ -85,13 +85,15 @@ def main():
     #     eggnames.extend([(name, categ + str(i))
     #                      for i, name in enumerate(names)])
     #eggdict = dict(eggnames)
-   
+
+    name_tgz_pairs = []
+    
     # Loop over models, doing the conversions
     for modelname, targzname in modeldict.iteritems():
         
         # un-tar, un-gz into a temp directory
         fulltargzname = os.path.join(model_path, targzname)
-        objname = untargz(tmp_path, fulltargzname, modelname)
+        objname = untar(tmp_path, fulltargzname, modelname + ".obj")
 
         # Construct obj and egg paths
         obj_path = os.path.join(tmp_path, objname)
@@ -123,36 +125,87 @@ def main():
         print "rm -rf %s" % rm_path
         shutil.rmtree(rm_path)
 
+        name_tgz_pairs.append((eggname, outtgz_path))
+
+        # # Convert .egg to .bam
+        # egg2bam(egg_path)
+        
         # Remove .egg file (because they're huge)
         os.remove(egg_path)
 
 
-def untargz(tmp_path, targzname, modelname):
+    # Loop over models, converting eggs to bams and deleting the eggs
+    for eggname, outtgz_path in name_tgz_pairs:
+        
+        # un-tar, un-gz into a temp directory
+        egg_path0 = untar(tmp_path, outtgz_path, eggname + ".egg")
+        # make the input/output paths
+        egg_path = os.path.join(tmp_path, egg_path0)
+        bam_path = os.path.join(os.path.splitext(outtgz_path)[0], ".bam")
+        
+        # Convert .egg to .bam
+        egg2bam(egg_path, bam_path=bam_path)
+
+        # Remove tmp directory
+        rm_path = os.path.join(
+            tmp_path, obj_path[len(tmp_path.rstrip("/")) + 1:].split("/")[0])
+        print "rm -rf %s" % rm_path
+        shutil.rmtree(rm_path)
+
+
+
+
+# def untargz_obj(tmp_path, targzname, modelname):
+#     # Make the tmp_path directory if it doesn't exist already
+#     if not os.path.isdir(tmp_path):
+#         os.makedirs(tmp_path)
+
+#     # .obj filename
+#     objname = modelname + ".obj"
+
+#     # Open the tar.gz
+#     with tarfile.open(targzname, 'r') as tf:
+#         # Extract it
+#         tf.extractall(tmp_path)
+#         # Get tar.gz's member names
+#         tarnames = tf.getnames()
+
+#     # Get obj_path
+#     obj_path = [pth for pth in tarnames
+#                 if os.path.split(pth)[1] == objname]
+#     # Raise exception if there're more than 1
+#     if len(obj_path) != 1:
+#         raise ValueError("Cannot find unique .obj file in tar.gz. Found: %s"
+#                          % ", ".join(obj_path))
+#     else:
+#         obj_path = obj_path[0]
+
+#     return obj_path
+
+
+def untar(tmp_path, tarname, objname=""):
     # Make the tmp_path directory if it doesn't exist already
     if not os.path.isdir(tmp_path):
         os.makedirs(tmp_path)
 
-    # .obj filename
-    objname = modelname + ".obj"
-
-    # Open the tar.gz
-    with tarfile.open(targzname, 'r') as tf:
+    # Open the tar
+    with tarfile.open(tarname, 'r') as tf:
         # Extract it
         tf.extractall(tmp_path)
         # Get tar.gz's member names
         tarnames = tf.getnames()
 
-    # Get obj_path
-    obj_path = [pth for pth in tarnames
-                if os.path.split(pth)[1] == objname]
+    # Get target's path
+    names = [name for name in tarnames
+             if os.path.split(name)[1].endswith(objname)]
     # Raise exception if there're more than 1
-    if len(obj_path) != 1:
-        raise ValueError("Cannot find unique .obj file in tar.gz. Found: %s"
-                         % ", ".join(obj_path))
+    if len(names) != 1:
+        raise ValueError("Cannot find unique object file in tar. Found: %s"
+                         % ", ".join(names))
     else:
-        obj_path = obj_path[0]
+        name = names[0]
 
-    return obj_path
+    return name
 
 
 def convert(obj_path, egg_path, blender_command_base, params):
@@ -184,8 +237,11 @@ def convert(obj_path, egg_path, blender_command_base, params):
     tex_path = os.path.join(os.path.split(egg_path)[0], "tex")
     copy_tex(os.path.split(obj_path)[0], tex_path)
 
+
+def egg2bam(egg_path, bam_path=None):
     # Make a .bam copy
-    bam_path = os.path.splitext(egg_path)[0] + '.bam'
+    if bam_path is None:
+        bam_path = os.path.splitext(egg_path)[0] + '.bam'
     call("egg2bam -o %s %s" % (bam_path, egg_path), shell=True)
 
 
