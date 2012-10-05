@@ -7,13 +7,18 @@ import pdb
 
 """
 Usage: 
-$ blender -b -P obj2egg.py -- <.obj filename>
+$ blender -b -P obj_converter.py -- <.obj filename>
 
 """
 
 
 def import_obj(pth):
     bpy.ops.import_scene.obj(filepath=pth)
+
+
+def export_obj(pth):
+    bpy.ops.export_scene.obj(filepath=pth, use_normals=True,
+                             keep_vertex_order=True)
 
 
 def export_egg(pth):
@@ -64,19 +69,26 @@ def export_egg(pth):
                    "gloss": (512, True),    # specular
                    "glow": (512, False)      # emission
                    }
+    MERGE_ACTOR_MESH = False
+    APPLY_MOD = True
+    PVIEW = False
 
     egg_writer = io_scene_egg.yabee_libs.egg_writer
+
     egg_writer.write_out(pth, 
-                        ANIMATIONS,
-                        EXPORT_UV_IMAGE_AS_TEXTURE, 
-                        SEPARATE_ANIM_FILE, 
-                        ANIM_ONLY,
-                        COPY_TEX_FILES, 
-                        TEX_PATH, 
-                        FLOATING_POINT_ACCURACY,
-                        CALC_TBS,
-                        TEXTURE_PROCESSOR,
-                        BAKE_LAYERS)
+                         ANIMATIONS,
+                         EXPORT_UV_IMAGE_AS_TEXTURE, 
+                         SEPARATE_ANIM_FILE, 
+                         ANIM_ONLY,
+                         COPY_TEX_FILES, 
+                         TEX_PATH, 
+                         FLOATING_POINT_ACCURACY,
+                         CALC_TBS,
+                         TEXTURE_PROCESSOR,
+                         BAKE_LAYERS,
+                         MERGE_ACTOR_MESH,
+                         APPLY_MOD,
+                         PVIEW)
 
     #bpy.ops.wm.addon_enable(module="io_scene_egg")
     #bpy.ops.export.panda3d_egg(pth)
@@ -126,7 +138,7 @@ def transform_model(rot):
     # bpy.ops.transform.rotate(value=(90.,), axis=(1., 0., 0.))
 
 
-def run(obj_path, egg_path, rot):
+def run(obj_path, out_path, rot):
     # Empty the current scene
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -137,13 +149,22 @@ def run(obj_path, egg_path, rot):
     # Do whatever you need to do within the Blender scene
     transform_model(rot)
 
-    # Export egg
-    export_egg(egg_path)
+    ext = os.path.splitext(out_path)[1]
+    if ext == ".egg":
+        # Export egg
+        export_egg(out_path)
+    elif ext == ".obj":
+        # Export obj
+        if obj_path == out_path:
+            # don't clobber
+            raise ValueError("I cannot overwrite the obj files: %s" % out_path)
+        export_obj(out_path)
+    else:
+        raise ValueError("unsupported output type: %s" % ext)
 
     # # Drop to debugger
     # print("\nYou're now in the debugger, within the Blender context\n")
     # pdb.set_trace()
-
 
 
 # Main
@@ -157,12 +178,12 @@ if __name__ == "__main__":
     # Get the .obj filename
     obj_path = pyargs[0]
 
-    # Put together output egg path
+    # Put together output path
     if len(pyargs) < 2:
-        egg_path = os.path.splitext(obj_path)[0] + ".egg"
+        out_path = os.path.splitext(obj_path)[0] + ".egg"
     else:
-    # Get the .egg filename from cmd line
-        egg_path = pyargs[1]
+        # Get the .<out> filename from cmd line
+        out_path = pyargs[1]
 
     # Put together rotation
     if len(pyargs) < 3:
@@ -173,5 +194,5 @@ if __name__ == "__main__":
         rot = [float(s) for s in param_str.split(",")]
 
     # Run the import
-    run(obj_path, egg_path, rot)
+    run(obj_path, out_path, rot)
 

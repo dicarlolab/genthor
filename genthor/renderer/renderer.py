@@ -8,7 +8,8 @@ from pandac.PandaModules import TexGenAttrib
 from pandac.PandaModules import TextureStage
 from pandac.PandaModules import NodePath
 import genthor as gt
-from lightbase import LightBase
+import genthor.tools as tools
+from genthor.renderer.lightbase import LightBase
 import pdb
 
 
@@ -21,9 +22,17 @@ def setup_renderer(window_type, size=(256, 256)):
 
     if window_type == "onscreen":
         output = lbase.make_window(size, "window")
-    else:
-        output, tex = lbase.make_texture_buffer(size, "buffer",
+    elif window_type == "offscreen":
+        output = lbase.make_buffer(size, "buffer")
+    elif window_type == "texture":
+        output, tex = lbase.make_texture_buffer(size, "texturebuffer",
                                                 mode='RTMCopyRam')
+    else:
+        raise ValueError("Unknown window type: %s" % window_type)
+
+    # Clear out frame contents
+    lbase.render_frame()
+    lbase.render_frame()
 
     # Set up a camera
     scene_width = 3.
@@ -50,25 +59,16 @@ def setup_renderer(window_type, size=(256, 256)):
     return lbase, output
 
 
-def read_file(func, filepth):
-    """ Returns func(filepath), first trying absolute path, then
-    relative."""
-
-    try:
-        out = func(filepth)
-    except IOError:
-        try:
-            out = func(os.path.join(os.getcwd(), filepth))
-        except IOError as exc:
-            raise exc
-    return out
-
-
-def construct_scene(lbase, modelpth, bgpath, scale, pos, hpr, bgscale, bghp):
+def construct_scene(lbase, modelpth, bgpath, scale, pos, hpr, bgscale, bghp,
+                    scene=None):
     """ Constructs the scene per the parameters. """
+
+    # Default scene is lbase's rootnode
+    if scene is None:
+        scene = lbase.rootnode
     
     # Modelpth points to the model .egg/.bam file
-    objnode = read_file(lbase.loader.loadModel, modelpth)
+    objnode = tools.read_file(lbase.loader.loadModel, modelpth)
     objnode.setScale(scale[0], scale[0], scale[0])
     objnode.setPos(pos[0], pos[1], 0.)
     objnode.setHpr(hpr[0], hpr[1], hpr[2])
@@ -76,7 +76,7 @@ def construct_scene(lbase, modelpth, bgpath, scale, pos, hpr, bgscale, bghp):
 
     # Environment map
     if bgpath and False:
-        envtex = read_file(lbase.loader.loadTexture, bgpath)
+        envtex = tools.read_file(lbase.loader.loadTexture, bgpath)
         # Map onto object
         ts = TextureStage('env')
         ts.setMode(TextureStage.MBlendColorScale)
@@ -84,7 +84,7 @@ def construct_scene(lbase, modelpth, bgpath, scale, pos, hpr, bgscale, bghp):
         objnode.setTexture(ts, envtex)
 
     if bgpath:
-        bgtex = read_file(lbase.loader.loadTexture, bgpath)
+        bgtex = tools.read_file(lbase.loader.loadTexture, bgpath)
         # Set as background
         bgnode = lbase.loader.loadModel('smiley')
         # Get material list
@@ -104,8 +104,9 @@ def construct_scene(lbase, modelpth, bgpath, scale, pos, hpr, bgscale, bghp):
     else:
         bgnode = NodePath("empty-bgnode")
 
-    objnode.reparentTo(lbase.rootnode)
-    bgnode.reparentTo(lbase.rootnode)
+    # Reparent to a single scene node
+    objnode.reparentTo(scene)
+    bgnode.reparentTo(scene)
 
     return objnode, bgnode
 
