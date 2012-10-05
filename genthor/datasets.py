@@ -4,6 +4,7 @@ import re
 import hashlib
 import cPickle
 
+import lockfile
 import numpy as np
 import Image
 import tabular as tb
@@ -22,7 +23,7 @@ from skdata.utils.download_and_extract import extract, download
 
 import genthor.renderer.renderer as gr
 import genthor.model_info as model_info
-
+import genthor.jxx_model_info as jxx_model_info
 
 class DatasetBase(object):
     def home(self, *suffix_paths):
@@ -33,13 +34,15 @@ class DatasetBase(object):
         home = self.home()
         if not os.path.exists(home):
             os.makedirs(home)
-        for base, sha1 in self.FILES:
-            archive_filename = os.path.join(home, base)  
-            if not os.path.exists(archive_filename):
-                url = 'http://dicarlocox-datasets.s3.amazonaws.com/' + base
-                print ('downloading %s' % url)
-                download(url, archive_filename, sha1=sha1, verbose=True)                
-                extract(archive_filename, home, sha1=sha1, verbose=True)
+        lock = lockfile.FileLock(home)
+        with lock:
+            for base, sha1 in self.FILES:
+                archive_filename = os.path.join(home, base)  
+                if not os.path.exists(archive_filename):
+                    url = 'http://dicarlocox-datasets.s3.amazonaws.com/' + base
+                    print ('downloading %s' % url)
+                    download(url, archive_filename, sha1=sha1, verbose=True)                
+                    extract(archive_filename, home, sha1=sha1, verbose=True)
 
     @property
     def meta(self):
@@ -62,6 +65,11 @@ class GenerativeDatasetBase(DatasetBase):
                )]
 
     base_name = 'GenthorGenerative'
+    model_categories = dict_inverse(model_info.MODEL_CATEGORIES)
+    
+    def __init__(self, data=None):
+        self.data = data
+        self.specific_name = self.__class__.__name__ + '_' + get_image_id(data)
     
     def _get_meta(self):
         #generate params 
@@ -70,15 +78,17 @@ class GenerativeDatasetBase(DatasetBase):
 
         latents = []
         rng = np.random.RandomState(seed=0)
-
-        model_categories = dict_inverse(model_info.MODEL_CATEGORIES)
+        model_categories = self.model_categories
         for tdict in templates:
-            n_ex_per_model = tdict['n_ex_per_model']
             template = tdict['template']
             tname = tdict['name']
+            if tdict.has_key('n_ex_dict'):
+                n_ex_dict = tdict['n_ex_dict']
+            else:
+                n_ex_dict = dict([(m, tdict['n_ex_per_model']) for m in models])
             for model in models:
                 print('Generating meta for %s' % model)
-                for _ind in range(n_ex_per_model):
+                for _ind in range(n_ex_dict[model]):
                     l = stochastic.sample(template, rng)
                     l['obj'] = model
                     l['category'] = model_categories[model][0]
@@ -302,7 +312,6 @@ class GenerativeDataset1(GenerativeDatasetBase):
                      'rxz': uniform(-180., 180.),
                      }
                   }]
-    specific_name = 'GenerativeDataset1'
 
 
 class GenerativeDataset2(GenerativeDatasetBase):    
@@ -342,10 +351,349 @@ class GenerativeDataset2(GenerativeDatasetBase):
                      'rxz': uniform(-180., 180.),
                      }
                   }]
-    specific_name = 'GenerativeDataset2'
 
+
+class GenerativeDataset3(GenerativeDatasetBase):    
+    models = model_info.MODEL_SUBSET_3
+    bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
+                       'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
+                       'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
+                       'INTERIOR_07ST.jpg', 'INTERIOR_06ST.jpg',
+                       'INTERIOR_05ST.jpg']
+    good_backgrounds = [_b for _b in model_info.BACKGROUNDS
+                                                  if _b not in bad_backgrounds]
+    templates = [
+                 {'n_ex_per_model': 200,
+                  'name': 'var1', 
+                  'template': {'bgname': choice(good_backgrounds),
+                     'bgscale': 1.,
+                     'bgpsi': 0,
+                     'bgphi': uniform(-180.0, 180.),
+                     's': loguniform(np.log(2./3), np.log(2.)),
+                     'ty': uniform(-1.0, 1.0),
+                     'tz': uniform(-1.0, 1.0),
+                     'ryz': uniform(-180., 180.),
+                     'rxy': uniform(-180., 180.),
+                     'rxz': uniform(-180., 180.),
+                     }
+                  }]
+
+
+class GenerativeDataset3a(GenerativeDatasetBase):    
+    models = model_info.MODEL_SUBSET_3
+    bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
+                       'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
+                       'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
+                       'INTERIOR_07ST.jpg', 'INTERIOR_06ST.jpg',
+                       'INTERIOR_05ST.jpg']
+    good_backgrounds = [_b for _b in model_info.BACKGROUNDS
+                                                  if _b not in bad_backgrounds]
+    templates = [
+                 {'n_ex_per_model': 250,
+                  'name': 'var1', 
+                  'template': {'bgname': choice(good_backgrounds),
+                     'bgscale': 1.,
+                     'bgpsi': 0,
+                     'bgphi': uniform(-180.0, 180.),
+                     's': loguniform(np.log(2./3), np.log(3.)),
+                     'ty': uniform(-1.0, 1.0),
+                     'tz': uniform(-1.0, 1.0),
+                     'ryz': uniform(-180., 180.),
+                     'rxy': uniform(-180., 180.),
+                     'rxz': uniform(-180., 180.),
+                     }
+                  }]
     
 
+class GenerativeDataset4(GenerativeDatasetBase):    
+    models = model_info.MODEL_SUBSET_5
+    bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
+                       'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
+                       'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
+                       'INTERIOR_07ST.jpg', 'INTERIOR_06ST.jpg',
+                       'INTERIOR_05ST.jpg']
+    good_backgrounds = [_b for _b in model_info.BACKGROUNDS
+                                                  if _b not in bad_backgrounds]
+    templates = [
+                 {'n_ex_per_model': 250,
+                  'name': 'var1', 
+                  'template': {'bgname': choice(good_backgrounds),
+                     'bgscale': 1.,
+                     'bgpsi': 0,
+                     'bgphi': uniform(-180.0, 180.),
+                     's': uniform(2./3, 3),
+                     'ty': uniform(-1.0, 1.0),
+                     'tz': uniform(-1.0, 1.0),
+                     'ryz': uniform(-180., 180.),
+                     'rxy': uniform(-180., 180.),
+                     'rxz': uniform(-180., 180.),
+                     }
+                  }]
+    
+    def __init__(self, data=None):
+        GenerativeDatasetBase.__init__(self, data)
+        if self.data and self.data.get('bias_file') is not None:
+            froot = os.environ.get('FILEROOT','')
+            bias = cPickle.load(open(os.path.join(froot, self.data['bias_file'])))
+        elif self.data and self.data.get('bias') is not None:
+            bias = self.data['bias']
+        else:
+            bias = None
+        if self.data and self.data.get('n_ex_per_model'):
+            self.templates[0]['n_ex_per_model'] = self.data['n_ex_per_model']
+        if bias is not None:
+            models = self.models
+            n_ex = self.templates[0]['n_ex_per_model']
+            total = len(models) * n_ex
+            self.templates[0]['n_ex_dict'] = dict(zip(models,
+                               [int(round(total * bias[m])) for m in models]))
+
+
+class GenerativeDataset5(GenerativeDataset4):   
+    models = model_info.MODEL_SUBSET_5
+    bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
+                       'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
+                       'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
+                       'INTERIOR_07ST.jpg', 'INTERIOR_06ST.jpg',
+                       'INTERIOR_05ST.jpg']
+    good_backgrounds = [_b for _b in model_info.BACKGROUNDS
+                                                  if _b not in bad_backgrounds]
+
+    templates = [
+                 {'n_ex_per_model': 250,
+                  'name': 'var1', 
+                  'template': {'bgname': choice(good_backgrounds),
+                     'bgscale': 1.,
+                     'bgpsi': 0,
+                     'bgphi': uniform(-180.0, 180.),
+                     's': uniform(2./3, 3),
+                     'ty': uniform(-0.5, 0.5),
+                     'tz': uniform(-0.5, 0.5),
+                     'ryz': uniform(-180., 180.),
+                     'rxy': uniform(-180., 180.),
+                     'rxz': uniform(-180., 180.),
+                     }
+                  }]   
+
+
+class GenerativeDatasetLoTrans(GenerativeDataset4):   
+    models = model_info.MODEL_SUBSET_5
+    bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
+                       'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
+                       'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
+                       'INTERIOR_07ST.jpg', 'INTERIOR_06ST.jpg',
+                       'INTERIOR_05ST.jpg']
+    good_backgrounds = [_b for _b in model_info.BACKGROUNDS
+                                                  if _b not in bad_backgrounds]
+
+    templates = [
+                 {'n_ex_per_model': 250,
+                  'name': 'var1', 
+                  'template': {'bgname': choice(good_backgrounds),
+                     'bgscale': 1.,
+                     'bgpsi': 0,
+                     'bgphi': uniform(-180.0, 180.),
+                     's': uniform(2./3, 3),
+                     'ty': uniform(-0.05, 0.05),
+                     'tz': uniform(-0.05, 0.05),
+                     'ryz': uniform(-180., 180.),
+                     'rxy': uniform(-180., 180.),
+                     'rxz': uniform(-180., 180.),
+                     }
+                  }]   
+
+
+class GenerativeDatasetHiZTrans(GenerativeDataset4):   
+    models = model_info.MODEL_SUBSET_5
+    bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
+                       'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
+                       'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
+                       'INTERIOR_07ST.jpg', 'INTERIOR_06ST.jpg',
+                       'INTERIOR_05ST.jpg']
+    good_backgrounds = [_b for _b in model_info.BACKGROUNDS
+                                                  if _b not in bad_backgrounds]
+
+    templates = [
+                 {'n_ex_per_model': 250,
+                  'name': 'var1', 
+                  'template': {'bgname': choice(good_backgrounds),
+                     'bgscale': 1.,
+                     'bgpsi': 0,
+                     'bgphi': uniform(-180.0, 180.),
+                     's': uniform(2./3, 3),
+                     'ty': uniform(-0.05, 0.05),
+                     'tz': uniform(-5.0, 5.0),
+                     'ryz': uniform(-180., 180.),
+                     'rxy': uniform(-180., 180.),
+                     'rxz': uniform(-180., 180.),
+                     }
+                  }]   
+
+
+class GenerativeDatasetBoatsVsAll(GenerativeDatasetBase):    
+    models = model_info.MODEL_SUBSET_5
+    bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
+                       'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
+                       'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
+                       'INTERIOR_07ST.jpg', 'INTERIOR_06ST.jpg',
+                       'INTERIOR_05ST.jpg']
+    good_backgrounds = [_b for _b in model_info.BACKGROUNDS
+                                                  if _b not in bad_backgrounds]
+    templates = [
+                 {'n_ex_dict': dict([(m, 1125 if m in model_info.MODEL_CATEGORIES['boats'] else 140) for m in models]),
+                  'name': 'var1', 
+                  'template': {'bgname': choice(good_backgrounds),
+                     'bgscale': 1.,
+                     'bgpsi': 0,
+                     'bgphi': uniform(-180.0, 180.),
+                     's': uniform(2./3, 3),
+                     'ty': uniform(-1.0, 1.0),
+                     'tz': uniform(-1.0, 1.0),
+                     'ryz': uniform(-180., 180.),
+                     'rxy': uniform(-180., 180.),
+                     'rxz': uniform(-180., 180.),
+                     }
+                  }]
+
+
+class GenerativeDatasetTwoBadBoats(GenerativeDatasetBase):    
+    models = model_info.MODEL_SUBSET_5[:]
+    models.remove('MB27840')
+    models.remove('MB28586')
+    bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
+                       'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
+                       'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
+                       'INTERIOR_07ST.jpg', 'INTERIOR_06ST.jpg',
+                       'INTERIOR_05ST.jpg']
+    good_backgrounds = [_b for _b in model_info.BACKGROUNDS
+                                                  if _b not in bad_backgrounds]
+    templates = [
+                 {'n_ex_dict': dict([('MB28646', 1500), ('MB29346', 1500)] + \
+                                    [(m , 94) for m in models if m not in model_info.MODEL_CATEGORIES['boats']]),
+                  'name': 'var1', 
+                  'template': {'bgname': choice(good_backgrounds),
+                     'bgscale': 1.,
+                     'bgpsi': 0,
+                     'bgphi': uniform(-180.0, 180.),
+                     's': uniform(2./3, 3),
+                     'ty': uniform(-1.0, 1.0),
+                     'tz': uniform(-1.0, 1.0),
+                     'ryz': uniform(-180., 180.),
+                     'rxy': uniform(-180., 180.),
+                     'rxz': uniform(-180., 180.),
+                     }
+                  }]
+
+
+class GenerativeDatasetPlanesVsAll(GenerativeDatasetBase):    
+    models = model_info.MODEL_SUBSET_5
+    bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
+                       'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
+                       'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
+                       'INTERIOR_07ST.jpg', 'INTERIOR_06ST.jpg',
+                       'INTERIOR_05ST.jpg']
+    good_backgrounds = [_b for _b in model_info.BACKGROUNDS
+                                                  if _b not in bad_backgrounds]
+    templates = [
+                 {'n_ex_dict': dict([(m, 750 if m in model_info.MODEL_CATEGORIES['planes'] else 93) for m in models]),
+                  'name': 'var1', 
+                  'template': {'bgname': choice(good_backgrounds),
+                     'bgscale': 1.,
+                     'bgpsi': 0,
+                     'bgphi': uniform(-180.0, 180.),
+                     's': uniform(2./3, 3),
+                     'ty': uniform(-1.0, 1.0),
+                     'tz': uniform(-1.0, 1.0),
+                     'ryz': uniform(-180., 180.),
+                     'rxy': uniform(-180., 180.),
+                     'rxz': uniform(-180., 180.),
+                     }
+                  }]
+
+
+class GenerativeDatasetTablesVsAll(GenerativeDatasetBase):    
+    models = model_info.MODEL_SUBSET_5
+    bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
+                       'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
+                       'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
+                       'INTERIOR_07ST.jpg', 'INTERIOR_06ST.jpg',
+                       'INTERIOR_05ST.jpg']
+    good_backgrounds = [_b for _b in model_info.BACKGROUNDS
+                                                  if _b not in bad_backgrounds]
+    templates = [
+                 {'n_ex_dict': dict([(m, 750 if m in model_info.MODEL_CATEGORIES['tables'] else 93) for m in models]),
+                  'name': 'var1', 
+                  'template': {'bgname': choice(good_backgrounds),
+                     'bgscale': 1.,
+                     'bgpsi': 0,
+                     'bgphi': uniform(-180.0, 180.),
+                     's': uniform(2./3, 3),
+                     'ty': uniform(-1.0, 1.0),
+                     'tz': uniform(-1.0, 1.0),
+                     'ryz': uniform(-180., 180.),
+                     'rxy': uniform(-180., 180.),
+                     'rxz': uniform(-180., 180.),
+                     }
+                  }]
+
+
+MODEL_CATEGORIES = model_info.MODEL_CATEGORIES
+
+class GenerativeDatasetBoatsVsReptiles(GenerativeDatasetBase):    
+    models = [_x for _x in model_info.MODEL_SUBSET_5 
+                     if _x in MODEL_CATEGORIES['boats'] + MODEL_CATEGORIES['reptiles']]
+    bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
+                       'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
+                       'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
+                       'INTERIOR_07ST.jpg', 'INTERIOR_06ST.jpg',
+                       'INTERIOR_05ST.jpg']
+    good_backgrounds = [_b for _b in model_info.BACKGROUNDS
+                                                  if _b not in bad_backgrounds]
+    templates = [
+                 {'n_ex_per_model': 1000,
+                  'name': 'var1', 
+                  'template': {'bgname': choice(good_backgrounds),
+                     'bgscale': 1.,
+                     'bgpsi': 0,
+                     'bgphi': uniform(-180.0, 180.),
+                     's': uniform(2./3, 3),
+                     'ty': uniform(-1.0, 1.0),
+                     'tz': uniform(-1.0, 1.0),
+                     'ryz': uniform(-180., 180.),
+                     'rxy': uniform(-180., 180.),
+                     'rxz': uniform(-180., 180.),
+                     }
+                  }]
+
+
+class GenerativeDatasetLowres(GenerativeDatasetBase):    
+    """optimized for low res:, e.g. bigger objects"""
+    models = model_info.MODEL_SUBSET_3
+    bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
+                       'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
+                       'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
+                       'INTERIOR_07ST.jpg', 'INTERIOR_06ST.jpg',
+                       'INTERIOR_05ST.jpg']
+    good_backgrounds = [_b for _b in model_info.BACKGROUNDS
+                                                  if _b not in bad_backgrounds]
+    templates = [
+                 {'n_ex_per_model': 250,
+                  'name': 'var1', 
+                  'template': {'bgname': choice(good_backgrounds),
+                     'bgscale': 1.,
+                     'bgpsi': 0,
+                     'bgphi': uniform(-180.0, 180.),
+                     's': loguniform(np.log(1.5), np.log(5.)),
+                     'ty': uniform(-0.2, 0.2),
+                     'tz': uniform(-0.2, 0.2),
+                     'ryz': uniform(-45., 45.),
+                     'rxy': uniform(-45., 45.),
+                     'rxz': uniform(-45., 45.),
+                     }
+                  }]
+
+    
+    
 class GenerativeDatasetTest(GenerativeDataset1):    
     models = model_info.MODEL_SUBSET_1
     bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
@@ -369,12 +717,16 @@ class GenerativeDatasetTest(GenerativeDataset1):
                      'rxz': uniform(-180., 180.),
                      }
                   }]  
-    specific_name = 'GenerativeDatasetTest'
     
 
 class ImgRendererResizer(object):
     def __init__(self, model_root, bg_root, preproc, lbase, output):
-        self._shape = tuple(preproc['size'])
+        size = tuple(preproc['size'])
+        self.transpose = preproc.get('transpose', False)
+        if self.transpose:
+            self._shape = tuple(np.array(size)[list(self.transpose)])
+        else:
+            self._shape = size
         self._ndim = len(self._shape) 
         self._dtype = preproc['dtype']
         self.mode = preproc['mode']
@@ -383,6 +735,7 @@ class ImgRendererResizer(object):
         self.output = output
         self.model_root = model_root
         self.bg_root = bg_root
+
     
     def rval_getattr(self, attr, objs):
         if attr == 'shape' and self._shape is not None:
@@ -416,8 +769,11 @@ class ImgRendererResizer(object):
             rval -= rval.mean()
             rval /= max(rval.std(), 1e-3)
         else:
-            rval /= 255.0
-        assert rval.shape[:2] == self._shape[:2]
+            if 'float' in str(self._dtype):
+                rval /= 255.0
+        if self.transpose:
+            rval = rval.transpose(*tuple(self.transpose))
+        assert rval.shape[:2] == self._shape[:2], (rval.shape, self._shape)
         return rval
         
 
@@ -622,3 +978,235 @@ def test_generative_dataset():
     X = np.asarray(imgs[[0, 50]])
     Y = cPickle.load(open('generative_dataset_test_images_0_50.pkl'))
     assert (X == Y).all()
+    
+    
+#####GP generative
+class GPGenerativeDatasetBase(GenerativeDatasetBase):
+
+    def _get_meta(self, seed=0):
+        #generate params
+        rng = np.random.RandomState(seed=seed)
+        
+        models = self.models
+        template = self.template
+
+        model_categories = dict_inverse(model_info.MODEL_CATEGORIES)
+        
+        import sklearn.gaussian_process as gaussian_process 
+        
+        gps = self.gps = [gaussian_process.GaussianProcess(theta0=1e-2, thetaL=1e-4,
+                     thetaU=1e-1, corr='linear')  for _i in range(len(models))]
+        
+        data = self.data
+        X, y = data['bias_data']
+        M = data['num_to_sample']
+        N = data['num_images']
+        
+        [self.gps[i].fit(X[i], y[i]) for i in range(len(models))]
+        
+        mx = X.max(1)
+        mn = X.min(1)
+        Ts = [rng.uniform(size=(M, 6)) * (mx[i] - mn[i]) + mn[i] for i in range(len(models))]
+        Tps = [gps[i].predict(Ts[i]) for i in range(len(models))]
+        Tps = [np.minimum(t, 0) for t in Tps]
+        Tps = [(t / t.sum()) * y[i].sum() for i, t in enumerate(Tps)]
+        
+        W = tb.tab_rowstack([tb.tabarray(records=[(tt, i, j) for (j, tt) in enumerate(t)],
+                   names=['w', 'o', 'j']) for i, t in enumerate(Tps)])
+    
+        L = sample_without_replacement(W['w'], N, rng)
+        
+        latents = []
+        for w in W[L]:
+            obj = models[w['o']]
+            cat = model_categories[obj][0]
+            l = Ts[w['o']][w['j']]
+            l1 = stochastic.sample(template, rng)
+            rec = (l1['bgname'],
+                   float(l1['bgphi']),
+                   float(l1['bgpsi']),
+                   float(l1['bgscale']),
+                   cat,
+                   obj) + tuple(l)
+            idval = get_image_id(rec)
+            rec = rec + (idval,)
+            latents.append(rec)
+
+        return tb.tabarray(records=latents, names = ['bgname',
+                                                     'bgphi',
+                                                     'bgpsi',
+                                                     'bgscale',
+                                                     'category',
+                                                     'obj',
+                                                     'ryz',
+                                                     'rxz',
+                                                     'rxy',
+                                                     'ty',
+                                                     'tz',
+                                                     's',
+                                                     'id'])
+        
+def sample_without_replacement(w, N, rng):
+    w = w.copy()
+    assert (w >= 0).all()
+    assert np.abs(w.sum() - 1) < 1e-4, w.sum()
+    assert w.ndim == 1
+    assert len((w > 0).nonzero()[0]) >= N, (len((w >0).nonzero()[0]), N)
+    samples = []
+    for ind in xrange(N):
+        r = rng.uniform()
+        j = w.cumsum().searchsorted(r)
+        samples.append(j)
+        w[j] = 0
+        w = w / w.sum()
+    return samples
+
+
+class GPGenerativeDatasetTest(GPGenerativeDatasetBase):
+    models = GenerativeDataset4.models[:]
+    good_backgrounds = GenerativeDataset4.good_backgrounds[:]
+    template = {'bgname': choice(good_backgrounds),
+                'bgscale': 1.,
+                'bgpsi': 0,
+                'bgphi': uniform(-180.0, 180.)}
+
+
+class ResampleGenerativeDataset(GenerativeDatasetBase):
+    def _get_meta(self, seed=0):
+        #generate params
+        rng = np.random.RandomState(seed=seed)                
+        data = self.data
+        bias_meta, bias_weights = data['bias_data']
+        ranges = data['ranges']
+        N = data['num_images']
+
+        J = sample_with_replacement(bias_weights, N, rng)
+
+        latents = []        
+        for j in J:
+            l = get_nearby_sample(bias_meta[j], ranges, rng)     
+            l['id'] = get_image_id(l)
+            rec = (l['bgname'],
+                   float(l['bgphi']),
+                   float(l['bgpsi']),
+                   float(l['bgscale']),
+                   l['category'],
+                   l['obj'],
+                   float(l['ryz']),
+                   float(l['rxz']),
+                   float(l['rxy']),
+                   float(l['ty']),
+                   float(l['tz']),
+                   float(l['s']),
+                   l['id'])
+            latents.append(rec)
+        meta = tb.tabarray(records=latents, names = ['bgname',
+                                                     'bgphi',
+                                                     'bgpsi',
+                                                     'bgscale',
+                                                     'category',
+                                                     'obj',
+                                                     'ryz',
+                                                     'rxz',
+                                                     'rxy',
+                                                     'ty',
+                                                     'tz',
+                                                     's',
+                                                     'id'])
+        return meta
+
+
+def sample_with_replacement(w, N, rng):
+    assert (w >= 0).all()
+    assert np.abs(w.sum() - 1) < 1e-4, w.sum()
+    assert w.ndim == 1
+    return w.cumsum().searchsorted(rng.uniform(size=(N,)))
+    
+
+def get_nearby_sample(s, ranges, rng):
+    news = {}
+    news['bgname'] = s['bgname']
+    news['category'] = s['category']
+    news['obj'] = s['obj']
+    post = {'bgphi': lambda x: mod(x, 360, 180),
+            'bgpsi': lambda x: mod(x, 360, 180),
+            'rxy': lambda x: mod(x, 360, 180),
+            'ryz': lambda x: mod(x, 360, 180),
+            'rxz': lambda x: mod(x, 360, 180)}
+    for k in ['bgphi', 'bgpsi', 'bgscale', 'rxy', 'rxz', 'ryz', 'ty', 'tz', 's']:
+        delta = rng.uniform(high=ranges[k][1], low=ranges[k][0])
+        news[k] = post.get(k, lambda x: x)(s[k] + delta)
+    return news    
+                
+    
+def mod (x, y, a):
+    return (x + a) % y - a
+
+
+class ResampleGenerativeDataset4a(ResampleGenerativeDataset):    
+    def _get_meta(self):
+        dset = GenerativeDataset4()
+        dset.templates[0]['n_ex_per_model'] = 125
+        meta1 = dset.meta
+        dset = GenerativeDataset4()
+        dset.templates[0]['n_ex_per_model'] = 250
+        meta = dset.meta
+        froot = os.environ.get('FILEROOT','')
+        bias = cPickle.load(open(os.path.join(froot, self.data['bias_file'])))
+        self.data['bias_data'] = (meta, bias)
+        self.data['num_images'] = len(meta)/2
+        meta2 = ResampleGenerativeDataset._get_meta(self)
+        return tb.tab_rowstack([meta1, meta2])
+
+
+class ResampleGenerativeDataset4plus(ResampleGenerativeDataset):    
+    def _get_meta(self):
+        dset = GenerativeDataset4()
+        dset.templates[0]['n_ex_per_model'] = 125
+        meta1 = dset.meta
+        froot = os.environ.get('FILEROOT','')
+        self.data['bias_data'] = cPickle.load(open(os.path.join(froot,
+                       self.data['bias_file'])))
+        self.data['num_images'] = len(meta1)
+        meta2 = ResampleGenerativeDataset._get_meta(self)
+        return tb.tab_rowstack([meta1, meta2])
+
+
+class JXXDatasetBase(GenerativeDatasetBase):
+    bg_root = 'genthor_backgrounds_20120418'
+    model_root = 'jxx_processed_models_20120723'
+    FILES = [('genthor_backgrounds_20120418.zip',
+              '17c5dd97be0775a7e6ec5de07592a44fb4551b76'),
+              ('jxx_processed_models_20120723.tar.gz',
+               '1fadce011893e7f0bc18ad14047b30b9800e5d71'
+               )]
+
+    base_name = 'JXXGenerative'
+    model_categories = dict_inverse(jxx_model_info.MODEL_CATEGORIES)
+
+
+class JXXDatasetTest(JXXDatasetBase):    
+    models = ['test1']
+    bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
+                       'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
+                       'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
+                       'INTERIOR_07ST.jpg', 'INTERIOR_06ST.jpg',
+                       'INTERIOR_05ST.jpg']
+    good_backgrounds = [_b for _b in model_info.BACKGROUNDS
+                                                  if _b not in bad_backgrounds]
+    templates = [
+                 {'n_ex_per_model': 10,
+                  'name': 'var1', 
+                  'template': {'bgname': choice(good_backgrounds),
+                     'bgscale': 1.,
+                     'bgpsi': 0,
+                     'bgphi': uniform(-180.0, 180.),
+                     's': loguniform(np.log(2./3), np.log(2.)),
+                     'ty': uniform(-1.0, 1.0),
+                     'tz': uniform(-1.0, 1.0),
+                     'ryz': uniform(-180., 180.),
+                     'rxy': uniform(-180., 180.),
+                     'rxz': uniform(-180., 180.),
+                     }
+                  }]
+

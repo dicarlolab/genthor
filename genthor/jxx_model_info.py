@@ -11,61 +11,7 @@ except ImportError:
     except ImportError:
         raise ImportError("OrderedDict not available")
 
-MODEL_CATEGORIES = OrderedDict([('cars' , ['MB26897','MB28855','MB31518','MB28498',
-                              'MB28343','MB29642', 'MB31079','MB31620',
-                              'MB28490','MB31095']),
-                              
-                    ('cats_and_dogs' , ['shorthair_cat','leopard',
-                                       'lynx','oriental','panther',
-                                       'doberman', 'schnauzer',
-                                       'dalmatian', 'bloodhound','bullmastiff']),
-
-                    ('reptiles', ['MB30418','MB29694', 'chameleon',
-                                  'crocodile','gecko','iguana','leatherback',
-                                  'terapin','tortoise','salamander']),
-
-                    ('guns', ['MB27069','MB27350','MB30684','MB28771',
-                              'MB27860','MB29066','MB29726',
-                              'MB30472','MB30027','MB30680']),
-
-                    ('boats', ['MB27840','MB27239','MB28586','MB29022','MB28646',
-                               'MB29366','MB29346','MB29698',
-                               'MB29762','MB31331']),
-
-                    ('planes', ['MB26937','MB27203','MB27211',
-                                'MB27463','MB27876','MB27732',
-                                'MB27530','MB29650',
-                                'MB28651','MB28243']),
-
-                    ('faces', ['face0001','face0002','face0003',
-                               'face0005','face0006',
-                               'face1','face2','face3',
-                               'face5','face6']),
-
-                    ('chairs', ['MB29826','MB29342','MB28514','MB27139',
-                               'MB27680','MB27675','MB27692',
-                               'MB27684','MB27679','MB27696']),
-
-                    ('tables', ['MB30374','MB30082','MB28811','MB27386',
-                               'MB28462','MB28077','MB28049','MB30386',
-                               'MB30926','MB28214']),
-
-                    ('plants', ['MB29862','MB30366','MB28415','MB30422',
-                                'MB30150','MB31632','MB30370','MB30114',
-                                'MB30762','MB30814']),
-
-                    ('buildings', ['MB27471','MB28886','MB30794',
-                                   'MB29870','MB27835','MB31131',
-                                   'MB29802', 'MB30810','MB28921',
-                                   'MB28934'])])
-                  
-                                   
-MODEL_SUBSET_1 = list(itertools.chain(*[v[::2] + [v[5]] for v in MODEL_CATEGORIES.values()]))
-MODEL_SUBSET_2 = MODEL_SUBSET_1[::2]
-MODEL_SUBSET_3 = MODEL_SUBSET_1[::3]
-MODEL_SUBSET_4 = MODEL_SUBSET_1[::6]
-MODEL_SUBSET_5 = list(itertools.chain(*[v[:-2:2] for k,v in MODEL_CATEGORIES.items() if k not in ['plants', 'buildings']]))
-
+MODEL_CATEGORIES = OrderedDict([('test%d'%i, ['test%d'%i] + ['test%d_00%d'%(i,j) for j in range(1,11)]) for i in range(1,6)])
 
 BACKGROUNDS = ['DH-ITALY01SN.jpg',
  'DH-ITALY02SN.jpg',
