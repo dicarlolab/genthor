@@ -1,3 +1,7 @@
+"""
+Blender script for normalizing .obj files and converting them to either .obj or
+.egg.
+"""
 import os
 import re
 import shutil
@@ -12,7 +16,7 @@ import pdb
 
 """
 Usage: 
-$ blender -b -P obj_converter.py -- <.obj filename>
+$ blender -b -P blender_obj_tools.py -- <.obj filename>
 """
 
 

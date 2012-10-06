@@ -261,7 +261,7 @@ def copy_tex(obj_path, tex_path):
     """ Copy texture images from .obj's directory to .egg's directory """
 
     # Texture image file extensions
-    tex_imgexts = (".jpg", ".tif", ".bmp", ".gif", ".png")
+    imgexts = (".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".gif", ".png")
     
     # Tex image files in obj_path
     tex_filenames0 = [name for name in os.listdir(obj_path)
