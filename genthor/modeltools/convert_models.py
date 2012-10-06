@@ -28,7 +28,7 @@ def blender_convert(ext=".obj"):
 
     # Blender script and conversion command.
     blender_path = os.path.join(os.environ["HOME"], "bin", "blender")
-    blender_script_name = "obj_converter.py"
+    blender_script_name = "obj_Bscript.py"
     blender_command_base = "%s -b -P %s --" % (blender_path,
                                                blender_script_name)
 
@@ -265,7 +265,7 @@ def copy_tex(obj_path, tex_path):
     
     # Tex image files in obj_path
     tex_filenames0 = [name for name in os.listdir(obj_path)
-                      if os.path.splitext(name)[1].lower() in tex_imgexts]
+                      if os.path.splitext(name)[1].lower() in imgexts]
 
     # Make the directory if need be, and error if it is a file already
     if os.path.isfile(tex_path):
@@ -283,7 +283,7 @@ def main():
     ext = ".obj"
     # Make the egg files from the objs
     tgz_pairs = blender_convert(ext)
-    # Make the bam files from the eggs
+    # Make the .egg/.bam files from the eggs
     panda_convert(tgz_pairs, outext=".egg")
     
 

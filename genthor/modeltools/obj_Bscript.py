@@ -87,12 +87,14 @@ def fix_tex_names(mtl_path, imgdirname="tex", f_verify=True):
 
     # visit() function for os.path.walk().  It appends detected image
     # files to a list.
-    def visit(imgnames, dirname, names):
-        imgnames.extend([os.path.join(dirname, name) for name in names
+    def visit(imgnames, dir_pth, names):
+        imgnames.extend([os.path.join(dir_pth, name) for name in names
                          if os.path.splitext(name)[1].lower() in imgexts])
     # walk down directory tree and get the image files    
     imgpaths0 = []
-    os.path.walk(dir_path, visit, imgpaths0)
+    for dp, foo, names in os.walk(dir_path):
+        visit(imgpaths0, dp, names)
+    #os.path.walk(dir_path, visit, imgpaths0)
     imgnames = [os.path.split(pth)[1].lower() for pth in imgpaths0]
 
     if f_verify:
