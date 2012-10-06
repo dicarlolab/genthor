@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 """
-Convert .obj models to .obj or .egg (Panda3d format) files
+Convert .obj models to .obj, .egg/.bam (Panda3d format) files
 Peter W Battaglia - 03.2012
 PWB - 10.2012 - updates
 """
+import argparse
 import obj2egg as o2e
 import os
 import shutil
@@ -14,33 +15,27 @@ from subprocess import check_call
 import pdb
 
 
-def blender_convert(ext=".obj"):
-
-    # Model root directory
-    model_path = os.path.join(os.environ["HOME"], "work/genthor/models/")
+def blender_convert(model_pth, out_root, ext=".obj", f_force=False):
 
     # Model info scripts
     model_categories_py = "model_categories"
     canonical_angles_py = "canonical_angles"
 
     # Temporary path in which to extract .obj files before conversion.
-    tmp_path = os.path.join(os.environ["HOME"], "tmp", "scrap")
+    tmp_root = os.path.join(os.environ["HOME"], "tmp", "scrap")
 
     # Blender script and conversion command.
-    blender_path = os.path.join(os.environ["HOME"], "bin", "blender")
+    blender_pth = os.path.join(os.environ["HOME"], "bin", "blender")
     blender_script_name = "obj_Bscript.py"
-    blender_command_base = "%s -b -P %s --" % (blender_path,
+    blender_command_base = "%s -b -P %s --" % (blender_pth,
                                                blender_script_name)
 
-    # Destination directory for .<out> files
-    out_root_path = os.path.join(os.environ["HOME"], "tmp", "processed_models")
-
     # Get the model names from the directory listing
-    modeldict = dict([(name[:-7], name) for name in os.listdir(model_path)
+    modeldict = dict([(name[:-7], name) for name in os.listdir(model_pth)
                       if name[-7:] == ".tar.gz"])
 
     # Get the model info that's contained in the scripts
-    sys.path.append(model_path)
+    sys.path.append(model_pth)
     model_categories = __import__(model_categories_py).MODEL_CATEGORIES
     canonical_angles = __import__(canonical_angles_py).ANGLES
 
@@ -66,13 +61,13 @@ def blender_convert(ext=".obj"):
         raise ValueError("%s does not have info for: %s" % (
             canonical_angles_py, ", ".join(modelnames.difference(names))))
 
-    # Raise exception if the out_root_path is an existing file
-    if os.path.isfile(out_root_path):
-        raise IOError("File already exists, cannot make: %s" % out_root_path)
+    # Raise exception if the out_root is an existing file
+    if os.path.isfile(out_root):
+        raise IOError("File already exists, cannot make: %s" % out_root)
 
-    # Create out_root_path directory if necessary
-    if not os.path.isdir(out_root_path):
-        os.makedirs(out_root_path)
+    # Create out_root directory if necessary
+    if not os.path.isdir(out_root):
+        os.makedirs(out_root)
 
     # Don't rename models 
     outdict = dict(zip(modeldict.keys(), modeldict.keys()))
@@ -83,16 +78,29 @@ def blender_convert(ext=".obj"):
     #                      for i, name in enumerate(names)])
     #outdict = dict(outnames)
 
-    tgz_paths = []
+    tgz_pths = []
     
     # Loop over models, doing the conversions
     for modelname, targzname in modeldict.iteritems():
+        # Set up file names
+        objname = modelname + ".obj"
+        outname = outdict[modelname]
+        outtgz_pth = os.path.join(out_root, outname, outname + ".tgz")
+        tgz_pths.append(outtgz_pth)
+        if not f_force and os.path.isfile(outtgz_pth):
+            continue
+        
+        out_pths = []
+        out_pths.append(os.path.join(out_root, outname, outname + ext))
+        out_pths.append(os.path.join(out_root, outname, "tex"))
+        if ext == ".obj":
+            out_pths.append(os.path.join(out_root, outname, outname + ".mtl"))
         
         # un-tar, un-gz into a temp directory
-        fulltargzname = os.path.join(model_path, targzname)
-        allnames = untar(tmp_path, fulltargzname)
+        fulltargzname = os.path.join(model_pth, targzname)
+        tmp_tar_pth = os.path.join(tmp_root, "tartmp")
+        allnames = untar(tmp_tar_pth, fulltargzname)
 
-        objname = modelname + ".obj"
         # Get target's path
         names = [n for n in allnames if os.path.split(n)[1] == objname]
         # Raise exception if there are not exactly 1
@@ -100,115 +108,131 @@ def blender_convert(ext=".obj"):
             raise ValueError("Cannot find unique object file in tar. Found: %s"
                              % ", ".join(names))
         # Construct obj and out paths
-        obj_path = os.path.join(tmp_path, names[0])
-        outname = outdict[modelname]
-        out_paths = []
-        out_paths.append(os.path.join(out_root_path, outname,
-                                      outname + ext))
-        out_paths.append(os.path.join(os.path.split(out_paths[0])[0], "tex"))
-        if ext == ".obj":
-            out_paths.append(os.path.join(out_root_path, outname,
-                                          outname + ".mtl"))
-
-        # if outname not in ("bloodhound", "MB29826"):
-        #     continue
-        # else:
-        #     #pdb.set_trace()
-        #     pass
+        obj_pth = os.path.join(tmp_tar_pth, names[0])
 
         # The params are the angles
         params = angledict[modelname]
-        
+
         # Do the conversion from .obj to .<out>
-        call_blender(obj_path, out_paths[0], blender_command_base, params)
+        call_blender(obj_pth, out_pths[0], blender_command_base, params)
 
         # Convert the .<out> to a .tgz
-        outtgz_path = os.path.splitext(out_paths[0])[0] + ".tbz2"
-        with tarfile.open(outtgz_path, mode="w:bz2") as tf:
-            for out_path in out_paths:
-                tf.add(out_path, out_path.split(out_root_path + "/")[1])
+        with tarfile.open(outtgz_pth, mode="w:gz") as tf:
+            for out_pth in out_pths:
+                tf.add(out_pth, out_pth.split(out_root + "/")[1])
 
         # Remove tmp directory
-        rm_path = os.path.join(
-            tmp_path, obj_path[len(tmp_path.rstrip("/")) + 1:].split("/")[0])
-        print "rm -rf %s" % rm_path
-        shutil.rmtree(rm_path)
+        print "rm -rf %s" % tmp_root
+        shutil.rmtree(tmp_root)
+
         # Remove .<out> file (eggs can be huge)
-        for out_path in out_paths:
-            if os.path.isfile(out_path):
-                os.remove(out_path)
-            elif os.path.isdir(out_path):
-                shutil.rmtree(out_path)
+        for out_pth in out_pths:
+            if os.path.isfile(out_pth):
+                os.remove(out_pth)
+            elif os.path.isdir(out_pth):
+                shutil.rmtree(out_pth)
 
-        tgz_paths.append(outtgz_path)
+    tgz_pths.sort()
 
-    return tgz_paths
+    return tgz_pths
 
 
-def panda_convert(tgz_paths, out_root="", outext=".egg"):
+def panda_convert(inout_pths, ext=".egg"):
     # Temporary path in which to extract .obj files before conversion.
-    tmp_path = os.path.join(os.environ["HOME"], "tmp", "scrap")
+    tmp_root = os.path.join(os.environ["HOME"], "tmp", "scrap")
+
+    if ext not in (".egg", ".bam"):
+        raise ValueError("Unsupported output type: %s" % ext)
 
     # Loop over models, converting <out>s to bams and deleting the <outs>
-    for tgz_path in tgz_paths:
-        # un-tar, un-gz into a temp directory
-        allnames = untar(tmp_path, tgz_path)
+    for in_pth, out_pth in inout_pths.iteritems():
+        if not os.path.isfile(in_pth):
+            raise IOError("File does not exist: %s" % in_pth)
 
-        # Get target's path
-        names = [n for n in allnames
-                 if os.path.splitext(n)[1] in (".egg", ".obj")]
-        # Raise exception if there are not exactly 1
-        if len(names) != 1:
-            raise ValueError("Cannot find unique object file in tar. Found: %s"
-                             % ", ".join(names))
-        name = names[0]
-        # File extension
-        ext = os.path.splitext(name)[1]
+        # Determine file name and extension
+        name, ext0 = os.path.basename(in_pth).split(".", 1)
+        ext0 = "." + ext0
+        if ext0 in (".tgz", ".tar.gz", ".tbz2"):
+            # un-tar, un-gz into a temp directory
+            tmp_tar_pth = os.path.join(tmp_root, "tartmp")
+            allnames = untar(tmp_tar_pth, in_pth)
 
-        # make the input/output paths
-        in_path = os.path.join(tmp_path, name)
-        bam_path = os.path.join(out_root, os.path.splitext(name)[0] + ".bam")
+            # Get target's path
+            names = [n for n in allnames
+                     if os.path.splitext(n)[1] in (".egg", ".obj")]
+            # Raise exception if there are not exactly 1
+            if len(names) != 1:
+                raise ValueError("Can't find unique file in tar. Found: %s"
+                                 % ", ".join(names))
+            in_pth = os.path.join(tmp_tar_pth, names[0])
+            ext0 = os.path.splitext(names[0])[1]
+        elif ext0 not in (".egg", ".obj"):
+            raise ValueError("Can't handle extension: %s" % in_pth)
 
-        if ext == ".obj":
-            # Convert .obj to .bam
-            egg_path = os.path.join(out_root, os.path.splitext(name)[0] + ".egg")
+        # Make the output paths. If the specified path has an
+        # extension, that takes precedence over the argument 'ext'.
+        ext1 = os.path.splitext(out_pth)[1]
+        if ext1 == "":
+            # out_pth is a directory, make it a filename
+            out_pth = os.path.join(out_pth, name + ext)
+            ext1 = ext
+        elif ext1 not in (".egg", ".bam"):
+            raise ValueError("Unsupported output type: %s" % ext1)
+
+
+        ## pdb.set_trace()
+
+        
+
+        # Make output directory (if necessary)
+        if not os.path.isdir(os.path.split(out_pth)[0]):
+            os.makedirs(os.path.split(out_pth)[0])
+
+        # Do the conversion, depending on ext1 type
+        if ext0 == ".obj":
+            if ext1 == ".bam":
+                # Two-step conversion, first to egg, then to bam
+                egg_pth = os.path.join(tmp_root, "eggtmp", "tmp.egg")
+            else:
+                # One-step conversion, to egg.
+                egg_pth = out_pth
             # Convert .obj to .egg
-            obj2egg(in_path, egg_path=egg_path)
-            if outext == ".bam":
+            obj2egg(in_pth, egg_pth=egg_pth)
+            if ext1 == ".bam":
                 # Convert .egg to .bam
-                egg2bam(egg_path, bam_path=bam_path)
-                os.remove(egg_path)
-        elif ext == ".egg" and outext == ".bam":
+                egg2bam(egg_pth, bam_pth=out_pth)
+        elif ext0 == ".egg" and ext1 == ".bam":
             # Convert .egg to .bam
-            egg2bam(in_path, bam_path=bam_path)
+            egg2bam(in_pth, bam_pth=out_pth)
         else:
             raise ValueError("unsupported output type: %s" % ext)
 
-        # Remove tmp directory
-        rm_path = os.path.join(
-            tmp_path, in_path[len(tmp_path.rstrip("/")) + 1:].split("/")[0])
-        print "rm -rf %s" % rm_path
-        shutil.rmtree(rm_path)
+        # Remove all tmp directories
+        print "rm -rf %s" % tmp_root
+        shutil.rmtree(tmp_root)
 
 
-def untar(tmp_path, tarname):
-    # Make the tmp_path directory if it doesn't exist already
-    if not os.path.isdir(tmp_path):
-        os.makedirs(tmp_path)
+def untar(tmp_pth, tarname):
+    # Make the tmp_pth directory if it doesn't exist already
+    if not os.path.isdir(tmp_pth):
+        os.makedirs(tmp_pth)
 
-    # Open the tar
-    with tarfile.open(tarname, 'r') as tf:
-        # Extract it
-        tf.extractall(tmp_path)
-        # Get tar.gz's member names
-        names = tf.getnames()
+    try:
+        # Open the tar
+        with tarfile.open(tarname, 'r') as tf:
+            # Extract it
+            tf.extractall(tmp_pth)
+            # Get tar.gz's member names
+            names = tf.getnames()
+    except:
+        pdb.set_trace()
 
     return names
 
 
-def call_blender(obj_path, out_path, blender_command_base, params):
+def call_blender(obj_pth, out_pth, blender_command_base, params):
     # Split into directory and filename
-    outdir, outname = os.path.split(out_path)
+    outdir, outname = os.path.split(out_pth)
     
     # Make the outdir directory if it doesn't exist already
     if not os.path.isdir(outdir):
@@ -218,8 +242,8 @@ def call_blender(obj_path, out_path, blender_command_base, params):
     param_str = ",".join([str(float(x)) for x in params])
 
     # Assemble the full blender command
-    blender_command = "%s %s %s %s" % (blender_command_base, obj_path,
-                                       out_path, param_str)
+    blender_command = "%s %s %s %s" % (blender_command_base, obj_pth,
+                                       out_pth, param_str)
 
     # Run the blender conversion
     try:
@@ -232,60 +256,81 @@ def call_blender(obj_path, out_path, blender_command_base, params):
         pdb.set_trace()
 
     # Copy the textures from the .obj path to the .<out> path
-    tex_path = os.path.join(os.path.split(out_path)[0], "tex")
-    copy_tex(os.path.split(obj_path)[0], tex_path)
+    tex_pth = os.path.join(os.path.split(out_pth)[0], "tex")
+    copy_tex(os.path.split(obj_pth)[0], tex_pth)
 
 
-def obj2egg(obj_path, egg_path=None):
+def obj2egg(obj_pth, egg_pth=None):
     ## Make an .egg
-    if egg_path is None:
-        egg_path = os.path.splitext(obj_path)[0] + '.egg'
-    #call("obj2egg -o %s %s" % (egg_path, obj_path), shell=True)
-    o2e.main(argv=["", obj_path])
-    egg_path0 = egg_path = os.path.splitext(obj_path)[0] + '.egg'
-    if egg_path0 != egg_path:
-        shutil.move(egg_path0, egg_path)
-        pth0 = os.path.split(obj_path)[0]
-        pth = os.path.split(egg_path)[0]
-        shutil.copytree(os.path.join(pth0, "tex"), pth)
+    if egg_pth is None:
+        egg_pth = os.path.splitext(obj_pth)[0] + '.egg'
+    # Call obj2egg.py script to convert
+    o2e.main(argv=["", obj_pth])
+    egg_pth0 = os.path.splitext(obj_pth)[0] + '.egg'
+    if egg_pth0 != egg_pth:
+        shutil.move(egg_pth0, egg_pth)
+        pth0 = os.path.split(obj_pth)[0]
+        pth = os.path.split(egg_pth)[0]
+        shutil.copytree(os.path.join(pth0, "tex"), os.path.join(pth, "tex"))
 
 
-def egg2bam(egg_path, bam_path=None):
+def egg2bam(egg_pth, bam_pth=None):
     # Make a .bam
-    if bam_path is None:
-        bam_path = os.path.splitext(egg_path)[0] + '.bam'
-    call("egg2bam -o %s %s" % (bam_path, egg_path), shell=True)
+    if bam_pth is None:
+        bam_pth = os.path.splitext(egg_pth)[0] + '.bam'
+    call("egg2bam -o %s %s" % (bam_pth, egg_pth), shell=True)
 
 
-def copy_tex(obj_path, tex_path):
+def copy_tex(obj_pth, tex_pth):
     """ Copy texture images from .obj's directory to .egg's directory """
 
     # Texture image file extensions
     imgexts = (".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".gif", ".png")
     
-    # Tex image files in obj_path
-    tex_filenames0 = [name for name in os.listdir(obj_path)
+    # Tex image files in obj_pth
+    tex_filenames0 = [name for name in os.listdir(obj_pth)
                       if os.path.splitext(name)[1].lower() in imgexts]
 
     # Make the directory if need be, and error if it is a file already
-    if os.path.isfile(tex_path):
+    if os.path.isfile(tex_pth):
         raise IOError("File exists: '%s'")
-    elif not os.path.isdir(tex_path):
-        os.mkdir(tex_path)
+    elif not os.path.isdir(tex_pth):
+        os.mkdir(tex_pth)
 
     for name in tex_filenames0:
-        #print "%s --> %s" % (os.path.join(obj_path, name), tex_path)
-        new_tex_path = os.path.join(tex_path, name.lower())
-        shutil.copy2(os.path.join(obj_path, name), new_tex_path)
+        #print "%s --> %s" % (os.path.join(obj_pth, name), tex_pth)
+        new_tex_pth = os.path.join(tex_pth, name.lower())
+        shutil.copy2(os.path.join(obj_pth, name), new_tex_pth)
 
 
-def main():
-    ext = ".obj"
-    # Make the egg files from the objs
-    tgz_pairs = blender_convert(ext)
-    # Make the .egg/.bam files from the eggs
-    panda_convert(tgz_pairs, outext=".egg")
+def main(f_panda=True):
+    # Model root directory
+    model_pth = os.path.join(os.environ["HOME"], "work", "genthor", "raw_models")
+    # Destination directory for .<out> files
+    out_root = os.path.join(os.environ["HOME"], "work", "genthor", "models")
+    # Make the .obj/.egg files from original .obj files
+    tgz_pths = blender_convert(model_pth, out_root, ext=".obj")
+
+    if f_panda:
+        # Destination directory for .egg files
+        out_root = os.path.join(os.environ["HOME"], "work", "genthor", "eggs")
+        # Make the .egg/.bam files from the .obj/.egg files
+        # inout_pths = {}
+        # inout_pths[tgz_pth] = os.path.join(out_root, os.path.splitext(
+        #     os.path.basename(tgz_pth))[1])
+        out_pths = [os.path.join(out_root, os.path.splitext(
+            os.path.basename(tgz_pth))[0]) for tgz_pth in tgz_pths]
+        inout_pths = dict(zip(tgz_pths, out_pths))
+
+        panda_convert(inout_pths, ext=".egg")
     
 
 if __name__ == "__main__":
     main()
+
+
+## TODO
+#
+# Make cmd line interface better using argparse
+# 
+

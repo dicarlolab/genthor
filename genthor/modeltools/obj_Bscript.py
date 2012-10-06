@@ -3,7 +3,6 @@ Blender script for normalizing .obj files and converting them to either .obj or
 .egg.
 """
 import os
-import re
 import shutil
 import sys
 try:
@@ -16,7 +15,7 @@ import pdb
 
 """
 Usage: 
-$ blender -b -P blender_obj_tools.py -- <.obj filename>
+$ blender -b -P obj_Bscript.py -- <.obj filename>
 """
 
 
@@ -41,12 +40,16 @@ def fix_tex_names(mtl_path, imgdirname="tex", f_verify=True):
     # Directory for the images
     img_pth = os.path.join(dir_path, imgdirname)
 
-    # Make regexp for searching .mtl file
-    patstr0 = ".+? (.*?[/\\\]?([\.\w]+(?:\\" + ")|(?:\\".join(imgexts) + ")))\\r"
-    rx0 = re.compile(patstr0, re.IGNORECASE)
-    patstr1 = (".+? (.*(?:" + dir_name + ")[/\\\]+([\.\w/\\\]+(?:\\"
-               + ")|(?:\\".join(imgexts) + ")))\\r")
-    rx1 = re.compile(patstr1, re.IGNORECASE)
+    # visit() function for os.path.walk().  It appends detected image
+    # files to a list.
+    def visit(imgnames, dir_pth, names):
+        imgnames.extend([os.path.join(dir_pth, name) for name in names
+                         if os.path.splitext(name)[1].lower() in imgexts])
+    # walk down directory tree and get the image files    
+    imgpaths0 = []
+    for dp, foo, names in os.walk(dir_path):
+        visit(imgpaths0, dp, names)
+    imgnames = [os.path.split(pth)[1].lower() for pth in imgpaths0]
 
     # Initialize storage for the image file names inside the .mtl
     mtlnames = []
@@ -58,21 +61,26 @@ def fix_tex_names(mtl_path, imgdirname="tex", f_verify=True):
         # Iterate over lines
         for line in fid.readlines():
             # Search for image file name
-            m = rx1.search(line)
-            if m is None:
-                m = rx0.search(line)
-            if m is not None:
+            for imgname in imgnames:
+                try:
+                    i = line.lower().index(imgname)
+                except:
+                    i = -1
+                    continue
+                j = line.index(" ")
+                k = i + len(imgname)
+
                 # If an image file name is found, store it
-                pth = m.group(1)
-                Name = m.group(2)
+                pth = line[j:k]
+                Name = line[i:k]
                 name = Name.lower()
                 mtlnames.append(name)
                 # Edit the line and store
-                i = line.index(pth)
-                newline = (line[:i] + os.path.join(imgdirname, name)
-                           + line[i + len(pth):])
+                newline = (line[:j + 1] + os.path.join(imgdirname, name)
+                           + line[k:])
                 mtllines.append(newline)
-            else:
+                break
+            if i == -1:
                 mtllines.append(line)
     ## Edit .mtl files
     # Open .mtl
@@ -84,18 +92,6 @@ def fix_tex_names(mtl_path, imgdirname="tex", f_verify=True):
                 
     # Make unique and sort
     mtlnames = sorted(set(mtlnames))
-
-    # visit() function for os.path.walk().  It appends detected image
-    # files to a list.
-    def visit(imgnames, dir_pth, names):
-        imgnames.extend([os.path.join(dir_pth, name) for name in names
-                         if os.path.splitext(name)[1].lower() in imgexts])
-    # walk down directory tree and get the image files    
-    imgpaths0 = []
-    for dp, foo, names in os.walk(dir_path):
-        visit(imgpaths0, dp, names)
-    #os.path.walk(dir_path, visit, imgpaths0)
-    imgnames = [os.path.split(pth)[1].lower() for pth in imgpaths0]
 
     if f_verify:
         # Verify that all the mtl images are present
@@ -110,7 +106,7 @@ def fix_tex_names(mtl_path, imgdirname="tex", f_verify=True):
     elif not os.path.isdir(img_pth):
         # Make image directory, if necessary
         os.makedirs(img_pth)
-
+    
     # Move the image files to the new img_pth location
     for imgpath0, imgname in zip(imgpaths0, imgnames):
         imgpath = os.path.join(img_pth, imgname)
@@ -128,7 +124,11 @@ def import_obj(pth):
 
 def export_obj(pth):
     bpy.ops.export_scene.obj(filepath=pth, use_normals=True,
-                             keep_vertex_order=True)
+                             keep_vertex_order=True) 
+    
+    # Fix the .mtl and texture names
+    mtl_path = os.path.splitext(pth)[0] + ".mtl"
+    fix_tex_names(mtl_path)
 
 def export_egg(pth):
     import io_scene_egg.yabee_libs.egg_writer
@@ -264,6 +264,10 @@ def run(obj_path, out_path, rot):
         if obj_path == out_path:
             # don't clobber
             raise ValueError("I cannot overwrite the obj files: %s" % out_path)
+        # copy textures
+        shutil.copytree(os.path.join(os.path.split(obj_path)[0], "tex"),
+                        os.path.join(os.path.split(out_path)[0], "tex"))
+        # export the obj
         export_obj(out_path)
     else:
         raise ValueError("unsupported output type: %s" % ext)
