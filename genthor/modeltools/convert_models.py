@@ -4,6 +4,7 @@ Convert .obj models to .obj or .egg (Panda3d format) files
 Peter W Battaglia - 03.2012
 PWB - 10.2012 - updates
 """
+import obj2egg as o2e
 import os
 import shutil
 import sys
@@ -13,7 +14,7 @@ from subprocess import check_call
 import pdb
 
 
-def convert(ext=".obj"):
+def blender_convert(ext=".obj"):
 
     # Model root directory
     model_path = os.path.join(os.environ["HOME"], "work/genthor/models/")
@@ -119,7 +120,7 @@ def convert(ext=".obj"):
         params = angledict[modelname]
         
         # Do the conversion from .obj to .<out>
-        blender_convert(obj_path, out_paths[0], blender_command_base, params)
+        call_blender(obj_path, out_paths[0], blender_command_base, params)
 
         # Convert the .<out> to a .tgz
         outtgz_path = os.path.splitext(out_paths[0])[0] + ".tbz2"
@@ -144,7 +145,7 @@ def convert(ext=".obj"):
     return tgz_paths
 
 
-def make_bams(tgz_paths, out_root=""):
+def panda_convert(tgz_paths, out_root="", outext=".egg"):
     # Temporary path in which to extract .obj files before conversion.
     tmp_path = os.path.join(os.environ["HOME"], "tmp", "scrap")
 
@@ -170,13 +171,14 @@ def make_bams(tgz_paths, out_root=""):
 
         if ext == ".obj":
             # Convert .obj to .bam
-            egg_path = os.path.join(out_root, os.path.splitext(name)[0] + ".bam")
+            egg_path = os.path.join(out_root, os.path.splitext(name)[0] + ".egg")
             # Convert .obj to .egg
             obj2egg(in_path, egg_path=egg_path)
-            # Convert .egg to .bam
-            egg2bam(egg_path, bam_path=bam_path)
-            os.remove(egg_path)
-        elif ext == ".egg":
+            if outext == ".bam":
+                # Convert .egg to .bam
+                egg2bam(egg_path, bam_path=bam_path)
+                os.remove(egg_path)
+        elif ext == ".egg" and outext == ".bam":
             # Convert .egg to .bam
             egg2bam(in_path, bam_path=bam_path)
         else:
@@ -204,7 +206,7 @@ def untar(tmp_path, tarname):
     return names
 
 
-def blender_convert(obj_path, out_path, blender_command_base, params):
+def call_blender(obj_path, out_path, blender_command_base, params):
     # Split into directory and filename
     outdir, outname = os.path.split(out_path)
     
@@ -235,10 +237,17 @@ def blender_convert(obj_path, out_path, blender_command_base, params):
 
 
 def obj2egg(obj_path, egg_path=None):
-    # Make an .egg
+    ## Make an .egg
     if egg_path is None:
         egg_path = os.path.splitext(obj_path)[0] + '.egg'
-    call("obj2egg -o %s %s" % (egg_path, obj_path), shell=True)
+    #call("obj2egg -o %s %s" % (egg_path, obj_path), shell=True)
+    o2e.main(argv=["", obj_path])
+    egg_path0 = egg_path = os.path.splitext(obj_path)[0] + '.egg'
+    if egg_path0 != egg_path:
+        shutil.move(egg_path0, egg_path)
+        pth0 = os.path.split(obj_path)[0]
+        pth = os.path.split(egg_path)[0]
+        shutil.copytree(os.path.join(pth0, "tex"), pth)
 
 
 def egg2bam(egg_path, bam_path=None):
@@ -266,15 +275,16 @@ def copy_tex(obj_path, tex_path):
 
     for name in tex_filenames0:
         #print "%s --> %s" % (os.path.join(obj_path, name), tex_path)
-        shutil.copy2(os.path.join(obj_path, name), tex_path)
+        new_tex_path = os.path.join(tex_path, name.lower())
+        shutil.copy2(os.path.join(obj_path, name), new_tex_path)
 
 
 def main():
-    ext = ".egg"
+    ext = ".obj"
     # Make the egg files from the objs
-    tgz_pairs = convert(ext)
+    tgz_pairs = blender_convert(ext)
     # Make the bam files from the eggs
-    make_bams(tgz_pairs)
+    panda_convert(tgz_pairs, outext=".egg")
     
 
 if __name__ == "__main__":

@@ -1,25 +1,128 @@
 import os
+import re
+import shutil
 import sys
-import bpy
-import mathutils
+try:
+    import bpy
+    import mathutils
+except:
+    pass
 import pdb
 
 
 """
 Usage: 
 $ blender -b -P obj_converter.py -- <.obj filename>
-
 """
 
 
+def fix_tex_names(mtl_path, imgdirname="tex", f_verify=True):
+    """ Make all .mtl image file names lowercase and relative paths,
+    so they are compatible with linux and are portable.  Also change
+    the actual image file names."""
+
+    # mtl_path = "/home/pbatt/tmp/3dmodels/MB26897/MB26897.mtl"
+    # #mtl_path = "/home/pbatt/tmp/3dmodels/MB29698/MB29698.mtl"
+    # mtl_path = "/home/pbatt/tmp/iguana/iguana.mtl"
+
+    # Texture image file extensions
+    imgexts = (".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".gif", ".png")
+
+    # Directory path that the .mtl file is in
+    dir_path = os.path.split(mtl_path)[0]
+
+    # Name of this directory
+    dir_name = os.path.split(dir_path)[1]
+
+    # Directory for the images
+    img_pth = os.path.join(dir_path, imgdirname)
+
+    # Make regexp for searching .mtl file
+    patstr0 = ".+? (.*?[/\\\]?([\.\w]+(?:\\" + ")|(?:\\".join(imgexts) + ")))\\r"
+    rx0 = re.compile(patstr0, re.IGNORECASE)
+    patstr1 = (".+? (.*(?:" + dir_name + ")[/\\\]+([\.\w/\\\]+(?:\\"
+               + ")|(?:\\".join(imgexts) + ")))\\r")
+    rx1 = re.compile(patstr1, re.IGNORECASE)
+
+    # Initialize storage for the image file names inside the .mtl
+    mtlnames = []
+    mtllines = []
+   
+    ## Get the image file names from the .mtl file
+    # Open .mtl
+    with open(mtl_path, "r") as fid:
+        # Iterate over lines
+        for line in fid.readlines():
+            # Search for image file name
+            m = rx1.search(line)
+            if m is None:
+                m = rx0.search(line)
+            if m is not None:
+                # If an image file name is found, store it
+                pth = m.group(1)
+                Name = m.group(2)
+                name = Name.lower()
+                mtlnames.append(name)
+                # Edit the line and store
+                i = line.index(pth)
+                newline = (line[:i] + os.path.join(imgdirname, name)
+                           + line[i + len(pth):])
+                mtllines.append(newline)
+            else:
+                mtllines.append(line)
+    ## Edit .mtl files
+    # Open .mtl
+    with open(mtl_path, "w") as fid:
+        # Iterate over lines
+        for line in mtllines:
+            # Write the line
+            fid.write(line)
+                
+    # Make unique and sort
+    mtlnames = sorted(set(mtlnames))
+
+    # visit() function for os.path.walk().  It appends detected image
+    # files to a list.
+    def visit(imgnames, dirname, names):
+        imgnames.extend([os.path.join(dirname, name) for name in names
+                         if os.path.splitext(name)[1].lower() in imgexts])
+    # walk down directory tree and get the image files    
+    imgpaths0 = []
+    os.path.walk(dir_path, visit, imgpaths0)
+    imgnames = [os.path.split(pth)[1].lower() for pth in imgpaths0]
+
+    if f_verify:
+        # Verify that all the mtl images are present
+        for mtlname in mtlnames:
+            if mtlname not in imgnames:
+                raise ValueError("Cannot find .mtl-defined image. "
+                                 "mtl: %s. img: %s" % (mtl_path, mtlname))
+
+    # Make the directory if need be, and error if it is a file already
+    if os.path.isfile(img_pth):
+        raise IOError("File exists: '%s'")
+    elif not os.path.isdir(img_pth):
+        # Make image directory, if necessary
+        os.makedirs(img_pth)
+
+    # Move the image files to the new img_pth location
+    for imgpath0, imgname in zip(imgpaths0, imgnames):
+        imgpath = os.path.join(img_pth, imgname)
+        shutil.move(imgpath0, imgpath)
+        #print "%s --> %s" % (imgpath0, imgpath)
+
+
 def import_obj(pth):
+    # Fix the .mtl and texture names
+    mtl_path = os.path.splitext(pth)[0] + ".mtl"
+    fix_tex_names(mtl_path)
+    # Import the .obj
     bpy.ops.import_scene.obj(filepath=pth)
 
 
 def export_obj(pth):
     bpy.ops.export_scene.obj(filepath=pth, use_normals=True,
                              keep_vertex_order=True)
-
 
 def export_egg(pth):
     import io_scene_egg.yabee_libs.egg_writer
@@ -89,9 +192,6 @@ def export_egg(pth):
                          MERGE_ACTOR_MESH,
                          APPLY_MOD,
                          PVIEW)
-
-    #bpy.ops.wm.addon_enable(module="io_scene_egg")
-    #bpy.ops.export.panda3d_egg(pth)
 
 
 def transform_model(rot):
