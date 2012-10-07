@@ -3,6 +3,7 @@ Blender script for normalizing .obj files and converting them to either .obj or
 .egg.
 """
 import os
+import re
 import shutil
 import sys
 try:
@@ -31,6 +32,9 @@ def fix_tex_names(mtl_path, imgdirname="tex", f_verify=True):
     # Texture image file extensions
     imgexts = (".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".gif", ".png")
 
+    # .mtl image fields
+    mtl_img_fields = ("map_Ka", "map_Kd", "map_bump", "bump", "map_refl")
+
     # Directory path that the .mtl file is in
     dir_path = os.path.split(mtl_path)[0]
 
@@ -51,6 +55,12 @@ def fix_tex_names(mtl_path, imgdirname="tex", f_verify=True):
         visit(imgpaths0, dp, names)
     imgnames = [os.path.split(pth)[1].lower() for pth in imgpaths0]
 
+    # RE pattern
+    pat_fields = "(?:" + "|".join(mtl_img_fields) + ") "
+    pat_imgexts = "(.+(?:\\" + "|\\".join(imgexts) + "))"
+    patstr = "[\s]*" + pat_fields + "((?:.*[/\\\\])?" + pat_imgexts + ")"
+    rx = re.compile(patstr, re.IGNORECASE)
+
     # Initialize storage for the image file names inside the .mtl
     mtlnames = []
     mtllines = []
@@ -60,28 +70,22 @@ def fix_tex_names(mtl_path, imgdirname="tex", f_verify=True):
     with open(mtl_path, "r") as fid:
         # Iterate over lines
         for line in fid.readlines():
-            # Search for image file name
-            for imgname in imgnames:
-                try:
-                    i = line.lower().index(imgname)
-                except:
-                    i = -1
-                    continue
-                j = line.index(" ")
-                k = i + len(imgname)
-
-                # If an image file name is found, store it
-                pth = line[j:k]
-                Name = line[i:k]
+            # Search the line
+            m = rx.search(line)
+            if m is not None:
+                # Pull out the path and image name
+                pth = m.group(1)
+                Name = m.group(2)
                 name = Name.lower()
+                # If an image file name is found, store it
                 mtlnames.append(name)
                 # Edit the line and store
-                newline = (line[:j + 1] + os.path.join(imgdirname, name)
-                           + line[k:])
+                newline = (line[:m.start(1)] + os.path.join(imgdirname, name)
+                           + line[m.end(1):])
                 mtllines.append(newline)
-                break
-            if i == -1:
+            else:
                 mtllines.append(line)
+
     ## Edit .mtl files
     # Open .mtl
     with open(mtl_path, "w") as fid:
