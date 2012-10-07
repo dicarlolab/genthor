@@ -22,6 +22,7 @@ import math
 import string
 import getopt
 import sys, os
+import pdb
 
 
 def floats(float_list):
@@ -105,8 +106,9 @@ class ObjMaterial:
 
 class MtlFile:
     """an object representing all Wavefront materials in a .mtl file"""
-    def __init__(self, filename=None):
+    def __init__(self, filename=None, relpath=""):
         self.filename = None
+        self.relpath = relpath
         self.materials = {}
         self.comments = {}
         if filename is not None:
@@ -117,7 +119,9 @@ class MtlFile:
         self.materials = {}
         self.comments = {}
         try:
-            file = open(filename)
+            pth = (filename if os.path.isabs(filename)
+                   else os.path.join(self.relpath, filename))
+            file = open(pth)
         except:
             return self
         linenumber = 0
@@ -172,7 +176,9 @@ class MtlFile:
                 # map_Kd == diffuse
                 # map_Bump == bump
                 # map_Ks == specular
-                mat.put(tokens[0], pathify(tokens[1]))
+                # pth = (tokens[1] if True or os.path.isabs(tokens[1])
+                #     else os.path.join(self.relpath, tokens[1]))
+                mat.put(tokens[0], pth) #pathify(pth))
                 if verbose: print "map:", mat.name, tokens[0], mat.get(tokens[0])
                 continue
             if tokens[0] in ("Ni"):
@@ -186,8 +192,9 @@ class MtlFile:
 
 class ObjFile:
     """a representation of a wavefront .obj file"""
-    def __init__(self, filename=None):
+    def __init__(self, filename=None, relpath=""):
         self.filename = None
+        self.relpath = relpath
         self.objects = ["defaultobject"]
         self.groups = ["defaultgroup"]
         self.points = []
@@ -239,7 +246,7 @@ class ObjFile:
                 continue
             if tokens[0] == "mtllib":
                 if verbose: print "mtllib:", tokens[1:]
-                mtllib = MtlFile(tokens[1])
+                mtllib = MtlFile(tokens[1], relpath=self.relpath)
                 # if verbose: print mtllib
                 self.matlibs.append(mtllib)
                 self.indexmaterials(mtllib)
@@ -504,6 +511,7 @@ def pathify(path):
     if os.path.isfile(t):
         return t
     print "warning: can't make sense of this map file name:", orig
+    pdb.set_trace()
     return t
     
 def main(argv=None):
@@ -527,7 +535,8 @@ def main(argv=None):
             if ".obj" not in infile:
                 print "WARNING", infile, "does not look like a valid obj file"
                 continue
-            obj = ObjFile(infile)
+            dirname, basename = os.path.split(infile)
+            obj = ObjFile(infile, relpath=dirname)
             egg = obj.toEgg()
             f, e = os.path.splitext(infile)
             outfile = f + ".egg"
