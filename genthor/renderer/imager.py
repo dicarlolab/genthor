@@ -1,30 +1,42 @@
 #!/usr/bin/env python
-
+""" Contains Imager and ImgRendererResizer class definitions."""
 from genthor.renderer.lightbase import LightBase
 import genthor.renderer.renderer as gr
 import Image
 import numpy as np
 import os
-
 import pdb
 
 
-
 class Imager(object):
+    """ Manages renderers and can produce ImgRenderResizer instances."""
 
-    lbases = []
+    # A dict that contains all renderers. The keys are
+    # tuple(window_type, size), the values are tuple(LightBase
+    # instance, output).
+    renderers = {}
 
     def __init__(self):
         pass
 
-    def get_map(self, args):
+    def get_renderer(self, window_type, size):
+        """ Initializes a new renderer and adds it to the
+        Imager.renderers dict."""
+        # Create the LightBase instance/output
+        lbase, output = self.renderers.get((window_type, size),
+                                           gr.setup_renderer(window_type, size))
+        # Add to the Imager.renderers
+        lbases[(window_type, size)] = lbase, output
+        return lbase, output
 
-
-        ImgRendererResizer
-       
-
+    def get_map(self, model_root, bg_root, preproc):
+        """ Returns an ImgRendererResizer instance."""
+        # Get a valid renderer (new or old)
+        lbase, output = self.lbases.get((window_type, size),
+                                        self.get_renderer(window_type, size))
+        # Make the irr instance
+        irr = ImgRendererResizer(model_root, bg_root, preproc, lbase, output)
         return irr
-
 
 class ImgRendererResizer(object):
     def __init__(self, model_root, bg_root, preproc, lbase, output):
@@ -42,7 +54,6 @@ class ImgRendererResizer(object):
         self.output = output
         self.model_root = model_root
         self.bg_root = bg_root
-
     
     def rval_getattr(self, attr, objs):
         if attr == 'shape' and self._shape is not None:

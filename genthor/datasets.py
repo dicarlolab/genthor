@@ -24,6 +24,7 @@ from skdata.utils.download_and_extract import extract, download
 import genthor.renderer.renderer as gr
 import genthor.model_info as model_info
 import genthor.jxx_model_info as jxx_model_info
+from genthor.renderer.imager import Imager
 
 class DatasetBase(object):
     def home(self, *suffix_paths):
@@ -70,6 +71,7 @@ class GenerativeDatasetBase(DatasetBase):
     def __init__(self, data=None):
         self.data = data
         self.specific_name = self.__class__.__name__ + '_' + get_image_id(data)
+        self.imager = Imager()
     
     def _get_meta(self):
         #generate params 
@@ -131,11 +133,16 @@ class GenerativeDatasetBase(DatasetBase):
         meta = self.meta
         window_type = 'texture'
         size = preproc['size']
-        lbase, output = gr.setup_renderer(window_type, size=size) 
         model_root = self.home(self.model_root)
         bg_root = self.home(self.bg_root)
-        images = larray.lmap(ImgRendererResizer(model_root, bg_root, preproc,
-                                                lbase, output), meta)
+
+        # lbase, output = gr.setup_renderer(window_type, size=size) 
+        # images = larray.lmap(ImgRendererResizer(model_root, bg_root, preproc,
+        #                                         lbase, output), meta)
+
+        irr = self.imager.get_map(model_root, bg_root, preproc)
+
+        images = larray.lmap(irr, meta)
         return larray.cache_memmap(images, name=name, basedir=basedir)
         
 
@@ -717,65 +724,7 @@ class GenerativeDatasetTest(GenerativeDataset1):
                      'rxz': uniform(-180., 180.),
                      }
                   }]  
-    
-
-class ImgRendererResizer(object):
-    def __init__(self, model_root, bg_root, preproc, lbase, output):
-        size = tuple(preproc['size'])
-        self.transpose = preproc.get('transpose', False)
-        if self.transpose:
-            self._shape = tuple(np.array(size)[list(self.transpose)])
-        else:
-            self._shape = size
-        self._ndim = len(self._shape) 
-        self._dtype = preproc['dtype']
-        self.mode = preproc['mode']
-        self.normalize = preproc['normalize']
-        self.lbase = lbase
-        self.output = output
-        self.model_root = model_root
-        self.bg_root = bg_root
-
-    
-    def rval_getattr(self, attr, objs):
-        if attr == 'shape' and self._shape is not None:
-            return self._shape
-        if attr == 'ndim' and self._ndim is not None:
-            return self._ndim
-        if attr == 'dtype':
-            return self._dtype
-        raise AttributeError(attr)
-        
-    def __call__(self, m):
-        modelpath = os.path.join(self.model_root, 
-                                 m['obj'], m['obj'] + '.bam')
-        bgpath = os.path.join(self.bg_root, m['bgname'])
-        scale = [m['s']]
-        pos = [m['ty'], m['tz']]
-        hpr = [m['ryz'], m['rxz'], m['rxy']]
-        bgscale = [m['bgscale']]
-        bghp = [m['bgphi'], m['bgpsi']]
-        args = (modelpath, bgpath, scale, pos, hpr, bgscale, bghp)
-        objnode, bgnode = gr.construct_scene(self.lbase, *args)
-        self.lbase.render_frame()
-        objnode.removeNode()
-        bgnode.removeNode()
-        tex = self.output.getTexture()
-        im = Image.fromarray(self.lbase.get_tex_image(tex))
-        if im.mode != self.mode:
-            im = im.convert(self.mode)
-        rval = np.asarray(im, self._dtype)
-        if self.normalize:
-            rval -= rval.mean()
-            rval /= max(rval.std(), 1e-3)
-        else:
-            if 'float' in str(self._dtype):
-                rval /= 255.0
-        if self.transpose:
-            rval = rval.transpose(*tuple(self.transpose))
-        assert rval.shape[:2] == self._shape[:2], (rval.shape, self._shape)
-        return rval
-        
+            
 
 class TrainingDataset(DatasetBase):
 
