@@ -71,7 +71,10 @@ class GenerativeDatasetBase(DatasetBase):
     def __init__(self, data=None):
         self.data = data
         self.specific_name = self.__class__.__name__ + '_' + get_image_id(data)
-        self.imager = Imager()
+        model_root = self.home(self.model_root)
+        bg_root = self.home(self.bg_root)
+        self.imager = Imager(model_root, bg_root)
+
     
     def _get_meta(self):
         #generate params 
@@ -133,14 +136,12 @@ class GenerativeDatasetBase(DatasetBase):
         meta = self.meta
         window_type = 'texture'
         size = preproc['size']
-        model_root = self.home(self.model_root)
-        bg_root = self.home(self.bg_root)
 
         # lbase, output = gr.setup_renderer(window_type, size=size) 
         # images = larray.lmap(ImgRendererResizer(model_root, bg_root, preproc,
         #                                         lbase, output), meta)
 
-        irr = self.imager.get_map(model_root, bg_root, preproc)
+        irr = self.imager.get_map(preproc, window_type)
 
         images = larray.lmap(irr, meta)
         return larray.cache_memmap(images, name=name, basedir=basedir)
@@ -1159,3 +1160,31 @@ class JXXDatasetTest(JXXDatasetBase):
                      }
                   }]
 
+
+
+
+class GenerativeDatasetLowres(GenerativeDatasetBase):    
+    """optimized for low res:, e.g. bigger objects"""
+    models = model_info.MODEL_SUBSET_3
+    bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
+                       'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
+                       'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
+                       'INTERIOR_07ST.jpg', 'INTERIOR_06ST.jpg',
+                       'INTERIOR_05ST.jpg']
+    good_backgrounds = [_b for _b in model_info.BACKGROUNDS
+                                                  if _b not in bad_backgrounds]
+    templates = [
+                 {'n_ex_per_model': 250,
+                  'name': 'var1', 
+                  'template': {'bgname': choice(good_backgrounds),
+                     'bgscale': 1.,
+                     'bgpsi': 0,
+                     'bgphi': uniform(-180.0, 180.),
+                     's': loguniform(np.log(1.5), np.log(5.)),
+                     'ty': uniform(-0.2, 0.2),
+                     'tz': uniform(-0.2, 0.2),
+                     'ryz': uniform(-45., 45.),
+                     'rxy': uniform(-45., 45.),
+                     'rxz': uniform(-45., 45.),
+                     }
+                  }]

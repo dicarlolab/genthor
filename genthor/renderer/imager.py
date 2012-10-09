@@ -16,8 +16,9 @@ class Imager(object):
     # instance, output).
     renderers = {}
 
-    def __init__(self):
-        pass
+    def __init__(self, model_root="", bg_root=""):
+        self.model_root = model_root
+        self.bg_root = bg_root
 
     def get_renderer(self, window_type, size):
         """ Initializes a new renderer and adds it to the
@@ -26,17 +27,20 @@ class Imager(object):
         lbase, output = self.renderers.get((window_type, size),
                                            gr.setup_renderer(window_type, size))
         # Add to the Imager.renderers
-        lbases[(window_type, size)] = lbase, output
+        self.renderers[(window_type, size)] = lbase, output
         return lbase, output
 
-    def get_map(self, model_root, bg_root, preproc):
+    def get_map(self, preproc, window_type):
         """ Returns an ImgRendererResizer instance."""
         # Get a valid renderer (new or old)
-        lbase, output = self.lbases.get((window_type, size),
-                                        self.get_renderer(window_type, size))
+        size = preproc["size"]
+        lbase, output = self.renderers.get((window_type, size),
+                                           self.get_renderer(window_type, size))
         # Make the irr instance
-        irr = ImgRendererResizer(model_root, bg_root, preproc, lbase, output)
+        irr = ImgRendererResizer(self.model_root, self.bg_root,
+                                 preproc, lbase, output)
         return irr
+
 
 class ImgRendererResizer(object):
     def __init__(self, model_root, bg_root, preproc, lbase, output):
