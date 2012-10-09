@@ -57,8 +57,8 @@ def state2args(state):
     rendering."""
 
     # Extract the values from 'state'
-    modelpath = gr.model_name2path(state[0])
-    bgpath = gr.bg_name2path(state[1])
+    modelpath = gr.resolve_model_path(state[0])
+    bgpath = gr.resolve_bg_path(state[1])
     category = state[2]
     scale, pos, hpr, bgscale, bghp = state[3:]
 
