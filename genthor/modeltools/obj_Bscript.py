@@ -30,7 +30,7 @@ def fix_tex_names(mtl_path, imgdirname="tex", f_verify=True):
     # mtl_path = "/home/pbatt/tmp/iguana/iguana.mtl"
 
     # Texture image file extensions
-    imgexts = (".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".gif", ".png")
+    img_exts = (".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".gif", ".png")
 
     # .mtl image fields
     mtl_img_fields = ("map_Ka", "map_Kd", "map_bump", "bump", "map_refl")
@@ -48,7 +48,7 @@ def fix_tex_names(mtl_path, imgdirname="tex", f_verify=True):
     # files to a list.
     def visit(imgnames, dir_pth, names):
         imgnames.extend([os.path.join(dir_pth, name) for name in names
-                         if os.path.splitext(name)[1].lower() in imgexts])
+                         if os.path.splitext(name)[1].lower() in img_exts])
     # walk down directory tree and get the image files    
     imgpaths0 = []
     for dp, foo, names in os.walk(dir_path):
@@ -57,8 +57,8 @@ def fix_tex_names(mtl_path, imgdirname="tex", f_verify=True):
 
     # RE pattern
     pat_fields = "(?:" + "|".join(mtl_img_fields) + ") "
-    pat_imgexts = "(.+(?:\\" + "|\\".join(imgexts) + "))"
-    patstr = "[\s]*" + pat_fields + "((?:.*[/\\\\])?" + pat_imgexts + ")"
+    pat_img_exts = "(.+(?:\\" + "|\\".join(img_exts) + "))"
+    patstr = "[\s]*" + pat_fields + "((?:.*[/\\\\])?" + pat_img_exts + ")"
     rx = re.compile(patstr, re.IGNORECASE)
 
     # Initialize storage for the image file names inside the .mtl
