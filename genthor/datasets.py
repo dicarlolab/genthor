@@ -26,7 +26,9 @@ import genthor.model_info as model_info
 import genthor.jxx_model_info as jxx_model_info
 from genthor.renderer.imager import Imager
 
+
 class DatasetBase(object):
+    """base utility class"""
     def home(self, *suffix_paths):
         return os.path.join(get_data_home(), self.base_name, *suffix_paths)
 
@@ -56,7 +58,37 @@ class DatasetBase(object):
         return get_subset_splits(self.meta, *args, **kwargs) 
 
 
-class GenerativeDatasetBase(DatasetBase):
+class GenerativeBase(DatasetBase):
+    #must subclass this and set bg_root, model_root, FILES, base_name and model_categories
+    #as class properties and define a ._get_meta method the constructs the 
+    #metadata tabarray.   then subclasses of THAT are the specific datasets, 
+    #which define specific templates
+    
+    def __init__(self, data=None):
+        self.data = data
+        self.specific_name = self.__class__.__name__ + '_' + get_image_id(data)
+        model_root = self.home(self.model_root)
+        bg_root = self.home(self.bg_root)
+        self.imager = Imager(model_root, bg_root)
+
+    def get_images(self, preproc):
+        name = self.specific_name + '_' + get_image_id(preproc)
+        basedir = self.home()
+        cache_file = os.path.join(basedir, name)
+        meta = self.meta
+        window_type = 'texture'
+        size = preproc['size']
+        irr = self.imager.get_map(preproc, window_type)
+        image_map = larray.lmap(irr, meta)
+        return larray.cache_memmap(image_map, name=name, basedir=basedir)
+
+
+class GenerativeDatasetBase(GenerativeBase):
+    """A class that generates randomly sampled metadata for single objects 
+    from a set of templates.   Datasets are implemented as subclasses of this 
+    class which define the "templates" attribute 
+    as class attributes
+    """
     bg_root = 'genthor_backgrounds_20120418'
     model_root = 'genthor_processed_models_20120418'
     FILES = [('genthor_backgrounds_20120418.zip',
@@ -67,14 +99,6 @@ class GenerativeDatasetBase(DatasetBase):
 
     base_name = 'GenthorGenerative'
     model_categories = dict_inverse(model_info.MODEL_CATEGORIES)
-    
-    def __init__(self, data=None):
-        self.data = data
-        self.specific_name = self.__class__.__name__ + '_' + get_image_id(data)
-        model_root = self.home(self.model_root)
-        bg_root = self.home(self.bg_root)
-        self.imager = Imager(model_root, bg_root)
-
     
     def _get_meta(self):
         #generate params 
@@ -128,24 +152,94 @@ class GenerativeDatasetBase(DatasetBase):
                                                      'tname',
                                                      'id'])
         return meta
-
-    def get_images(self, preproc):
-        name = self.specific_name + '_' + get_image_id(preproc)
-        basedir = self.home()
-        cache_file = os.path.join(basedir, name)
-        meta = self.meta
-        window_type = 'texture'
-        size = preproc['size']
-
-        # lbase, output = gr.setup_renderer(window_type, size=size) 
-        # images = larray.lmap(ImgRendererResizer(model_root, bg_root, preproc,
-        #                                         lbase, output), meta)
-
-        irr = self.imager.get_map(preproc, window_type)
-
-        images = larray.lmap(irr, meta)
-        return larray.cache_memmap(images, name=name, basedir=basedir)
         
+        
+class GenerativeMultiDatasetTest(GenerativeDatasetBase):
+    """multi-object rendering dataset
+    """
+
+    def _get_meta(self):
+        #generate params 
+        
+        bgname = [model_info.BACKGROUNDS[0]]
+        bgphi = [0]
+        bgpsi = [0]
+        bgscale = [1]
+        ty = [[0, .2]]
+        tz = [[-0.2, 0.2]]
+        s = [[1, 1]]
+        ryz = [[0, 0]]
+        rxz = [[0, 0]]
+        rxy = [[0, 0]]
+        obj = [['MB26897', 'MB28049']]
+        category = [['cars', 'tables']]
+        latents = zip(*[bgname, bgphi, bgpsi, bgscale, obj, category,
+                   ryz, rxz, rxy, ty, tz, s, ['t0'], ['testing']])
+        
+
+        meta = tb.tabarray(records=latents, names = ['bgname',
+                                                     'bgphi',
+                                                     'bgpsi',
+                                                     'bgscale',
+                                                     'obj',
+                                                     'category',
+                                                     'ryz',
+                                                     'rxz',
+                                                     'rxy',
+                                                     'ty',
+                                                     'tz',
+                                                     's',
+                                                     'tname',
+                                                     'id'], 
+                           formats=['|S20', 'float', 'float', 'float'] + \
+                                  ['|O8']*8 +  ['|S10', '|S10'])
+        return meta
+
+
+class GenerativeEmptyDatasetTest(GenerativeDatasetBase):
+    """renndering empty frame with just background
+    """
+
+    def _get_meta(self):
+        #generate params 
+        
+        bgname = [model_info.BACKGROUNDS[0]]
+        bgphi = [0]
+        bgpsi = [0]
+        bgscale = [1]
+        ty = [[]]
+        tz = [[]]
+        s = [[]]
+        ryz = [[]]
+        rxz = [[]]
+        rxy = [[]]
+        obj = [[]]
+        category = [[]]
+        latents = zip(*[bgname, bgphi, bgpsi, bgscale, obj, category,
+                   ryz, rxz, rxy, ty, tz, s, ['t0'], ['testing']])
+        
+
+        meta = tb.tabarray(records=latents, names = ['bgname',
+                                                     'bgphi',
+                                                     'bgpsi',
+                                                     'bgscale',
+                                                     'obj',
+                                                     'category',
+                                                     'ryz',
+                                                     'rxz',
+                                                     'rxy',
+                                                     'ty',
+                                                     'tz',
+                                                     's',
+                                                     'tname',
+                                                     'id'], 
+                           formats=['|S20', 'float', 'float', 'float'] + \
+                                  ['|O8']*8 +  ['|S10', '|S10'])
+        return meta
+    
+    
+
+
 
 def get_subset_splits(meta, npc_train, npc_tests, num_splits,
                       catfunc, train_q=None, test_qs=None, test_names=None, 
