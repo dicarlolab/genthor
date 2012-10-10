@@ -68,13 +68,34 @@ def construct_scene(lbase, modelpth, bgpath, scale, pos, hpr, bgscale, bghp,
         scene = lbase.rootnode
     
     # Modelpth points to the model .egg/.bam file
-    objnode = tools.read_file(lbase.loader.loadModel, modelpth)
-    objnode.setScale(scale[0], scale[0], scale[0])
-    #objnode.setPos(pos[0], pos[1], 0.)
-    objnode.setPos(pos[0], 0., pos[1])
-    objnode.setHpr(hpr[0], hpr[1], hpr[2])
-    objnode.setTwoSided(1)
+    if isinstance(modelpth, str):
+        modelpths = [modelpth]
+        scales = [scale]
+        poses = [pos]
+        hprs = [hpr]
+    else:  
+        modelpths = modelpth
+        scales = scale
+        poses = pos
+        hprs = hpr
+    assert hasattr(modelpths, '__iter__')
+    assert hasattr(scales, '__iter__')
+    assert hasattr(poses, '__iter__')
+    assert hasattr(hprs, '__iter__')
+    assert len(modelpths) == len(scales) == len(hprs) == len(poses)
+        
+    objnodes = []
+    for mpth, scale, hpr, pos in zip(modelpths, scales, hprs, poses):
+        objnode = tools.read_file(lbase.loader.loadModel, mpth)
+        objnode.setScale(scale[0], scale[0], scale[0])
+        #objnode.setPos(pos[0], pos[1], 0.)
+        objnode.setPos(pos[0], 0., pos[1])
+        objnode.setHpr(hpr[0], hpr[1], hpr[2])
+        objnode.setTwoSided(1)
+        objnodes.append(objnode)
 
+    #XXX:  What is this code doing? it's been disabled, I guess
+    #should it be removed?  is there a todo reminder here?
     # Environment map
     if bgpath and False:
         envtex = tools.read_file(lbase.loader.loadTexture, bgpath)
@@ -106,10 +127,11 @@ def construct_scene(lbase, modelpth, bgpath, scale, pos, hpr, bgscale, bghp,
         bgnode = NodePath("empty-bgnode")
 
     # Reparent to a single scene node
-    objnode.reparentTo(scene)
+    for objnode in objnodes:
+        objnode.reparentTo(scene)
     bgnode.reparentTo(scene)
 
-    return objnode, bgnode
+    return objnodes, bgnode
 
 
 def model_name2path(modelname):
