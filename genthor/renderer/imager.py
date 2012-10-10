@@ -76,7 +76,7 @@ class ImgRendererResizer(object):
             pos = [m['ty'], m['tz']]
             hpr = [m['ryz'], m['rxz'], m['rxy']]                                 
         else:
-            assert hasattr(m, '__iter__')
+            assert hasattr(m['obj'], '__iter__')
             modelpath = [os.path.join(self.model_root, 
                                  mn, mn + '.bam') for mn in m['obj']]      
             scale = [[ms] for ms in m['s']]

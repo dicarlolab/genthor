@@ -161,27 +161,28 @@ class GenerativeMultiDatasetTest(GenerativeDatasetBase):
     def _get_meta(self):
         #generate params 
         
-        bgname = [model_info.backgrounds[0]]
+        bgname = [model_info.BACKGROUNDS[0]]
         bgphi = [0]
         bgpsi = [0]
         bgscale = [1]
         ty = [[0, .2]]
         tz = [[-0.2, 0.2]]
-        s = [[1, 1]
+        s = [[1, 1]]
         ryz = [[0, 0]]
         rxz = [[0, 0]]
         rxy = [[0, 0]]
-        obj = ['MB26897', 'MB28049']
-        category = ['cars', 'tables']
-        latents = [bgname, bgphi, bgpsi, bgscale,
-                   ryz, rxz, rxy, ty, tz, s, 't0', 'testimg']
+        obj = [['MB26897', 'MB28049']]
+        category = [['cars', 'tables']]
+        latents = zip(*[bgname, bgphi, bgpsi, bgscale, obj, category,
+                   ryz, rxz, rxy, ty, tz, s, ['t0'], ['testing']])
         
-        meta = tb.tabarray(columns=latents, names = ['bgname',
+
+        meta = tb.tabarray(records=latents, names = ['bgname',
                                                      'bgphi',
                                                      'bgpsi',
                                                      'bgscale',
-                                                     'category',
                                                      'obj',
+                                                     'category',
                                                      'ryz',
                                                      'rxz',
                                                      'rxy',
@@ -189,7 +190,9 @@ class GenerativeMultiDatasetTest(GenerativeDatasetBase):
                                                      'tz',
                                                      's',
                                                      'tname',
-                                                     'id'])
+                                                     'id'], 
+                           formats=['|S20', 'float', 'float', 'float'] + \
+                                  ['|O8']*8 +  ['|S10', '|S10'])
         return meta
     
     
