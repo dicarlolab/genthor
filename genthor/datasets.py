@@ -194,6 +194,48 @@ class GenerativeMultiDatasetTest(GenerativeDatasetBase):
                            formats=['|S20', 'float', 'float', 'float'] + \
                                   ['|O8']*8 +  ['|S10', '|S10'])
         return meta
+
+
+class GenerativeEmptyDatasetTest(GenerativeDatasetBase):
+    """renndering empty frame with just background
+    """
+
+    def _get_meta(self):
+        #generate params 
+        
+        bgname = [model_info.BACKGROUNDS[0]]
+        bgphi = [0]
+        bgpsi = [0]
+        bgscale = [1]
+        ty = [[]]
+        tz = [[]]
+        s = [[]]
+        ryz = [[]]
+        rxz = [[]]
+        rxy = [[]]
+        obj = [[]]
+        category = [[]]
+        latents = zip(*[bgname, bgphi, bgpsi, bgscale, obj, category,
+                   ryz, rxz, rxy, ty, tz, s, ['t0'], ['testing']])
+        
+
+        meta = tb.tabarray(records=latents, names = ['bgname',
+                                                     'bgphi',
+                                                     'bgpsi',
+                                                     'bgscale',
+                                                     'obj',
+                                                     'category',
+                                                     'ryz',
+                                                     'rxz',
+                                                     'rxy',
+                                                     'ty',
+                                                     'tz',
+                                                     's',
+                                                     'tname',
+                                                     'id'], 
+                           formats=['|S20', 'float', 'float', 'float'] + \
+                                  ['|O8']*8 +  ['|S10', '|S10'])
+        return meta
     
     
 
