@@ -76,12 +76,15 @@ def download_s3_directory(bucket_name, target):
     f_suffix = '_$folder$'
     for l in L:
         n = l.name
-        print(n)
         if n.endswith(f_suffix):
             dirname = n[:-len(f_suffix)]
             dir = os.path.join(target, dirname)
-            os.mkdir(dir)
+            if not os.path.exists(dir):
+                print(n)
+                os.mkdir(dir)
         else:
             filename = os.path.join(target, n)
-            l.get_contents_to_filename(filename)
+            if not os.path.exists(filename):
+                print(n)
+                l.get_contents_to_filename(filename)
 

@@ -41,12 +41,12 @@ class DatasetBase(object):
         """Download and extract the dataset."""
         resource_home = self.resource_home()
         if not os.path.exists(resource_home):
-            os.makedirs(home)
+            os.makedirs(resource_home)
         cachedir = self.cache_home()
         if not os.path.exists(cachedir):
             os.makedirs(cachedir)      
 
-        lock = lockfile.FileLock(home)
+        lock = lockfile.FileLock(resource_home)
         with lock:
             tools.download_s3_directory(gt.s3_resource_bucket,
                                         resource_home)
@@ -69,8 +69,8 @@ class GenerativeDatasetBase(DatasetBase):
     def __init__(self, data=None):
         self.data = data
         self.specific_name = self.__class__.__name__ + '_' + get_image_id(data)
-        model_root = OBJ_PATH
-        bg_root = BACKGROUND_PATH
+        model_root = gt.OBJ_PATH
+        bg_root = gt.BACKGROUND_PATH
         self.imager = Imager(model_root, bg_root)
 
     def _get_meta(self):

@@ -17,7 +17,7 @@ RESOURCE_PATH = os.path.join(GENTHOR_PATH, "resources")
 # Resource root directory
 CACHE_PATH = os.path.join(GENTHOR_PATH, "cache")
 # background root directory
-BACKGROUND_PATH = os.path.join(GENTHOR_PATH, "backgrounds")
+BACKGROUND_PATH = os.path.join(RESOURCE_PATH, "backgrounds")
 # .obj model root directory
 OBJ_PATH = os.path.join(RESOURCE_PATH, "objs")
 # .egg model root directory
