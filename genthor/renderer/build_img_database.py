@@ -15,6 +15,9 @@ import genthor.tools as tools
 import pdb
 
 
+raise DeprecationWarning("This module is no longer supported and contains bugs and incompatibilities")
+
+
 def sample_model_bg(modelnames, bgnames, n_ex_per_model, n_ex, rand=0):
     """ Samples a list of models and backgrounds for building the
     dataset. The models will be repeated 'n_ex_per_model' times.
@@ -37,7 +40,7 @@ def sample_model_bg(modelnames, bgnames, n_ex_per_model, n_ex, rand=0):
 
     # Make category list
     # Model root directory
-    model_path = os.path.join(gt.GENTHOR_PATH, "models")
+    model_path = os.path.join(gt.RESOURCE_PATH, "objs")
     # Get the model info that's contained in the scripts
     sys.path.append(model_path)
     model_categories = __import__("model_categories").MODEL_CATEGORIES
@@ -152,7 +155,7 @@ state_dicts = [dict(zip(dictkeys, state)) for state in states]
 # Build the 'all_args' and 'out_paths' lists, which will be fed to
 # the rendering loop.
 # 'out_root' points to the directory to place the images.
-out_root = os.path.join(gt.GENTHOR_PATH, "training_data")
+out_root = os.path.join(gt.RESOURCE_PATH, "training_data")
 all_args, out_paths = build_renderer_data(states, out_root)
 
 ######################################################################

@@ -306,7 +306,7 @@ def copy_tex(obj_pth, tex_pth):
 
 def main(f_panda=True):
     # Model root directory
-    model_pth = os.path.join(gt.GENTHOR_PATH, "raw_models")
+    model_pth = os.path.join(gt.RESOURCE_PATH, "raw_models")
     # Destination directory for .<out> files
     out_root = gt.OBJ_PATH
     # Make the .obj/.egg files from original .obj files

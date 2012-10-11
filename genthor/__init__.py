@@ -2,14 +2,17 @@ import os
 import urllib
 import json
 import os
+from skdata.data_home import get_data_home
 
 BASE_URL = 'http://50.19.109.25'
 MODEL_URL = BASE_URL + ':9999/3dmodels?'
 
-# Root genthor project path
-GENTHOR_PATH = os.path.abspath(os.environ["GENTHOR"])
+# Scikits data genthor directory
+SKDATA_PATH = os.path.join(get_data_home(), "genthor")
 # Resource root directory
-RESOURCE_PATH = os.path.join(GENTHOR_PATH, "resources")
+RESOURCE_PATH = os.path.join(SKDATA_PATH, "resources")
+# Resource root directory
+CACHE_PATH = os.path.join(SKDATA_PATH, "cache")
 # background root directory
 BACKGROUND_PATH = os.path.join(RESOURCE_PATH, "backgrounds")
 # .obj model root directory
