@@ -29,14 +29,17 @@ def get_canonical_view(m):
         return v['canonical_view']
 
 
-def splitext2(pth, splitpoint=1):
+def splitext2(pth, splitpoint=0):
     """ Better splitext than os.path's (take optional arg that lets
     you control which dot to split on)."""
     dirname, basename = os.path.split(pth)
-    splits = basename.split(".")
-    n = len(splits)
-    splitpoint = 1 if splitpoint == 0 or splitpoint <= -n else splitpoint
-    splitpoint = n - 1 if splitpoint >= n else splitpoint
-    name = os.path.join(dirname, ".".join(splits[:splitpoint]))
-    ext = "." + ".".join(splits[splitpoint:])
+    if "." in basename:
+        splits = basename.split(".")
+        n = len(splits)
+        splitpoint = 0 if splitpoint < -n else splitpoint
+        splitpoint = n - 1 if splitpoint >= n else splitpoint
+        name = os.path.join(dirname, ".".join(splits[:splitpoint + 1]))
+        ext = "." + ".".join(splits[splitpoint + 1:])
+    else:
+        name, ext = basename, ""
     return name, ext

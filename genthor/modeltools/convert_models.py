@@ -8,12 +8,23 @@ import argparse
 import genthor as gt
 import obj2egg as o2e
 import os
+import re
 import shutil
 from subprocess import call
 from subprocess import check_call
 import sys
 import tarfile
 import pdb
+
+
+# Model extensions
+model_exts = (".obj", ".egg", ".bam")
+# Zip extensions
+zip_exts = (".tgz", ".tar.gz", ".tbz2", ".tar.bz2")
+# Texture image file extensions
+img_exts = (".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".gif", ".png")
+# .mtl image fields
+mtl_img_fields = ("map_Ka", "map_Kd", "map_bump", "bump", "map_refl")
 
 
 def blender_convert(model_pth, out_root, ext=".obj", f_force=False):
@@ -100,7 +111,7 @@ def blender_convert(model_pth, out_root, ext=".obj", f_force=False):
         # un-tar, un-gz into a temp directory
         fulltargzname = os.path.join(model_pth, targzname)
         tmp_tar_pth = os.path.join(tmp_root, "tartmp")
-        allnames = untar(tmp_tar_pth, fulltargzname)
+        allnames = untar(fulltargzname, tmp_tar_pth)
 
         # Get target's path
         names = [n for n in allnames if os.path.split(n)[1] == objname]
@@ -151,12 +162,11 @@ def panda_convert(inout_pths, ext=".egg"):
             raise IOError("File does not exist: %s" % in_pth)
 
         # Determine file name and extension
-        name, ext0 = os.path.basename(in_pth).split(".", 1)
-        ext0 = "." + ext0
-        if ext0 in (".tgz", ".tar.gz", ".tbz2"):
+        name, ext0 = gt.splitext2(os.path.basename(in_pth))
+        if ext0 in (".tgz", ".tar.gz", ".tbz2", ".tar.bz2"):
             # un-tar, un-gz into a temp directory
             tmp_tar_pth = os.path.join(tmp_root, "tartmp")
-            allnames = untar(tmp_tar_pth, in_pth)
+            allnames = untar(in_pth, tmp_tar_pth)
 
             # Get target's path
             names = [n for n in allnames
@@ -208,11 +218,12 @@ def panda_convert(inout_pths, ext=".egg"):
         shutil.rmtree(tmp_root)
 
 
-def untar(tmp_pth, tarname):
+def untar(tarname, tmp_pth):
     # Make the tmp_pth directory if it doesn't exist already
     if not os.path.isdir(tmp_pth):
         os.makedirs(tmp_pth)
-
+    if gt.splitext2(tarname)[1] not in zip_exts:
+        raise ValueError("Invalid zip file extension: %s" % tarname)
     try:
         # Open the tar
         with tarfile.open(tarname, 'r') as tf:
@@ -222,8 +233,119 @@ def untar(tmp_pth, tarname):
             names = tf.getnames()
     except:
         pdb.set_trace()
-
     return names
+
+
+def parse_dir_imgs(root_pth):
+    """ Search through pth and all sub-directories for image files and
+    return a list of their names."""
+    def visit(imgpths, pth, names):
+        # Appends detected image filenames to a list.
+        imgpths.extend([os.path.join(pth, name) for name in names
+                        if os.path.splitext(name)[1].lower() in img_exts])
+    # Walk down directory tree and get the image file paths
+    imgpaths = []
+    for dp, foo, names in os.walk(root_pth):
+        visit(imgpaths, dp, names)
+    # Make lowercased list of imagefilenames
+    imgnames = [os.path.split(pth)[1].lower() for pth in imgpaths]
+    return imgnames, imgpaths
+
+
+def parse_mtl_imgs(mtl_pth, f_edit=False, imgdirname="tex"):
+    """ Search through the mtl_pth for all image file names and return
+    as a list.  f_edit will substitute fixed img names into the .mtl
+    file."""
+    # RE pattern
+    pat_fields = "(?:" + "|".join(mtl_img_fields) + ") "
+    pat_img_exts = "(.+(?:\\" + "|\\".join(img_exts) + "))"
+    patstr = "[\s]*" + pat_fields + "((?:.*[/\\\\])?" + pat_img_exts + ")"
+    rx = re.compile(patstr, re.IGNORECASE)
+    ## Get the image file names from the .mtl file
+    # Open .mtl
+    with open(mtl_pth, "r") as fid:
+        filestr = fid.read()
+    if f_edit:
+        def repl(m):
+            # Get the old file name
+            name = m.group(2).lower()
+            # Store name
+            mtlnames.append(name)
+            # Pull out the path and image name
+            newname = os.path.join(imgdirname, name)
+            # First and last points in match
+            i = m.start(1) - m.start()
+            j = m.end(1) - m.start()
+            match = m.group()
+            # Make a substitute for the match
+            newmatch = match[:i] + newname + match[j:]
+            return newmatch
+        # Initialize storage for the image file names from inside the
+        # .mtl, which will be appended to by the repl function
+        mtlnames = []
+        # Search for matches and substitute in fixed path
+        newfilestr = rx.subn(repl, filestr)[0]
+        # Edit and save new .mtl
+        with open(mtl_pth, "w") as fid:
+            fid.write(newfilestr)
+    else:
+        # The .mtl's image filenames
+        mtlnames = [m.group(2).lower() for m in rx.finditer(filestr)]
+    return mtlnames
+
+        
+def check_format(pth):
+    """ Checks format of a model directory to make sure everything is
+    formatted per the genthor standard."""
+    def returnfunc():
+        # Remove tmp path
+        if os.path.isdir(tmp_pth):
+            shutil.rmtree(tmp_pth)
+    # Temporary path
+    tmp_pth = os.path.join(os.environ["HOME"], "tmp", "scrap")
+    # Directory contents
+    ld = os.listdir(pth)
+    # Get directory's contents
+    names = [fn for fn in ld if os.path.splitext(fn)[1] in model_exts + zip_exts]
+    # Check that there is exactly one model file
+    if len(names) != 1:
+        return 1
+    ## There is a unique model or zip file
+    # Determine file name and extension, and unzip if necessary
+    name, ext = gt.splitext2(os.path.basename(names[0]))
+    if ext in zip_exts:
+        # un-tar, un-zip into a temp directory
+        untar(os.path.join(pth, name + ext), tmp_pth)
+        pth = os.path.join(tmp_pth, name)
+        # Directory contents
+        ld = os.listdir(pth)
+        # Get target's path
+        names = [fn for fn in ld if os.path.splitext(fn)[1] in model_exts]
+        # Check that there is exactly one model file
+        if len(names) != 1:
+            # Remove tmp path
+            returnfunc()
+            return 2
+        name, ext = gt.splitext2(os.path.basename(names[0]))
+    ## There is a unique model file
+    if ext == ".obj":
+        mtlname = name + ".mtl"
+        # Is .mtl present?
+        f_mtl = os.path.isfile(mtlname)
+        if f_mtl:
+            # Parse the .mtl file for the image names
+            mtl_pth = os.path.join(pth, mtlname)
+            mtlnames = parse_mtl_imgs(mtl_pth)
+            # Directory for the images
+            img_pth = os.path.join(pth, imgdirname)
+            # Get image file names
+            imgnames, imgpaths = parse_dir_imgs(img_pth)
+            # Check that all .mtl img names are present
+            if not set(mtlnames) <= set(imgnames):
+                returnfunc()
+                return 3
+    returnfunc()
+    return 0
 
 
 def call_blender(obj_pth, out_pth, blender_command_base, params):
@@ -306,7 +428,7 @@ def copy_tex(obj_pth, tex_pth):
 
 def main(f_panda=True):
     # Model root directory
-    model_pth = os.path.join(gt.RESOURCE_PATH, "raw_models")
+    model_pth = "/home/pbatt/work/genthor/raw_models"
     # Destination directory for .<out> files
     out_root = gt.OBJ_PATH
     # Make the .obj/.egg files from original .obj files
