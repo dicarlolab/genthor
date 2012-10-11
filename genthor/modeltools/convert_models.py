@@ -5,13 +5,14 @@ Peter W Battaglia - 03.2012
 PWB - 10.2012 - updates
 """
 import argparse
+import genthor as gt
 import obj2egg as o2e
 import os
 import shutil
-import sys
-import tarfile
 from subprocess import call
 from subprocess import check_call
+import sys
+import tarfile
 import pdb
 
 
@@ -179,11 +180,6 @@ def panda_convert(inout_pths, ext=".egg"):
         elif ext1 not in (".egg", ".bam"):
             raise ValueError("Unsupported output type: %s" % ext1)
 
-
-        ## pdb.set_trace()
-
-        
-
         # Make output directory (if necessary)
         if not os.path.isdir(os.path.split(out_pth)[0]):
             os.makedirs(os.path.split(out_pth)[0])
@@ -260,7 +256,7 @@ def call_blender(obj_pth, out_pth, blender_command_base, params):
     copy_tex(os.path.split(obj_pth)[0], tex_pth)
 
 
-def obj2egg(obj_pth, egg_pth=None):
+def obj2egg(obj_pth, egg_pth=None, f_force_tex=True):
     ## Make an .egg
     if egg_pth is None:
         egg_pth = os.path.splitext(obj_pth)[0] + '.egg'
@@ -271,7 +267,13 @@ def obj2egg(obj_pth, egg_pth=None):
         shutil.move(egg_pth0, egg_pth)
         pth0 = os.path.split(obj_pth)[0]
         pth = os.path.split(egg_pth)[0]
-        shutil.copytree(os.path.join(pth0, "tex"), os.path.join(pth, "tex"))
+        tex_pth = os.path.join(pth, "tex")
+        if os.path.isdir(tex_pth):
+            if f_force_tex:
+                shutil.rmtree(tex_pth)
+            else:
+                raise IOError("Directory exists: %s" % tex_pth)
+        shutil.copytree(os.path.join(pth0, "tex"), tex_pth)
 
 
 def egg2bam(egg_pth, bam_pth=None):
@@ -285,40 +287,39 @@ def copy_tex(obj_pth, tex_pth):
     """ Copy texture images from .obj's directory to .egg's directory """
 
     # Texture image file extensions
-    imgexts = (".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".gif", ".png")
+    img_exts = (".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".gif", ".png")
     
     # Tex image files in obj_pth
     tex_filenames0 = [name for name in os.listdir(obj_pth)
-                      if os.path.splitext(name)[1].lower() in imgexts]
+                      if os.path.splitext(name)[1].lower() in img_exts]
 
     # Make the directory if need be, and error if it is a file already
     if os.path.isfile(tex_pth):
         raise IOError("File exists: '%s'")
     elif not os.path.isdir(tex_pth):
-        os.mkdir(tex_pth)
+        os.mkdirs(tex_pth)
 
     for name in tex_filenames0:
-        #print "%s --> %s" % (os.path.join(obj_pth, name), tex_pth)
-        new_tex_pth = os.path.join(tex_pth, name.lower())
+        new_tex_pth = os.path.join(tex_pth, name)
         shutil.copy2(os.path.join(obj_pth, name), new_tex_pth)
 
 
 def main(f_panda=True):
     # Model root directory
-    model_pth = os.path.join(os.environ["HOME"], "work", "genthor", "raw_models")
+    model_pth = os.path.join(gt.RESOURCE_PATH, "raw_models")
     # Destination directory for .<out> files
-    out_root = os.path.join(os.environ["HOME"], "work", "genthor", "models")
+    out_root = gt.OBJ_PATH
     # Make the .obj/.egg files from original .obj files
     tgz_pths = blender_convert(model_pth, out_root, ext=".obj")
 
     if f_panda:
         # Destination directory for .egg files
-        out_root = os.path.join(os.environ["HOME"], "work", "genthor", "eggs")
+        out_root = gt.EGG_PATH
         # Make the .egg/.bam files from the .obj/.egg files
         # inout_pths = {}
         # inout_pths[tgz_pth] = os.path.join(out_root, os.path.splitext(
         #     os.path.basename(tgz_pth))[1])
-        out_pths = [os.path.join(out_root, os.path.splitext(
+        out_pths = [os.path.join(out_root, gt.splitext2(
             os.path.basename(tgz_pth))[0]) for tgz_pth in tgz_pths]
         inout_pths = dict(zip(tgz_pths, out_pths))
 

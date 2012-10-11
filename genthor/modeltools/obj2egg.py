@@ -22,7 +22,6 @@ import math
 import string
 import getopt
 import sys, os
-import pdb
 
 
 def floats(float_list):
@@ -30,7 +29,8 @@ def floats(float_list):
     return [ float(number) for number in float_list ]
 
 def ints(int_list):
-    """coerce a list of strings that represent integers into a list of integers"""
+    """coerce a list of strings that represent integers into a list of
+    integers"""
     return [ int(number) for number in int_list ]
 
 
@@ -178,7 +178,7 @@ class MtlFile:
                 # map_Ks == specular
                 # pth = (tokens[1] if True or os.path.isabs(tokens[1])
                 #     else os.path.join(self.relpath, tokens[1]))
-                mat.put(tokens[0], pth) #pathify(pth))
+                mat.put(tokens[0], tokens[1]) #pathify(pth))
                 if verbose: print "map:", mat.name, tokens[0], mat.get(tokens[0])
                 continue
             if tokens[0] in ("Ni"):
@@ -511,7 +511,6 @@ def pathify(path):
     if os.path.isfile(t):
         return t
     print "warning: can't make sense of this map file name:", orig
-    pdb.set_trace()
     return t
     
 def main(argv=None):

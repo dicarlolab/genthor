@@ -26,13 +26,18 @@ import genthor.model_info as model_info
 import genthor.jxx_model_info as jxx_model_info
 from genthor.renderer.imager import Imager
 
+import pdb
+
 class DatasetBase(object):
-    def home(self, *suffix_paths):
-        return os.path.join(get_data_home(), self.base_name, *suffix_paths)
+    def resouce_home(self, *suffix_paths):
+        return os.path.join(gt.RESOURCE_PATH, *suffix_paths)
+
+    def cache_home(self, *suffix_paths):
+        return os.path.join(gt.CACHE_PATH, *suffix_paths)
 
     def fetch(self):
         """Download and extract the dataset."""
-        home = self.home()
+        home = self.resource_home()
         if not os.path.exists(home):
             os.makedirs(home)
         lock = lockfile.FileLock(home)
@@ -42,7 +47,7 @@ class DatasetBase(object):
                 if not os.path.exists(archive_filename):
                     url = 'http://dicarlocox-datasets.s3.amazonaws.com/' + base
                     print ('downloading %s' % url)
-                    download(url, archive_filename, sha1=sha1, verbose=True)                
+                    download(url, archive_filename, sha1=sha1, verbose=True)
                     extract(archive_filename, home, sha1=sha1, verbose=True)
 
     @property
@@ -71,8 +76,8 @@ class GenerativeDatasetBase(DatasetBase):
     def __init__(self, data=None):
         self.data = data
         self.specific_name = self.__class__.__name__ + '_' + get_image_id(data)
-        model_root = self.home(self.model_root)
-        bg_root = self.home(self.bg_root)
+        model_root = self.resource_home("objs", self.model_root)
+        bg_root = self.resource_home("backgrounds", self.bg_root)
         self.imager = Imager(model_root, bg_root)
 
     
@@ -136,13 +141,9 @@ class GenerativeDatasetBase(DatasetBase):
         meta = self.meta
         window_type = 'texture'
         size = preproc['size']
-
-        # lbase, output = gr.setup_renderer(window_type, size=size) 
-        # images = larray.lmap(ImgRendererResizer(model_root, bg_root, preproc,
-        #                                         lbase, output), meta)
-
+        # Get an ImgRendererResizer object
         irr = self.imager.get_map(preproc, window_type)
-
+        # Make the image map
         images = larray.lmap(irr, meta)
         return larray.cache_memmap(images, name=name, basedir=basedir)
         
