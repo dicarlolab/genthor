@@ -21,28 +21,35 @@ import skdata.larray as larray
 from skdata.data_home import get_data_home
 from skdata.utils.download_and_extract import extract, download
 
-import genthor.renderer.genthor_renderer as gr
+import genthor as gt
+import genthor.renderer.renderer as gr
 import genthor.model_info as model_info
 import genthor.jxx_model_info as jxx_model_info
+from genthor.renderer.imager import Imager
+import genthor.tools as tools
+
+import pdb
 
 class DatasetBase(object):
-    def home(self, *suffix_paths):
-        return os.path.join(get_data_home(), self.base_name, *suffix_paths)
+    def resource_home(self, *suffix_paths):
+        return os.path.join(gt.RESOURCE_PATH, *suffix_paths)
+
+    def cache_home(self, *suffix_paths):
+        return os.path.join(gt.CACHE_PATH, *suffix_paths)
 
     def fetch(self):
         """Download and extract the dataset."""
-        home = self.home()
-        if not os.path.exists(home):
+        resource_home = self.resource_home()
+        if not os.path.exists(resource_home):
             os.makedirs(home)
+        cachedir = self.cache_home()
+        if not os.path.exists(cachedir):
+            os.makedirs(cachedir)      
+
         lock = lockfile.FileLock(home)
         with lock:
-            for base, sha1 in self.FILES:
-                archive_filename = os.path.join(home, base)  
-                if not os.path.exists(archive_filename):
-                    url = 'http://dicarlocox-datasets.s3.amazonaws.com/' + base
-                    print ('downloading %s' % url)
-                    download(url, archive_filename, sha1=sha1, verbose=True)                
-                    extract(archive_filename, home, sha1=sha1, verbose=True)
+            tools.download_s3_directory(gt.s3_resource_bucket,
+                                        resource_home)
 
     @property
     def meta(self):
@@ -56,21 +63,16 @@ class DatasetBase(object):
 
 
 class GenerativeDatasetBase(DatasetBase):
-    bg_root = 'genthor_backgrounds_20120418'
-    model_root = 'genthor_processed_models_20120418'
-    FILES = [('genthor_backgrounds_20120418.zip',
-              '17c5dd97be0775a7e6ec5de07592a44fb4551b76'),
-              ('genthor_processed_models_20120418.tar.gz',
-               'fd9a26a2b8198a7745ff642c4351f5206fc7d550'
-               )]
 
-    base_name = 'GenthorGenerative'
     model_categories = dict_inverse(model_info.MODEL_CATEGORIES)
     
     def __init__(self, data=None):
         self.data = data
         self.specific_name = self.__class__.__name__ + '_' + get_image_id(data)
-    
+        model_root = OBJ_PATH
+        bg_root = BACKGROUND_PATH
+        self.imager = Imager(model_root, bg_root)
+
     def _get_meta(self):
         #generate params 
         models = self.models
@@ -126,17 +128,15 @@ class GenerativeDatasetBase(DatasetBase):
 
     def get_images(self, preproc):
         name = self.specific_name + '_' + get_image_id(preproc)
-        basedir = self.home()
-        cache_file = os.path.join(basedir, name)
+        cache_dir = self.cache_home()
         meta = self.meta
         window_type = 'texture'
         size = preproc['size']
-        lbase, output = gr.setup_renderer(window_type, size=size) 
-        model_root = self.home(self.model_root)
-        bg_root = self.home(self.bg_root)
-        images = larray.lmap(ImgRendererResizer(model_root, bg_root, preproc,
-                                                lbase, output), meta)
-        return larray.cache_memmap(images, name=name, basedir=basedir)
+        # Get an ImgRendererResizer object
+        irr = self.imager.get_map(preproc, window_type)
+        # Make the image map
+        images = larray.lmap(irr, meta)
+        return larray.cache_memmap(images, name=name, basedir=cache_dir)
         
 
 def get_subset_splits(meta, npc_train, npc_tests, num_splits,
@@ -745,246 +745,7 @@ class GenerativeDatasetTest(GenerativeDataset1):
                      'rxz': uniform(-180., 180.),
                      }
                   }]  
-    
-
-class ImgRendererResizer(object):
-    def __init__(self, model_root, bg_root, preproc, lbase, output):
-        size = tuple(preproc['size'])
-        self.transpose = preproc.get('transpose', False)
-        if self.transpose:
-            self._shape = tuple(np.array(size)[list(self.transpose)])
-        else:
-            self._shape = size
-        self._ndim = len(self._shape) 
-        self._dtype = preproc['dtype']
-        self.mode = preproc['mode']
-        self.normalize = preproc['normalize']
-        self.lbase = lbase
-        self.output = output
-        self.model_root = model_root
-        self.bg_root = bg_root
-
-    
-    def rval_getattr(self, attr, objs):
-        if attr == 'shape' and self._shape is not None:
-            return self._shape
-        if attr == 'ndim' and self._ndim is not None:
-            return self._ndim
-        if attr == 'dtype':
-            return self._dtype
-        raise AttributeError(attr)
-        
-    def __call__(self, m):
-        modelpath = os.path.join(self.model_root, 
-                                 m['obj'], m['obj'] + '.bam')
-        bgpath = os.path.join(self.bg_root, m['bgname'])
-        scale = [m['s']]
-        pos = [m['ty'], m['tz']]
-        hpr = [m['ryz'], m['rxz'], m['rxy']]
-        bgscale = [m['bgscale']]
-        bghp = [m['bgphi'], m['bgpsi']]
-        args = (modelpath, bgpath, scale, pos, hpr, bgscale, bghp)
-        objnode, bgnode = gr.construct_scene(self.lbase, *args)
-        self.lbase.render_frame()
-        objnode.removeNode()
-        bgnode.removeNode()
-        tex = self.output.getTexture()
-        im = Image.fromarray(self.lbase.get_tex_image(tex))
-        if im.mode != self.mode:
-            im = im.convert(self.mode)
-        rval = np.asarray(im, self._dtype)
-        if self.normalize:
-            rval -= rval.mean()
-            rval /= max(rval.std(), 1e-3)
-        else:
-            if 'float' in str(self._dtype):
-                rval /= 255.0
-        if self.transpose:
-            rval = rval.transpose(*tuple(self.transpose))
-        assert rval.shape[:2] == self._shape[:2], (rval.shape, self._shape)
-        return rval
-        
-
-class TrainingDataset(DatasetBase):
-
-    FILES = [('genthor_training_data_20120416.zip',
-              'cc5cbb5fd25cb469783e2494d7efdf1d189035a5')]
-
-    name = 'GenthorTrainingDataset'
-    
-    def _get_meta(self): 
-        homedir = os.path.join(self.home(), 'genthor_training_data_20120412')
-        L = sorted(os.listdir(homedir))
-        imgs = filter(lambda x: x.endswith('.jpg'), L)
-        pkls = filter(lambda x: x.endswith('.pkl'), L)
-        assert len(imgs) == len(pkls)
-        recs = []
-        for imfile, pklfile in zip(imgs, pkls):
-            pkl = cPickle.load(open(os.path.join(homedir, pklfile)))
-            file_id = os.path.split(imfile)[-1]
-            rec = (os.path.join(homedir, imfile), 
-                   pkl['bgname'],
-                   pkl['bghp'][0],
-                   pkl['bghp'][1],
-                   pkl['bgscale'][0],
-                   pkl['category'],
-                   pkl['modelname'],
-                   pkl['hpr'][0],
-                   pkl['hpr'][1],
-                   pkl['hpr'][2],
-                   pkl['pos'][0],
-                   pkl['pos'][1],
-                   pkl['scale'][0],
-                   file_id)
-            recs.append(rec)
-        meta = tb.tabarray(records=recs, names=['filename',
-                                             'bgname',
-                                             'bgh',
-                                             'bgp',
-                                             'bgscale',
-                                             'category',
-                                             'obj',
-                                             'ryz',
-                                             'rxz',
-                                             'rxy',
-                                             'ty',
-                                             'tz',
-                                             's',
-                                             'file_id'])
-        return meta
-        
-    @property 
-    def filenames(self):
-        return self.meta['filename']
-
-    def get_images(self, preproc):
-        self.fetch()
-        size = tuple(preproc['size'])
-        normalize = preproc['global_normalize']
-        mode = preproc['mode']
-        dtype = preproc['dtype']
-        return larray.lmap(ImgLoaderResizer(inshape=(256, 256),
-                                            shape=size,
-                                            dtype=dtype,
-                                            normalize=normalize,
-                                            mode=mode),
-                                self.filenames)
-
-
-class ImgLoaderResizer(object):
-    """
-    """
-    def __init__(self,
-                 inshape, 
-                 shape=None,
-                 ndim=None,
-                 dtype='float32',
-                 normalize=True,
-                 mode='RGB',
-                 crop=None,
-                 mask=None):
-        self.inshape = tuple(inshape)
-        assert len(shape) == 2
-        shape = tuple(shape)
-        if crop is None:
-            crop = (0, 0, self.inshape[0], self.inshape[1])
-        assert len(crop) == 4
-        crop = tuple(crop)
-        l, t, r, b = crop
-        assert 0 <= l < r <= self.inshape[0]
-        assert 0 <= t < b <= self.inshape[1]
-        self._crop = crop   
-        assert dtype == 'float32'
-        self.dtype=dtype
-        self._shape = shape
-        if ndim is None:
-            self._ndim = None if (shape is None) else len(shape)
-        else:
-            self._ndim = ndim
-        self._dtype = dtype
-        self.normalize = normalize
-        self.mask=mask
-        ##XXX:  To-do allow for other image modes (e.g. RGB)
-        assert mode == 'L'
-        self.mode=mode
-
-    def rval_getattr(self, attr, objs):
-        if attr == 'shape' and self._shape is not None:
-            return self._shape
-        if attr == 'ndim' and self._ndim is not None:
-            return self._ndim
-        if attr == 'dtype':
-            return self._dtype
-        raise AttributeError(attr)
-
-    def __call__(self, file_path):
-        im = Image.open(file_path)
-        if im.mode != self.mode:
-            im = im.convert(self.mode)
-        assert im.size == self.inshape
-        if self.mask is not None:
-            im.paste(self.mask)
-        if self._crop != (0, 0,) + self.inshape:
-            im = im.crop(self._crop)
-        l, t, r, b = self._crop
-        assert im.size == (r - l, b - t)
-        if max(im.size) != self._shape[0]:
-            m = self._shape[0]/float(max(im.size))
-            new_shape = (int(round(im.size[0]*m)), int(round(im.size[1]*m)))
-            im = im.resize(new_shape, Image.ANTIALIAS)
-        imval = np.asarray(im, 'float32')
-        rval = np.zeros(self._shape, dtype=self.dtype)
-        ctr = self._shape[0]/2
-        cxmin = ctr - imval.shape[0] / 2
-        cxmax = ctr - imval.shape[0] / 2 + imval.shape[0]
-        cymin = ctr - imval.shape[1] / 2
-        cymax = ctr - imval.shape[1] / 2 + imval.shape[1]
-        rval[cxmin:cxmax,cymin:cymax] = imval
-        if self.normalize:
-            rval -= rval.mean()
-            rval /= max(rval.std(), 1e-3)
-        else:
-            rval /= 255.0
-        assert rval.shape == self._shape
-        return rval
-    
-    
-def test_training_dataset():
-    dataset = TrainingDataset()
-    meta = dataset.meta
-    assert len(meta) == 11000
-    agg = meta[['obj', 'category']].aggregate(['category'],
-                                             AggFunc=lambda x: len(x))
-    assert agg.tolist() == [('boats', 1000),
-                             ('buildings', 1000),
-                             ('cars', 1000),
-                             ('cats_and_dogs', 1000),
-                             ('chair', 1000),
-                             ('faces', 1000),
-                             ('guns', 1000),
-                             ('planes', 1000),
-                             ('plants', 1000),
-                             ('reptiles', 1000),
-                             ('table', 1000)]
-
-    agg2 = meta[['obj', 'category']].aggregate(['category'], 
-           AggFunc=lambda x : len(np.unique(x)))       
-    assert agg2.tolist() == [('boats', 10),
-         ('buildings', 10),
-         ('cars', 10),
-         ('cats_and_dogs', 10),
-         ('chair', 10),
-         ('faces', 10),
-         ('guns', 10),
-         ('planes', 10),
-         ('plants', 10),
-         ('reptiles', 10),
-         ('table', 10)]
-         
-    imgs = dataset.get_images('float32', {'size':(256, 256),
-                          'global_normalize':False, 'mode':'L'})
-    assert imgs.shape == (11000, 256, 256)
-
+            
 
 ##XXX TO DO:  TEST simultaneous reads more thoroughly
 def test_generative_dataset():
@@ -1200,21 +961,9 @@ class ResampleGenerativeDataset4plus(ResampleGenerativeDataset):
         return tb.tab_rowstack([meta1, meta2])
 
 
-class JXXDatasetBase(GenerativeDatasetBase):
-    bg_root = 'genthor_backgrounds_20120418'
-    model_root = 'jxx_processed_models_20120723'
-    FILES = [('genthor_backgrounds_20120418.zip',
-              '17c5dd97be0775a7e6ec5de07592a44fb4551b76'),
-              ('jxx_processed_models_20120723.tar.gz',
-               '1fadce011893e7f0bc18ad14047b30b9800e5d71'
-               )]
-
-    base_name = 'JXXGenerative'
-    model_categories = dict_inverse(jxx_model_info.MODEL_CATEGORIES)
-
-
-class JXXDatasetTest(JXXDatasetBase):    
-    models = ['test1']
+class GenerativeDatasetLowres(GenerativeDatasetBase):    
+    """optimized for low res:, e.g. bigger objects"""
+    models = model_info.MODEL_SUBSET_3
     bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
                        'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
                        'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
@@ -1223,18 +972,17 @@ class JXXDatasetTest(JXXDatasetBase):
     good_backgrounds = [_b for _b in model_info.BACKGROUNDS
                                                   if _b not in bad_backgrounds]
     templates = [
-                 {'n_ex_per_model': 10,
+                 {'n_ex_per_model': 250,
                   'name': 'var1', 
                   'template': {'bgname': choice(good_backgrounds),
                      'bgscale': 1.,
                      'bgpsi': 0,
                      'bgphi': uniform(-180.0, 180.),
-                     's': loguniform(np.log(2./3), np.log(2.)),
-                     'ty': uniform(-1.0, 1.0),
-                     'tz': uniform(-1.0, 1.0),
-                     'ryz': uniform(-180., 180.),
-                     'rxy': uniform(-180., 180.),
-                     'rxz': uniform(-180., 180.),
+                     's': loguniform(np.log(1.5), np.log(5.)),
+                     'ty': uniform(-0.2, 0.2),
+                     'tz': uniform(-0.2, 0.2),
+                     'ryz': uniform(-45., 45.),
+                     'rxy': uniform(-45., 45.),
+                     'rxz': uniform(-45., 45.),
                      }
                   }]
-

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-""" Create a dataset of images and latent state descriptions, based on
-models and backgrounds."""
+""" Create a dataset of images and state descriptions, based on models
+and backgrounds."""
 
 import cPickle
 import os
@@ -10,11 +10,15 @@ from collections import OrderedDict as dict
 import numpy as np
 from matplotlib.cbook import flatten
 import genthor as gt
-import genthor_renderer as gr
+import renderer as gr
+import genthor.tools as tools
 import pdb
 
 
-def sample_model_bg(modelnames, bgnames, n_ex_per_model, n_ex):
+raise DeprecationWarning("This module is no longer supported and contains bugs and incompatibilities")
+
+
+def sample_model_bg(modelnames, bgnames, n_ex_per_model, n_ex, rand=0):
     """ Samples a list of models and backgrounds for building the
     dataset. The models will be repeated 'n_ex_per_model' times.
     
@@ -30,13 +34,13 @@ def sample_model_bg(modelnames, bgnames, n_ex_per_model, n_ex):
     # Make model list
     modellist = [m for m in flatten(zip(*([modelnames] * n_ex_per_model)))]
     # Make background list
-    prng = np.random.RandomState(seed=0)
-    bgrand = prng.randint(0, n_bg, n_ex)
+    rand = tools.init_rand(rand)
+    bgrand = rand.randint(0, n_bg, n_ex)
     bglist = [bgnames[r] for r in bgrand]
 
     # Make category list
     # Model root directory
-    model_path = os.path.join(gt.GENTHOR_PATH, "models")
+    model_path = os.path.join(gt.RESOURCE_PATH, "objs")
     # Get the model info that's contained in the scripts
     sys.path.append(model_path)
     model_categories = __import__("model_categories").MODEL_CATEGORIES
@@ -51,53 +55,15 @@ def sample_model_bg(modelnames, bgnames, n_ex_per_model, n_ex):
     return modellist, bglist, categorylist
 
 
-def sample(rng, num=1, f_log=False):
-    """ Samples 'num' random values in some range 'rng'.
-    
-    rng: range (can be either (2,) or (m,2)) 
-    num: number of desired random samples
-    f_log: log-uniform (good for scales)
-
-    val: random values, shaped (m, num) (m=1 if rng is (2,))
-    """
-    
-    # np.ndarray version of range
-    arng = np.array(rng).T
-
-    if f_log:
-        if np.any(arng <= 0.):
-            # error on non-positive log values
-            raise ValueError("log is no good for non-positive values")
-        # log-uniform
-        arng = np.log(arng)
-
-    if arng.ndim == 1:
-        # add dimension to make operations broadcast right
-        arng = arng[:, None]
-
-    # random values in [0, 1]
-    prng = np.random.RandomState(seed=0)
-    rand = prng.rand(num, arng.shape[1])
-
-    # fit them to the range
-    val = rand * (arng[[1]] - arng[[0]]) + arng[[0]]
-
-    if f_log:
-        # log-uniform
-        val = np.exp(val)
-
-    return val
-
-
-def latent2args(latent):
-    """ Convert the 'latent' state to an 'args' tuple, suitable for
+def state2args(state):
+    """ Convert the 'state' state to an 'args' tuple, suitable for
     rendering."""
 
-    # Extract the values from 'latent'
-    modelpath = gr.model_name2path(latent[0])
-    bgpath = gr.bg_name2path(latent[1])
-    category = latent[2]
-    scale, pos, hpr, bgscale, bghp = latent[3:]
+    # Extract the values from 'state'
+    modelpath = gr.resolve_model_path(state[0])
+    bgpath = gr.resolve_bg_path(state[1])
+    category = state[2]
+    scale, pos, hpr, bgscale, bghp = state[3:]
 
     # Put them into 'args'
     args = (modelpath, bgpath, scale, pos, hpr, bgscale, bghp)
@@ -105,8 +71,8 @@ def latent2args(latent):
     return args
 
 
-def build_renderer_data(latents, out_root):
-    """ Takes the 'latents' states and 'out_root' path, and returns
+def build_renderer_data(states, out_root):
+    """ Takes the 'states' states and 'out_root' path, and returns
     the renderer 'all_args' arguments and the 'out_paths' output
     paths."""
 
@@ -115,11 +81,11 @@ def build_renderer_data(latents, out_root):
 
     all_args = []
     out_paths = []
-    for ilatent, latent in enumerate(latents):
+    for istate, state in enumerate(states):
         # all_args
-        all_args.append(latent2args(latent))
+        all_args.append(state2args(state))
         # out_paths
-        filename = "scene%0*i" % (8, ilatent)
+        filename = "scene%0*i" % (8, istate)
         out_paths.append(os.path.join(out_root, filename))
 
     return all_args, out_paths
@@ -158,7 +124,7 @@ n_ex_per_model = 100
 n_ex = n_ex_per_model * n_models
 image_size = (256, 256)
 
-# Ranges for latent states
+# Ranges for states
 scale_rng = (0.6667, 2.)
 pos_rng = ((-1.0, 1.0), (-1.0, 1.0))
 hpr_rng = ((-180., 180.), (-180., 180.), (-180., 180.))
@@ -169,26 +135,28 @@ bghp_rng = ((-180., 180.), (0., 0.))
 modellist, bglist, categorylist  = sample_model_bg(
     modelnames, bgnames, n_ex_per_model, n_ex)
 
-# Make the latent parameters lists
+# Make the state parameters lists
+sample = tools.sample
 scalelist = sample(scale_rng, num=n_ex, f_log=True)
 poslist = sample(pos_rng, num=n_ex)
 hprlist = sample(hpr_rng, num=n_ex)
 bgscalelist = sample(bgscale_rng, num=n_ex, f_log=True)
 bghplist = sample(bghp_rng, num=n_ex)
 
-# Make the list of latent states
-latents = zip(modellist, bglist, categorylist, 
+# Make the list of states
+states = zip(modellist, bglist, categorylist, 
               scalelist, poslist, hprlist, bgscalelist, bghplist)
 
 ## We could make this a dict, but hold off for now
-dictkeys = ("modelname", "bgname", "category", "scale", "pos", "hpr", "bgscale", "bghp")
-latent_dicts = [dict(zip(dictkeys, latent)) for latent in latents]
+dictkeys = ("modelname", "bgname", "category", "scale", "pos", "hpr",
+            "bgscale", "bghp")
+state_dicts = [dict(zip(dictkeys, state)) for state in states]
 
 # Build the 'all_args' and 'out_paths' lists, which will be fed to
 # the rendering loop.
 # 'out_root' points to the directory to place the images.
-out_root = os.path.join(gt.GENTHOR_PATH, "training_data")
-all_args, out_paths = build_renderer_data(latents, out_root)
+out_root = os.path.join(gt.RESOURCE_PATH, "training_data")
+all_args, out_paths = build_renderer_data(states, out_root)
 
 ######################################################################
 
@@ -203,7 +171,7 @@ window_type = "onscreen" #"offscreen"
 # Set up the renderer
 lbase, output = gr.setup_renderer(window_type, size=image_size)
 
-for args, out_path, latent_dict in zip(all_args, out_paths, latent_dicts):
+for args, out_path, state_dict in zip(all_args, out_paths, state_dicts):
 
     # Construct a scene
     objnode, bgnode = gr.construct_scene(lbase, *args)
@@ -218,6 +186,6 @@ for args, out_path, latent_dict in zip(all_args, out_paths, latent_dicts):
     # Take a screenshot and save it
     lbase.screenshot(output, pth=out_path + ".jpg")
 
-    # Save latent state
+    # Save state
     with open(out_path + ".pkl", "w") as fid:
-        cPickle.dump(latent_dict, fid)
+        cPickle.dump(state_dict, fid)
