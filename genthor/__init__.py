@@ -6,15 +6,18 @@ from skdata.data_home import get_data_home
 
 BASE_URL = 'http://50.19.109.25'
 MODEL_URL = BASE_URL + ':9999/3dmodels?'
+S3_URL = "http://dicarlocox-datasets.s3.amazonaws.com"
+s3_resource_bucket = 'genthor-resources'
 
+BASE_NAME = 'genthor'
 # Scikits data genthor directory
-SKDATA_PATH = os.path.join(get_data_home(), "genthor")
+GENTHOR_PATH = os.path.join(get_data_home(), BASE_NAME)
 # Resource root directory
-RESOURCE_PATH = os.path.join(SKDATA_PATH, "resources")
+RESOURCE_PATH = os.path.join(GENTHOR_PATH, "resources")
 # Resource root directory
-CACHE_PATH = os.path.join(SKDATA_PATH, "cache")
+CACHE_PATH = os.path.join(GENTHOR_PATH, "cache")
 # background root directory
-BACKGROUND_PATH = os.path.join(RESOURCE_PATH, "backgrounds")
+BACKGROUND_PATH = os.path.join(GENTHOR_PATH, "backgrounds")
 # .obj model root directory
 OBJ_PATH = os.path.join(RESOURCE_PATH, "objs")
 # .egg model root directory
