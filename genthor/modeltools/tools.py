@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 import tarfile
+import pdb
 
 # Panda extensions
 panda_exts = (".bam", ".egg")
@@ -182,31 +183,29 @@ def check_format(pth, imgdirname="tex"):
             shutil.rmtree(tmp_pth)
     # Temporary path
     tmp_pth = os.path.join(os.environ["HOME"], "tmp", "scrap")
-    # Directory contents
-    ld = os.listdir(pth)
-    # Get directory's contents
-    names = [fn for fn in ld
-             if os.path.splitext(fn)[1] in model_exts + zip_exts]
-    # Check that there is exactly one model file
-    if len(names) != 1:
+    try:
+        # Get the model's path
+        modelpth = resolve_model_path(pth)
+    except:
+        # Remove tmp path
+        returnfunc()
         return 1
     ## There is a unique model or zip file
     # Determine file name and extension, and unzip if necessary
-    name, ext = gt.splitext2(os.path.basename(names[0]))
+    name, ext = gt.splitext2(os.path.basename(modelpth))
     if ext in zip_exts:
         # un-tar, un-zip into a temp directory
-        untar(os.path.join(pth, name + ext), tmp_pth)
+        untar(os.path.join(modelpth), tmp_pth)
         pth = os.path.join(tmp_pth, name)
-        # Directory contents
-        ld = os.listdir(pth)
-        # Get target's path
-        names = [fn for fn in ld if os.path.splitext(fn)[1] in model_exts]
-        # Check that there is exactly one model file
-        if len(names) != 1:
+        try:
+            # Get the unzipped model's path
+            modelpth = resolve_model_path(pth)
+        except:
             # Remove tmp path
             returnfunc()
             return 1
-        name, ext = gt.splitext2(os.path.basename(names[0]))
+        name, ext = gt.splitext2(os.path.basename(modelpth))
+        
     ## There is a unique model file
     if ext == ".obj":
         mtlname = name + ".mtl"
