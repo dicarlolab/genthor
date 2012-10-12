@@ -76,7 +76,7 @@ def resolve_bg_path(bgpth0):
 def resolve_model_path(modelpth0, f_force_egg=True):
     """ Finds a valid model path. It will convert an .obj model to an
     .egg if necessary."""
-    # Model extensions
+    # Model extensionsv
     panda_exts = (".bam", ".egg")
     valid_exts = panda_exts + (".obj", ".tgz", ".tar.gz", ".tbz2", ".tar.bz2")
     # Find a valid file first
@@ -144,7 +144,7 @@ def resolve_model_path(modelpth0, f_force_egg=True):
     return pandapth
 
 
-def construct_scene(lbase, modelpth, bgpath, scale, pos, hpr, bgscale, bghp,
+def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr, bgscale, bghp,
                     scene=None):
     """ Constructs the scene per the parameters. """
 
@@ -152,11 +152,11 @@ def construct_scene(lbase, modelpth, bgpath, scale, pos, hpr, bgscale, bghp,
     if scene is None:
         scene = lbase.rootnode
 
-    modelpth = resolve_model_path(modelpth)
-    bgpth = resolve_bg_path(bgpth)
+    modelpath = resolve_model_path(modelpath)
+    bgpath = resolve_bg_path(bgpath)
     
     # Modelpth points to the model .egg/.bam file
-    objnode = tools.read_file(lbase.loader.loadModel, modelpth)
+    objnode = tools.read_file(lbase.loader.loadModel, modelpath)
     objnode.setScale(scale[0], scale[0], scale[0])
     #objnode.setPos(pos[0], pos[1], 0.)
     objnode.setPos(pos[0], 0., pos[1])

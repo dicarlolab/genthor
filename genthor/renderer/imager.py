@@ -70,7 +70,7 @@ class ImgRendererResizer(object):
         
     def __call__(self, m):
         modelpath = os.path.join(self.model_root, 
-                                 m['obj'], m['obj'] + '.bam')
+                                 m['obj'])
         bgpath = os.path.join(self.bg_root, m['bgname'])
         scale = [m['s']]
         pos = [m['ty'], m['tz']]
