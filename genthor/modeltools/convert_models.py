@@ -4,8 +4,8 @@ Convert .obj models to .obj, .egg/.bam (Panda3d format) files
 Peter W Battaglia - 03.2012
 PWB - 10.2012 - updates
 """
-import argparse
 import genthor as gt
+import genthor.modeltools.tools as tools
 import obj2egg as o2e
 import os
 import shutil
@@ -100,7 +100,7 @@ def blender_convert(model_pth, out_root, ext=".obj", f_force=False):
         # un-tar, un-gz into a temp directory
         fulltargzname = os.path.join(model_pth, targzname)
         tmp_tar_pth = os.path.join(tmp_root, "tartmp")
-        allnames = untar(tmp_tar_pth, fulltargzname)
+        allnames = tools.untar(fulltargzname, tmp_tar_pth)
 
         # Get target's path
         names = [n for n in allnames if os.path.split(n)[1] == objname]
@@ -114,8 +114,19 @@ def blender_convert(model_pth, out_root, ext=".obj", f_force=False):
         # The params are the angles
         params = angledict[modelname]
 
-        # Do the conversion from .obj to .<out>
+        ## Do the conversion from .obj to .<out>
+        # Fix the .mtl and texture names
+        mtl_path = os.path.splitext(obj_pth)[0] + ".mtl"
+        tools.fix_tex_names(mtl_path)
+        # Run the blender script
         call_blender(obj_pth, out_pths[0], blender_command_base, params)
+        # Fix the .mtl and texture names
+        mtl_path = os.path.splitext(out_pths[0])[0] + ".mtl"
+        tools.fix_tex_names(mtl_path)
+        # Copy the textures from the .obj path to the .<out> path
+        tex_pth = os.path.join(os.path.split(out_pths[0])[0], "tex")
+        copy_tex(os.path.split(obj_pth)[0], tex_pth)
+
 
         # Convert the .<out> to a .tgz
         with tarfile.open(outtgz_pth, mode="w:gz") as tf:
@@ -151,12 +162,11 @@ def panda_convert(inout_pths, ext=".egg"):
             raise IOError("File does not exist: %s" % in_pth)
 
         # Determine file name and extension
-        name, ext0 = os.path.basename(in_pth).split(".", 1)
-        ext0 = "." + ext0
-        if ext0 in (".tgz", ".tar.gz", ".tbz2"):
+        name, ext0 = gt.splitext2(os.path.basename(in_pth))
+        if ext0 in (".tgz", ".tar.gz", ".tbz2", ".tar.bz2"):
             # un-tar, un-gz into a temp directory
             tmp_tar_pth = os.path.join(tmp_root, "tartmp")
-            allnames = untar(tmp_tar_pth, in_pth)
+            allnames = tools.untar(in_pth, tmp_tar_pth)
 
             # Get target's path
             names = [n for n in allnames
@@ -206,25 +216,7 @@ def panda_convert(inout_pths, ext=".egg"):
         # Remove all tmp directories
         print "rm -rf %s" % tmp_root
         shutil.rmtree(tmp_root)
-
-
-def untar(tmp_pth, tarname):
-    # Make the tmp_pth directory if it doesn't exist already
-    if not os.path.isdir(tmp_pth):
-        os.makedirs(tmp_pth)
-
-    try:
-        # Open the tar
-        with tarfile.open(tarname, 'r') as tf:
-            # Extract it
-            tf.extractall(tmp_pth)
-            # Get tar.gz's member names
-            names = tf.getnames()
-    except:
-        pdb.set_trace()
-
-    return names
-
+   
 
 def call_blender(obj_pth, out_pth, blender_command_base, params):
     # Split into directory and filename
@@ -250,10 +242,6 @@ def call_blender(obj_pth, out_pth, blender_command_base, params):
         print
         print "Failed with exception: %s" % details
         pdb.set_trace()
-
-    # Copy the textures from the .obj path to the .<out> path
-    tex_pth = os.path.join(os.path.split(out_pth)[0], "tex")
-    copy_tex(os.path.split(obj_pth)[0], tex_pth)
 
 
 def obj2egg(obj_pth, egg_pth=None, f_force_tex=True):
@@ -286,18 +274,15 @@ def egg2bam(egg_pth, bam_pth=None):
 def copy_tex(obj_pth, tex_pth):
     """ Copy texture images from .obj's directory to .egg's directory """
 
-    # Texture image file extensions
-    img_exts = (".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".gif", ".png")
-    
     # Tex image files in obj_pth
     tex_filenames0 = [name for name in os.listdir(obj_pth)
-                      if os.path.splitext(name)[1].lower() in img_exts]
+                      if os.path.splitext(name)[1].lower() in tools.img_exts]
 
     # Make the directory if need be, and error if it is a file already
     if os.path.isfile(tex_pth):
         raise IOError("File exists: '%s'")
     elif not os.path.isdir(tex_pth):
-        os.mkdirs(tex_pth)
+        os.makedirs(tex_pth)
 
     for name in tex_filenames0:
         new_tex_pth = os.path.join(tex_pth, name)
@@ -306,7 +291,7 @@ def copy_tex(obj_pth, tex_pth):
 
 def main(f_panda=True):
     # Model root directory
-    model_pth = os.path.join(gt.RESOURCE_PATH, "raw_models")
+    model_pth = "/home/pbatt/work/genthor/raw_models"
     # Destination directory for .<out> files
     out_root = gt.OBJ_PATH
     # Make the .obj/.egg files from original .obj files
