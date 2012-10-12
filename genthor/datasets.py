@@ -27,6 +27,7 @@ import genthor.model_info as model_info
 import genthor.jxx_model_info as jxx_model_info
 from genthor.renderer.imager import Imager
 import genthor.tools as tools
+import genthor.modeltools.tools as mtools
 
 import pdb
 
