@@ -4,6 +4,7 @@ import genthor as gt
 from genthor.modeltools.convert_models import panda_convert
 from genthor.renderer.lightbase import LightBase
 import genthor.tools as tools
+from libpanda import Point3
 import numpy as np
 import os
 from pandac.PandaModules import CullFaceAttrib
@@ -164,16 +165,16 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr, bgscale, bghp,
     objnode.setTwoSided(1)
 
     # Environment map
-    if bgpath and False:
-        envtex = tools.read_file(lbase.loader.loadTexture, bgpath)
+    if bgpth and False:
+        envtex = tools.read_file(lbase.loader.loadTexture, bgpth)
         # Map onto object
         ts = TextureStage('env')
         ts.setMode(TextureStage.MBlendColorScale)
         objnode.setTexGen(ts, TexGenAttrib.MEyeSphereMap)
         objnode.setTexture(ts, envtex)
 
-    if bgpath:
-        bgtex = tools.read_file(lbase.loader.loadTexture, bgpath)
+    if bgpth:
+        bgtex = tools.read_file(lbase.loader.loadTexture, bgpth)
         # Set as background
         bgnode = lbase.loader.loadModel('smiley')
         # Get material list
@@ -200,6 +201,28 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr, bgscale, bghp,
     return objnode, bgnode
 
 
+def is_penetrating(node0, node1):
+    """ Tests whether two nodes' geometries are overlapping by
+    comparing their axis-aligned bounding boxes (AABB)."""
+    # bb0 = [Vec3(0., 0., 0.), Vec3(5., 5., 5.)]
+    # bb1 = [Vec3(1., 1., 1.), Vec3(16., 16., 16.)]
+
+    # Allocate Vec3 storage
+    bb0 = [Point3(0., 0., 0.), Point3(0., 0., 0.)]
+    bb1 = [Point3(0., 0., 0.), Point3(0., 0., 0.)]
+
+    # Get tight AABBs
+    node0.calcTightBounds(bb0[0], bb0[1])
+    node1.calcTightBounds(bb1[0], bb1[1])
+
+    # Perform the test
+    BB0 = np.array(bb0)
+    BB1 = np.array(bb1)
+    f_penetrating = not (np.any(BB0[0] > BB1[1]) or np.any(BB1[0] > BB0[1]))
+
+    return f_penetrating
+
+
 def run(args):
     """ run() is called by the command line interface. It can serve as
     a template for operating the contained functions from within a
@@ -214,8 +237,16 @@ def run(args):
     
     # Construct a scene
     modelpath, bgpath, scale, pos, hpr, bgscale, bghp = args
-    objnode, bgnode = construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
-                                      bgscale, bghp)
+    objnode, bgnode = construct_scene(lbase, modelpath, bgpath,
+                                      scale, pos, hpr, bgscale, bghp)
+
+    modelpath2 = '/home/pbatt/.skdata/genthor/resources/eggs/iguana/iguana.egg'
+    # objnode2, bgnode = construct_scene(lbase, modelpath2, bgpath,
+    #                                    scale, (100, 0., 0), hpr, bgscale, bghp)
+    objnode2 = NodePath()
+
+    print is_penetrating(objnode, objnode2)
+    pdb.set_trace()
 
     # Render the scene
     lbase.render_frame()
