@@ -65,17 +65,18 @@ class DatasetBase(object):
 
 
 class GenerativeBase(DatasetBase):
-    #must subclass this and set bg_root, model_root, FILES, base_name and model_categories
-    #as class properties and define a ._get_meta method the constructs the 
-    #metadata tabarray.   then subclasses of THAT are the specific datasets, 
-    #which define specific templates
-    
+    #must subclass this and define a ._get_meta method the constructs the 
+    #metadata tabarray.   
+
+    check_penetration = False
+
     def __init__(self, data=None):
         self.data = data
         self.specific_name = self.__class__.__name__ + '_' + get_image_id(data)
         model_root = gt.OBJ_PATH
         bg_root = gt.BACKGROUND_PATH
-        self.imager = Imager(model_root, bg_root)
+        self.imager = Imager(model_root, bg_root, 
+                             check_penetration=self.check_penetration)
 
     def get_images(self, preproc):
         name = self.specific_name + '_' + get_image_id(preproc)
@@ -153,24 +154,26 @@ class GenerativeDatasetBase(GenerativeBase):
 class GenerativeMultiDatasetTest(GenerativeDatasetBase):
     """multi-object rendering dataset
     """
+    check_penetration = True
 
     def _get_meta(self):
         #generate params 
         
-        bgname = [model_info.BACKGROUNDS[0]]
-        bgphi = [0]
-        bgpsi = [0]
-        bgscale = [1]
-        ty = [[0, .2]]
-        tz = [[-0.2, 0.2]]
-        s = [[1, 1]]
-        ryz = [[0, 0]]
-        rxz = [[0, 0]]
-        rxy = [[0, 0]]
-        obj = [['MB26897', 'MB28049']]
-        category = [['cars', 'tables']]
+        bgname = [model_info.BACKGROUNDS[0],
+                  model_info.BACKGROUNDS[0]]
+        bgphi = [0, 0]
+        bgpsi = [0, 0]
+        bgscale = [1, 1]
+        ty = [[0, .2], [0, 0]]
+        tz = [[-0.2, 0.2], [0, 0]]
+        s = [[1, 1], [1, 1]]
+        ryz = [[0, 0], [0, 0]]
+        rxz = [[0, 0], [0, 90]]
+        rxy = [[0, 0], [0, 0]]
+        obj = [['MB26897', 'MB28049'], ['MB26897', 'MB28049']]
+        category = [['cars', 'tables'], ['cars', 'tables']]
         latents = zip(*[bgname, bgphi, bgpsi, bgscale, obj, category,
-                   ryz, rxz, rxy, ty, tz, s, ['t0'], ['testing']])
+                   ryz, rxz, rxy, ty, tz, s, ['t0', 't0'], ['testing', 'testing']])
         
 
         meta = tb.tabarray(records=latents, names = ['bgname',

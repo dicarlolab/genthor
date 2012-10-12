@@ -146,14 +146,13 @@ def resolve_model_path(modelpth0, f_force_egg=True):
 
 
 def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr, bgscale, bghp,
-                    scene=None):
+                    scene=None, check_penetration=False):
     """ Constructs the scene per the parameters. """
 
     # Default scene is lbase's rootnode
     if scene is None:
         scene = lbase.rootnode
 
-    modelpath = resolve_model_path(modelpath)
     bgpath = resolve_bg_path(bgpath)
     
     # Modelpth points to the model .egg/.bam file
@@ -174,6 +173,7 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr, bgscale, bghp,
     assert hasattr(hprs, '__iter__')
     assert len(modelpaths) == len(scales) == len(hprs) == len(poses)
         
+    modelpaths = map(resolve_model_path, modelpaths)
     objnodes = []
     for mpth, scale, hpr, pos in zip(modelpaths, scales, hprs, poses):
         objnode = tools.read_file(lbase.loader.loadModel, mpth)
@@ -217,6 +217,12 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr, bgscale, bghp,
     else:
         bgnode = NodePath("empty-bgnode")
 
+    if check_penetration:
+        for (i, n1) in enumerate(objnodes):
+            for j, n2 in enumerate(objnodes[i+1:]):
+                p = is_penetrating(n1, n2)
+                assert not p, 'Nodes %d (%s) and %d (%s) are penetrating' % (i, repr(n1), i+1+j, repr(n2))
+                    
     # Reparent to a single scene node
     for objnode in objnodes:
         objnode.reparentTo(scene)

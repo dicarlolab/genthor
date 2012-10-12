@@ -16,9 +16,10 @@ class Imager(object):
     # instance, output).
     renderers = {}
 
-    def __init__(self, model_root="", bg_root=""):
+    def __init__(self, model_root="", bg_root="", check_penetration=False):
         self.model_root = model_root
         self.bg_root = bg_root
+        self.check_penetration=check_penetration
 
     def get_renderer(self, window_type, size):
         """ Initializes a new renderer and adds it to the
@@ -38,12 +39,13 @@ class Imager(object):
                                            self.get_renderer(window_type, size))
         # Make the irr instance
         irr = ImgRendererResizer(self.model_root, self.bg_root,
-                                 preproc, lbase, output)
+                                 preproc, lbase, output,
+                                 check_penetration=self.check_penetration)
         return irr
 
 
 class ImgRendererResizer(object):
-    def __init__(self, model_root, bg_root, preproc, lbase, output):
+    def __init__(self, model_root, bg_root, preproc, lbase, output, check_penetration=False):
         size = tuple(preproc['size'])
         self.transpose = preproc.get('transpose', False)
         if self.transpose:
@@ -58,6 +60,7 @@ class ImgRendererResizer(object):
         self.output = output
         self.model_root = model_root
         self.bg_root = bg_root
+        self.check_penetration = check_penetration
     
     def rval_getattr(self, attr, objs):
         if attr == 'shape' and self._shape is not None:
@@ -87,7 +90,9 @@ class ImgRendererResizer(object):
         bgscale = [m['bgscale']]
         bghp = [m['bgphi'], m['bgpsi']]
         args = (modelpath, bgpath, scale, pos, hpr, bgscale, bghp)
-        objnodes, bgnode = gr.construct_scene(self.lbase, *args)
+        objnodes, bgnode = gr.construct_scene(self.lbase, 
+                                              *args,
+                          check_penetration=self.check_penetration)
         self.lbase.render_frame()
         for objnode in objnodes:
             objnode.removeNode()
