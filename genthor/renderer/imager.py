@@ -69,18 +69,28 @@ class ImgRendererResizer(object):
         raise AttributeError(attr)
         
     def __call__(self, m):
-        modelpath = os.path.join(self.model_root, 
+        if isinstance(m['obj'], str):
+            modelpath = os.path.join(self.model_root, 
                                  m['obj'])
+            scale = [m['s']]
+            pos = [m['ty'], m['tz']]
+            hpr = [m['ryz'], m['rxz'], m['rxy']]                                 
+        else:
+            assert hasattr(m['obj'], '__iter__')
+            modelpath = [os.path.join(self.model_root, mn) for mn in m['obj']]      
+            scale = [[ms] for ms in m['s']]
+            pos = zip(m['ty'], m['tz'])
+            hpr = zip(m['rxy'], m['rxz'], m['rxy'])
+            
         bgpath = os.path.join(self.bg_root, m['bgname'])
-        scale = [m['s']]
-        pos = [m['ty'], m['tz']]
-        hpr = [m['ryz'], m['rxz'], m['rxy']]
+
         bgscale = [m['bgscale']]
         bghp = [m['bgphi'], m['bgpsi']]
         args = (modelpath, bgpath, scale, pos, hpr, bgscale, bghp)
-        objnode, bgnode = gr.construct_scene(self.lbase, *args)
+        objnodes, bgnode = gr.construct_scene(self.lbase, *args)
         self.lbase.render_frame()
-        objnode.removeNode()
+        for objnode in objnodes:
+            objnode.removeNode()
         bgnode.removeNode()
         tex = self.output.getTexture()
         im = Image.fromarray(self.lbase.get_tex_image(tex))

@@ -157,24 +157,47 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr, bgscale, bghp,
     bgpath = resolve_bg_path(bgpath)
     
     # Modelpth points to the model .egg/.bam file
-    objnode = tools.read_file(lbase.loader.loadModel, modelpath)
-    objnode.setScale(scale[0], scale[0], scale[0])
-    #objnode.setPos(pos[0], pos[1], 0.)
-    objnode.setPos(pos[0], 0., pos[1])
-    objnode.setHpr(hpr[0], hpr[1], hpr[2])
-    objnode.setTwoSided(1)
+
+    if isinstance(modelpath, str):
+        modelpaths = [modelpath]
+        scales = [scale]
+        poses = [pos]
+        hprs = [hpr]
+    else:  
+        modelpaths = modelpath
+        scales = scale
+        poses = pos
+        hprs = hpr
+    assert hasattr(modelpaths, '__iter__')
+    assert hasattr(scales, '__iter__')
+    assert hasattr(poses, '__iter__')
+    assert hasattr(hprs, '__iter__')
+    assert len(modelpaths) == len(scales) == len(hprs) == len(poses)
+        
+    objnodes = []
+    for mpth, scale, hpr, pos in zip(modelpaths, scales, hprs, poses):
+        objnode = tools.read_file(lbase.loader.loadModel, mpth)
+        objnode.setScale(scale[0], scale[0], scale[0])
+        #objnode.setPos(pos[0], pos[1], 0.)
+        objnode.setPos(pos[0], 0., pos[1])
+        objnode.setHpr(hpr[0], hpr[1], hpr[2])
+        objnode.setTwoSided(1)
+        objnodes.append(objnode)
+
+    #XXX:  What is this code doing? it's been disabled, I guess
+    #should it be removed?  is there a todo reminder here?
 
     # Environment map
-    if bgpth and False:
-        envtex = tools.read_file(lbase.loader.loadTexture, bgpth)
+    if bgpath and False:
+        envtex = tools.read_file(lbase.loader.loadTexture, bgpath)
         # Map onto object
         ts = TextureStage('env')
         ts.setMode(TextureStage.MBlendColorScale)
         objnode.setTexGen(ts, TexGenAttrib.MEyeSphereMap)
         objnode.setTexture(ts, envtex)
 
-    if bgpth:
-        bgtex = tools.read_file(lbase.loader.loadTexture, bgpth)
+    if bgpath:
+        bgtex = tools.read_file(lbase.loader.loadTexture, bgpath)
         # Set as background
         bgnode = lbase.loader.loadModel('smiley')
         # Get material list
@@ -195,10 +218,11 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr, bgscale, bghp,
         bgnode = NodePath("empty-bgnode")
 
     # Reparent to a single scene node
-    objnode.reparentTo(scene)
+    for objnode in objnodes:
+        objnode.reparentTo(scene)
     bgnode.reparentTo(scene)
 
-    return objnode, bgnode
+    return objnodes, bgnode
 
 
 def is_penetrating(node0, node1):
