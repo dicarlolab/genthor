@@ -281,3 +281,17 @@ def untar(tarname, tmp_pth):
     except:
         pdb.set_trace()
     return names
+
+
+def is_penetrating(node0, node1):
+
+    bb0 = [lp.Vec3(0., 0., 0.), lp.Vec3(0., 0., 0.)]
+    bb1 = [lp.Vec3(0., 0., 0.), lp.Vec3(0., 0., 0.)]
+    
+    node0.calcTightBounds(bb0[0], bb0[1])
+    node1.calcTightBounds(bb1[0], bb1[1])
+
+    bb0[0][0] > bb1[1][0]
+    bb1[0][0] > bb0[1][0]
+    bb0[0][0] > bb1[1][0]
+    bb1[0][0] > bb0[1][0]
