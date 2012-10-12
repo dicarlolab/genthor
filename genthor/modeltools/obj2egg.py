@@ -17,6 +17,7 @@
     licensed under WTFPL (http://sam.zoy.org/wtfpl/)
 """
 
+import genthor.modeltools.tools as mt
 from pandac.PandaModules import *
 import math
 import string
@@ -171,7 +172,7 @@ class MtlFile:
             if tokens[0] in ("Kd", "Ka", "Ks", "Ke"):
                 mat.put(tokens[0], floats(tokens[1:]))
                 continue
-            if tokens[0] in ("map_Kd", "map_Bump", "map_Ks", "map_bump", "bump"):
+            if tokens[0].lower() in mt.mtl_img_fields:#("map_Kd", "map_Bump", "map_Ks", "map_bump", "bump"):
                 # Ultimate Unwrap 3D Pro emits these:
                 # map_Kd == diffuse
                 # map_Bump == bump

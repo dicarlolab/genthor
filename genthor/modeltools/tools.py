@@ -5,15 +5,73 @@ import re
 import shutil
 import tarfile
 
-
+# Panda extensions
+panda_exts = (".bam", ".egg")
 # Model extensions
-model_exts = (".obj", ".egg", ".bam")
+model_exts = (".obj",) + panda_exts
 # Zip extensions
 zip_exts = (".tgz", ".tar.gz", ".tbz2", ".tar.bz2")
 # Texture image file extensions
 img_exts = (".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".gif", ".png")
 # .mtl image fields
-mtl_img_fields = ("map_Ka", "map_Kd", "map_bump", "bump", "map_refl")
+mtl_img_fields = ("map_ka", "map_kd", "map_ks", "map_ks", "map_d", "disp",
+                  "decal", "map_bump", "bump", "map_refl")
+
+
+def resolve_bg_path(bgpth0):
+    """ Finds a valid background path."""
+    if not os.path.isfile(bgpth0):
+        bgpth = os.path.join(gt.BACKGROUND_PATH, os.path.basename(bgpth0))
+        if not os.path.isfile(bgpth):
+            raise IOError("Not a valid background file: %s" % bgpth)
+    else:
+        bgpth = bgpth0
+    return bgpth
+    
+
+def resolve_model_path(modelpth0):
+    """ Finds a valid model path. It will convert an .obj model to an
+    .egg if necessary."""
+    valid_exts = model_exts + zip_exts
+    # Find a valid file first
+    if os.path.isdir(modelpth0):
+        ## modelpth is a directory -- determine what kind of objects
+        ## are in it, and check that one is .egg/.bam/.obj
+        # Get dir listing
+        ld = os.listdir(modelpth0)
+        # Add all valid filenames to filepths
+        filepths = [fn for fn in ld if gt.splitext2(fn)[1] in valid_exts]
+        # Verify modelpths has exactly 1 filename
+        if len(filepths) != 1:
+            raise IOError("Cannot find valid model file in: %s" % modelpth0)
+        # Create modelpth
+        modelpth = os.path.join(modelpth0, filepths[0])
+    elif not os.path.isfile(modelpth0):
+        ## modelpth0 is not a directory or file, which means it might
+        ## be a model name. Search for it in the eggs and models
+        ## directories.
+        # model name
+        name = gt.splitext2(os.path.basename(modelpth0))[0]
+        # possible file paths, ordered by priority (bam > egg > obj)
+        filepths = (os.path.join(gt.BAM_PATH, name, name + ".bam"),
+                    os.path.join(gt.EGG_PATH, name, name + ".egg"), 
+                    os.path.join(gt.OBJ_PATH, name, name + ".obj"))
+        # Look for a valid file path
+        for filepth in filepths:
+            if os.path.isfile(filepth):
+                # Found a good one, save it and break
+                modelpth = filepth
+                break
+            else:
+                # Keep looking
+                modelpth = None
+        if modelpth is None:
+            # Error if we can't find a valid file
+            raise IOError("Cannot find a valid model name: %s" % name)
+    else:
+        modelpth = modelpth0
+
+    return modelpth
 
 
 def parse_dir_imgs(root_pth):
@@ -107,101 +165,6 @@ def fix_tex_names(mtl_pth, imgdirname="tex", f_verify=True):
     for imgpath0, imgname in zip(imgpaths0, imgnames):
         imgpath = os.path.join(img_pth, imgname)
         shutil.move(imgpath0, imgpath)
-
-
-
-# def fix_tex_names(mtl_path, imgdirname="tex", f_verify=True):
-#     """ Make all .mtl image file names lowercase and relative paths,
-#     so they are compatible with linux and are portable.  Also change
-#     the actual image file names."""
-
-#     # Texture image file extensions
-#     img_exts = (".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".gif", ".png")
-
-#     # .mtl image fields
-#     mtl_img_fields = ("map_Ka", "map_Kd", "map_bump", "bump", "map_refl")
-
-#     # Directory path that the .mtl file is in
-#     dir_path = os.path.split(mtl_path)[0]
-
-#     # Name of this directory
-#     dir_name = os.path.split(dir_path)[1]
-
-#     # Directory for the images
-#     img_pth = os.path.join(dir_path, imgdirname)
-
-#     # visit() function for os.path.walk().  It appends detected image
-#     # files to a list.
-#     def visit(imgnames, dir_pth, names):
-#         imgnames.extend([os.path.join(dir_pth, name) for name in names
-#                          if os.path.splitext(name)[1].lower() in img_exts])
-#     # walk down directory tree and get the image files    
-#     imgpaths0 = []
-#     for dp, foo, names in os.walk(dir_path):
-#         visit(imgpaths0, dp, names)
-#     imgnames = [os.path.split(pth)[1].lower() for pth in imgpaths0]
-
-#     # RE pattern
-#     pat_fields = "(?:" + "|".join(mtl_img_fields) + ") "
-#     pat_img_exts = "(.+(?:\\" + "|\\".join(img_exts) + "))"
-#     patstr = "[\s]*" + pat_fields + "((?:.*[/\\\\])?" + pat_img_exts + ")"
-#     rx = re.compile(patstr, re.IGNORECASE)
-
-#     # Initialize storage for the image file names inside the .mtl
-#     mtlnames = []
-#     mtllines = []
-   
-#     ## Get the image file names from the .mtl file
-#     # Open .mtl
-#     with open(mtl_path, "r") as fid:
-#         # Iterate over lines
-#         for line in fid.readlines():
-#             # Search the line
-#             m = rx.search(line)
-#             if m is not None:
-#                 # Pull out the path and image name
-#                 #pth = m.group(1)
-#                 Name = m.group(2)
-#                 name = Name.lower()
-#                 # If an image file name is found, store it
-#                 mtlnames.append(name)
-#                 # Edit the line and store
-#                 newline = (line[:m.start(1)] + os.path.join(imgdirname, name)
-#                            + line[m.end(1):])
-#                 mtllines.append(newline)
-#             else:
-#                 mtllines.append(line)
-
-#     ## Edit .mtl files
-#     # Open .mtl
-#     with open(mtl_path, "w") as fid:
-#         # Iterate over lines
-#         for line in mtllines:
-#             # Write the line
-#             fid.write(line)
-                
-#     # Make unique and sort
-#     mtlnames = sorted(set(mtlnames))
-
-#     if f_verify:
-#         # Verify that all the mtl images are present
-#         for mtlname in mtlnames:
-#             if mtlname not in imgnames:
-#                 raise ValueError("Cannot find .mtl-defined image. "
-#                                  "mtl: %s. img: %s" % (mtl_path, mtlname))
-
-#     # Make the directory if need be, and error if it is a file already
-#     if os.path.isfile(img_pth):
-#         raise IOError("File exists: '%s'")
-#     elif not os.path.isdir(img_pth):
-#         # Make image directory, if necessary
-#         os.makedirs(img_pth)
-    
-#     # Move the image files to the new img_pth location
-#     for imgpath0, imgname in zip(imgpaths0, imgnames):
-#         imgpath = os.path.join(img_pth, imgname)
-#         shutil.move(imgpath0, imgpath)
-#         #print "%s --> %s" % (imgpath0, imgpath)
 
 
 def check_format(pth, imgdirname="tex"):

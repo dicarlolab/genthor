@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
 import genthor as gt
-from genthor.modeltools.convert_models import panda_convert
+import genthor.modeltools.convert_models as cm
+import genthor.modeltools.tools as mt
 from genthor.renderer.lightbase import LightBase
 import genthor.tools as tools
 from libpanda import Point3
@@ -61,90 +62,6 @@ def setup_renderer(window_type, size=(256, 256)):
     return lbase, output
 
 
-def resolve_bg_path(bgpth0):
-    """ Finds a valid background path."""
-    # Image extensions
-    img_exts = (".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".gif", ".png")
-    if not os.path.isfile(bgpth0):
-        bgpth = os.path.join(gt.BACKGROUND_PATH, os.path.basename(bgpth0))
-        if not os.path.isfile(bgpth):
-            raise IOError("Not a valid background file: %s" % bgpth)
-    else:
-        bgpth = bgpth0
-    return bgpth
-    
-
-def resolve_model_path(modelpth0, f_force_egg=True):
-    """ Finds a valid model path. It will convert an .obj model to an
-    .egg if necessary."""
-    # Model extensions
-    panda_exts = (".bam", ".egg")
-    valid_exts = panda_exts + (".obj", ".tgz", ".tar.gz", ".tbz2", ".tar.bz2")
-    # Find a valid file first
-    if os.path.isdir(modelpth0):
-        ## modelpth is a directory -- determine what kind of objects
-        ## are in it, and check that one is .egg/.bam/.obj
-        # Get dir listing
-        ld = os.listdir(modelpth0)
-        # Add all valid filenames to filepths
-        filepths = [fn for fn in ld if gt.splitext2(fn)[1] in valid_exts]
-        # Verify modelpths has exactly 1 filename
-        if len(filepths) != 1:
-            raise IOError("Cannot find valid model file in: %s" % modelpth0)
-        # Create modelpth
-        modelpth = os.path.join(modelpth0, filepths[0])
-    elif not os.path.isfile(modelpth0):
-        ## modelpth0 is not a directory or file, which means it might
-        ## be a model name. Search for it in the eggs and models
-        ## directories.
-        # model name
-        name = gt.splitext2(os.path.basename(modelpth0))[0]
-        # possible file paths, ordered by priority (bam > egg > obj)
-        filepths = (os.path.join(gt.BAM_PATH, name, name + ".bam"),
-                    os.path.join(gt.EGG_PATH, name, name + ".egg"), 
-                    os.path.join(gt.OBJ_PATH, name, name + ".obj"))
-        # Look for a valid file path
-        for filepth in filepths:
-            if os.path.isfile(filepth):
-                # Found a good one, save it and break
-                modelpth = filepth
-                break
-            else:
-                # Keep looking
-                modelpth = None
-        if modelpth is None:
-            # Error if we can't find a valid file
-            raise IOError("Cannot find a valid model name: %s" % name)
-    else:
-        modelpth = modelpth0
-
-    # modelpth is now a valid file, check its extension and create an
-    # .egg if it is not a panda file
-    name, ext = gt.splitext2(os.path.basename(modelpth))
-    if ext not in panda_exts:
-        # modelpth is not a panda3d extension
-        # The .egg's path
-        pandapth = os.path.join(gt.EGG_PATH, name, name + ".egg")
-
-        if not os.path.isfile(pandapth):
-            if f_force_egg:
-                # The .egg doesn't exist, so convert the input file
-                inout_pth = {modelpth: pandapth}
-                panda_convert(inout_pth, ext=".egg")
-            else:
-                raise IOError(("Found valid non-panda model file, but "
-                               "f_force_egg must be True to convert (it is "
-                               "False): %s") % modelpth)
-        else:
-            # The .egg already exists, so just use that
-            pass
-    else:
-        # modelpth is a panda3d file, so just use that
-        pandapth = modelpth
-
-    return pandapth
-
-
 def construct_scene(lbase, modelpth, bgpth, scale, pos, hpr, bgscale, bghp,
                     scene=None):
     """ Constructs the scene per the parameters. """
@@ -153,8 +70,9 @@ def construct_scene(lbase, modelpth, bgpth, scale, pos, hpr, bgscale, bghp,
     if scene is None:
         scene = lbase.rootnode
 
-    modelpth = resolve_model_path(modelpth)
-    bgpth = resolve_bg_path(bgpth)
+    modelpth = mt.resolve_model_path(modelpth)
+    cm.autogen_egg(modelpth)
+    bgpth = mt.resolve_bg_path(bgpth)
     
     # Modelpth points to the model .egg/.bam file
     objnode = tools.read_file(lbase.loader.loadModel, modelpth)
@@ -267,8 +185,8 @@ if __name__ == "__main__":
     # Defaults
     # args = (modelpath, bgpath, scale, pos, hpr, bgscale, bghp)
     args = [
-        resolve_model_path("bloodhound"), #MB26897"),
-        resolve_bg_path("DH214SN.jpg"), #DH201SN.jpg"),
+        mt.resolve_model_path("bloodhound"), #MB26897"),
+        mt.resolve_bg_path("DH214SN.jpg"), #DH201SN.jpg"),
         # os.path.join(os.environ["HOME"],
         #              "Dropbox/genthor/rendering/backgrounds/Hires_pano.jpg"),
         (1.,),

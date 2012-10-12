@@ -5,7 +5,7 @@ Peter W Battaglia - 03.2012
 PWB - 10.2012 - updates
 """
 import genthor as gt
-import genthor.modeltools.tools as tools
+import genthor.modeltools.tools as mt
 import obj2egg as o2e
 import os
 import shutil
@@ -100,7 +100,7 @@ def blender_convert(model_pth, out_root, ext=".obj", f_force=False):
         # un-tar, un-gz into a temp directory
         fulltargzname = os.path.join(model_pth, targzname)
         tmp_tar_pth = os.path.join(tmp_root, "tartmp")
-        allnames = tools.untar(fulltargzname, tmp_tar_pth)
+        allnames = mt.untar(fulltargzname, tmp_tar_pth)
 
         # Get target's path
         names = [n for n in allnames if os.path.split(n)[1] == objname]
@@ -117,12 +117,12 @@ def blender_convert(model_pth, out_root, ext=".obj", f_force=False):
         ## Do the conversion from .obj to .<out>
         # Fix the .mtl and texture names
         mtl_path = os.path.splitext(obj_pth)[0] + ".mtl"
-        tools.fix_tex_names(mtl_path)
+        mt.fix_tex_names(mtl_path)
         # Run the blender script
         call_blender(obj_pth, out_pths[0], blender_command_base, params)
         # Fix the .mtl and texture names
         mtl_path = os.path.splitext(out_pths[0])[0] + ".mtl"
-        tools.fix_tex_names(mtl_path)
+        mt.fix_tex_names(mtl_path)
         # Copy the textures from the .obj path to the .<out> path
         tex_pth = os.path.join(os.path.split(out_pths[0])[0], "tex")
         copy_tex(os.path.split(obj_pth)[0], tex_pth)
@@ -166,7 +166,7 @@ def panda_convert(inout_pths, ext=".egg"):
         if ext0 in (".tgz", ".tar.gz", ".tbz2", ".tar.bz2"):
             # un-tar, un-gz into a temp directory
             tmp_tar_pth = os.path.join(tmp_root, "tartmp")
-            allnames = tools.untar(in_pth, tmp_tar_pth)
+            allnames = mt.untar(in_pth, tmp_tar_pth)
 
             # Get target's path
             names = [n for n in allnames
@@ -216,7 +216,22 @@ def panda_convert(inout_pths, ext=".egg"):
         # Remove all tmp directories
         print "rm -rf %s" % tmp_root
         shutil.rmtree(tmp_root)
-   
+
+
+def autogen_egg(modelpth):
+    # modelpth is now a valid file, check its extension and create an
+    # .egg if it is not a panda file
+    name, ext = gt.splitext2(os.path.basename(modelpth))
+    if ext not in mt.panda_exts:
+        # modelpth is not a panda3d extension
+        # The .egg's path
+        pandapth = os.path.join(gt.EGG_PATH, name, name + ".egg")
+
+        if not os.path.isfile(pandapth):
+            # The .egg doesn't exist, so convert the input file
+            inout_pth = {modelpth: pandapth}
+            panda_convert(inout_pth, ext=".egg")
+
 
 def call_blender(obj_pth, out_pth, blender_command_base, params):
     # Split into directory and filename
@@ -276,7 +291,7 @@ def copy_tex(obj_pth, tex_pth):
 
     # Tex image files in obj_pth
     tex_filenames0 = [name for name in os.listdir(obj_pth)
-                      if os.path.splitext(name)[1].lower() in tools.img_exts]
+                      if os.path.splitext(name)[1].lower() in mt.img_exts]
 
     # Make the directory if need be, and error if it is a file already
     if os.path.isfile(tex_pth):
