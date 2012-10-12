@@ -602,7 +602,7 @@ class GenerativeDatasetLoTrans(GenerativeDataset4):
 
 
 class GenerativeDatasetLoTransSmall(GenerativeDataset4):   
-    models = model_info.MODEL_SUBSET_5[:5]
+    models = model_info.MODEL_SUBSET_5[:2]
     bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
                        'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
                        'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
