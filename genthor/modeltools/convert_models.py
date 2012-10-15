@@ -231,6 +231,9 @@ def autogen_egg(modelpth):
             # The .egg doesn't exist, so convert the input file
             inout_pth = {modelpth: pandapth}
             panda_convert(inout_pth, ext=".egg")
+    else:
+        pandapth = modelpth
+    return pandapth
 
 
 def call_blender(obj_pth, out_pth, blender_command_base, params):

@@ -71,8 +71,10 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr, bgscale, bghp,
         scene = lbase.rootnode
 
     bgpath = mt.resolve_bg_path(bgpath)
+    modelpath = mt.resolve_model_path(modelpath)
+    modelpath = cm.autogen_egg(modelpath)
     
-    # Modelpth points to the model .egg/.bam file
+    # Modelpath points to the model .egg/.bam file
 
     if isinstance(modelpath, str):
         modelpaths = [modelpath]
@@ -184,14 +186,6 @@ def run(args):
     modelpath, bgpath, scale, pos, hpr, bgscale, bghp = args
     objnode, bgnode = construct_scene(lbase, modelpath, bgpath,
                                       scale, pos, hpr, bgscale, bghp)
-
-    modelpath2 = '/home/pbatt/.skdata/genthor/resources/eggs/iguana/iguana.egg'
-    # objnode2, bgnode = construct_scene(lbase, modelpath2, bgpath,
-    #                                    scale, (100, 0., 0), hpr, bgscale, bghp)
-    objnode2 = NodePath()
-
-    print is_penetrating(objnode, objnode2)
-    pdb.set_trace()
 
     # Render the scene
     lbase.render_frame()
