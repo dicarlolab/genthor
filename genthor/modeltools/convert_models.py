@@ -160,7 +160,7 @@ def panda_convert(inout_pths, ext=".egg"):
     for in_pth, out_pth in inout_pths.iteritems():
         if not os.path.isfile(in_pth):
             raise IOError("File does not exist: %s" % in_pth)
-
+         
         # Determine file name and extension
         name, ext0 = gt.splitext2(os.path.basename(in_pth))
         if ext0 in (".tgz", ".tar.gz", ".tbz2", ".tar.bz2"):
@@ -324,6 +324,11 @@ def main(f_panda=True):
         inout_pths = dict(zip(tgz_pths, out_pths))
 
         panda_convert(inout_pths, ext=".egg")
+
+
+class FormatError(Exception):
+    def __init__(self, inpth):
+        self.msg = 'Input path %s fails to meet check_format criteria' % inpth
     
 
 if __name__ == "__main__":
