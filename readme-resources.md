@@ -1,3 +1,9 @@
+To convert .obj to .egg, you need Blender and the Yabee exporter
+add-on. The code was tested on Blender 2.63 and Yabee r12 for
+Blender2.63a. See blender.org and code.google.com/p/yabee for those
+versions.
+
+
 Here is the organization for your models and backgrounds that you must
 observe if you want model/background loading to work properly.
 

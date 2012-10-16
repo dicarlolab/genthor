@@ -144,7 +144,7 @@ def transform_model(rot):
     # bpy.ops.transform.rotate(value=(90.,), axis=(1., 0., 0.))
 
 
-def run(obj_path, out_path, rot):
+def run(obj_path, out_path, rot=None):
     # Empty the current scene
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -153,13 +153,23 @@ def run(obj_path, out_path, rot):
         # Import obj into scene
         import_obj(obj_path)
 
-        # # Do whatever you need to do within the Blender scene
-        # transform_model(rot)
+        if rot is not None:
+            # Do whatever you need to do within the Blender scene
+            transform_model(rot)
 
         ext = os.path.splitext(out_path)[1]
         if ext == ".egg":
             # Export egg
-            export_egg(out_path)
+            try:
+                export_egg(out_path)
+            except Exception as ce:
+                print("Error: %s" % ce)
+                print("\nThis error may be due to an incompatible"
+                      "Yabee exporter or Blender version "
+                      "(tested on Blender 2.63 and Yabee r12 for Blender2.63a)."
+                      " See blender.org and code.google.com/p/yabee "
+                      "for those versions.")
+                    
         elif ext == ".obj":
             # Export obj
             if obj_path == out_path:
@@ -174,12 +184,9 @@ def run(obj_path, out_path, rot):
             raise ValueError("unsupported output type: %s" % ext)
 
     except Exception as ce:
-        print "Error: %s" % ce
+        print("Error: %s" % ce)
+        print("\nYou're now in the debugger, within the Blender context\n")
         pdb.set_trace()
-
-    # # Drop to debugger
-    # print("\nYou're now in the debugger, within the Blender context\n")
-    # pdb.set_trace()
 
 
 # Main
@@ -202,12 +209,12 @@ if __name__ == "__main__":
 
     # Put together rotation
     if len(pyargs) < 3:
-        rot = [0., 0., 0.]
+        rot = None
     else:
         # Get rotation from cmd line
         param_str = pyargs[2]
         rot = [float(s) for s in param_str.split(",")]
 
     # Run the import
-    run(obj_path, out_path, rot)
+    run(obj_path, out_path, rot=rot)
 
