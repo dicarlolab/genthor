@@ -23,7 +23,7 @@ import math
 import string
 import getopt
 import sys, os
-
+import pdb
 
 def floats(float_list):
     """coerce a list of strings that represent floats into a list of floats"""
@@ -282,7 +282,7 @@ class ObjFile:
                 continue
             if tokens[0] == "s":
                 # apparently, this enables/disables smoothing
-                print "%s:%d:" % (filename, linenumber), "ignoring:", tokens
+                if verbose: print "%s:%d:" % (filename, linenumber), "ignoring:", tokens
                 continue
             if tokens[0] == "l":
                 if verbose: print "l:", tokens[1:]
@@ -430,9 +430,9 @@ class ObjFile:
             mtl = self.materialsbyname[wmat]
             if mtl.isTextured():
                 eprim.setTexture(mtl.getEggTexture())
-                # NOTE: it looks like you almost always want to setMaterial()
-                #       for textured polys.... [continued below...]
-                eprim.setMaterial(mtl.getEggMaterial())
+            # NOTE: it looks like you almost always want to setMaterial()
+            #       for textured polys.... [continued below...]
+            eprim.setMaterial(mtl.getEggMaterial())
             rgb = mtl.get("Kd")
             if rgb is not None:
                 # ... and some untextured .obj's store the color of the
@@ -491,13 +491,23 @@ class ObjFile:
         # convert polygon faces
         if len(self.faces) > 0:
             for objname in self.objects:
-                for groupname in self.groups:
+                for i, groupname in enumerate(self.groups):
                     self.__facestoegg(egg, objname, groupname)
+                    # print "f", i
+                    if i % 50 == 0:
+                        egg.removeInvalidPrimitives(GlobPattern(""))
+                        egg.removeUnusedVertices(GlobPattern(""))
         # convert polylines
         if len(self.polylines) > 0:
             for objname in self.objects:
-                for groupname in self.groups:
+                for i, groupname in enumerate(self.groups):
                     self.__polylinestoegg(egg, objname, groupname)
+        #             print "p", i
+                    if i % 50 == 0:
+                        egg.removeInvalidPrimitives(GlobPattern(""))
+                        egg.removeUnusedVertices(GlobPattern(""))
+        egg.removeInvalidPrimitives(GlobPattern(""))
+        egg.removeUnusedVertices(GlobPattern(""))
         return egg
 
 def pathify(path):
@@ -537,6 +547,7 @@ def main(argv=None):
                 continue
             dirname, basename = os.path.split(infile)
             obj = ObjFile(infile, relpath=dirname)
+            #pdb.set_trace()
             egg = obj.toEgg()
             f, e = os.path.splitext(infile)
             outfile = f + ".egg"
@@ -545,6 +556,11 @@ def main(argv=None):
                     egg.recomputeVertexNormals(float(a))
                 elif o in ("-b", "--binormals"):
                     egg.recomputeTangentBinormal(GlobPattern(""))
+            egg.removeInvalidPrimitives(GlobPattern(""))
+            egg.removeUnusedVertices(GlobPattern(""))
+            egg.collapseEquivalentMaterials()
+            egg.collapseEquivalentTextures()
+            egg.removeInvalidPrimitives(GlobPattern(""))
             egg.removeUnusedVertices(GlobPattern(""))
             if True:
                 egg.triangulatePolygons(EggData.TConvex & EggData.TPolygon)
@@ -555,6 +571,7 @@ def main(argv=None):
                 os.system("pview " + outfile)
         except Exception,e:
             print e
+    ModelPool.garbageCollect()
     return 0
 
 if __name__ == "__main__":

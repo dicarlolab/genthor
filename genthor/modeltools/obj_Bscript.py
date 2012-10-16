@@ -25,6 +25,7 @@ def import_obj(pth):
 
 
 def export_obj(pth):
+    # Export the .obj
     bpy.ops.export_scene.obj(filepath=pth, use_normals=True,
                              keep_vertex_order=True) 
 
@@ -147,29 +148,34 @@ def run(obj_path, out_path, rot):
     # Empty the current scene
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
-    
-    # Import obj into scene
-    import_obj(obj_path)
 
-    # Do whatever you need to do within the Blender scene
-    transform_model(rot)
+    try:
+        # Import obj into scene
+        import_obj(obj_path)
 
-    ext = os.path.splitext(out_path)[1]
-    if ext == ".egg":
-        # Export egg
-        export_egg(out_path)
-    elif ext == ".obj":
-        # Export obj
-        if obj_path == out_path:
-            # don't clobber
-            raise ValueError("I cannot overwrite the obj files: %s" % out_path)
-        # copy textures
-        shutil.copytree(os.path.join(os.path.split(obj_path)[0], "tex"),
-                        os.path.join(os.path.split(out_path)[0], "tex"))
-        # export the obj
-        export_obj(out_path)
-    else:
-        raise ValueError("unsupported output type: %s" % ext)
+        # # Do whatever you need to do within the Blender scene
+        # transform_model(rot)
+
+        ext = os.path.splitext(out_path)[1]
+        if ext == ".egg":
+            # Export egg
+            export_egg(out_path)
+        elif ext == ".obj":
+            # Export obj
+            if obj_path == out_path:
+                # don't clobber
+                raise ValueError("Cannot overwrite the obj files: %s" % out_path)
+            # copy textures
+            shutil.copytree(os.path.join(os.path.split(obj_path)[0], "tex"),
+                            os.path.join(os.path.split(out_path)[0], "tex"))
+            # export the obj
+            export_obj(out_path)
+        else:
+            raise ValueError("unsupported output type: %s" % ext)
+
+    except Exception as ce:
+        print "Error: %s" % ce
+        pdb.set_trace()
 
     # # Drop to debugger
     # print("\nYou're now in the debugger, within the Blender context\n")

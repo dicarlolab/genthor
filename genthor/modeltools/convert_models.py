@@ -6,7 +6,8 @@ PWB - 10.2012 - updates
 """
 import genthor as gt
 import genthor.modeltools.tools as mt
-import obj2egg as o2e
+import numpy as np
+#import obj2egg as o2e
 import os
 import shutil
 from subprocess import call
@@ -16,7 +17,56 @@ import tarfile
 import pdb
 
 
-def blender_convert(model_pth, out_root, ext=".obj", f_force=False):
+# ## OLD OBJ2EGG THAT USES obj2egg.py, which is a garbage script
+# def obj2egg(obj_pth, egg_pth=None, f_force_tex=True):
+#     ## Make an .egg
+#     if egg_pth is None:
+#         egg_pth = os.path.splitext(obj_pth)[0] + '.egg'
+#     # Call obj2egg.py script to convert
+#     o2e.main(argv=["", obj_pth, "-b -t"])
+#     egg_pth0 = os.path.splitext(obj_pth)[0] + '.egg'
+#     if egg_pth0 != egg_pth:
+#         shutil.move(egg_pth0, egg_pth)
+#         pth0 = os.path.split(obj_pth)[0]
+#         pth = os.path.split(egg_pth)[0]
+#         tex_pth = os.path.join(pth, "tex")
+#         if os.path.isdir(tex_pth):
+#             if f_force_tex:
+#                 shutil.rmtree(tex_pth)
+#             else:
+#                 raise IOError("Directory exists: %s" % tex_pth)
+#         shutil.copytree(os.path.join(pth0, "tex"), tex_pth)
+
+
+def obj2egg(obj_pth, egg_pth=None, f_force_tex=True):
+    """ Convert an .obj file to an .egg using Blender."""
+    ## Make an .egg
+    if egg_pth is None:
+        egg_pth = os.path.splitext(obj_pth)[0] + '.egg'
+    # Call obj2egg.py script to convert
+    o2e.main(argv=["", obj_pth, "-b -t"])
+    egg_pth0 = os.path.splitext(obj_pth)[0] + '.egg'
+    if egg_pth0 != egg_pth:
+        shutil.move(egg_pth0, egg_pth)
+        pth0 = os.path.split(obj_pth)[0]
+        pth = os.path.split(egg_pth)[0]
+        tex_pth = os.path.join(pth, "tex")
+        if os.path.isdir(tex_pth):
+            if f_force_tex:
+                shutil.rmtree(tex_pth)
+            else:
+                raise IOError("Directory exists: %s" % tex_pth)
+        shutil.copytree(os.path.join(pth0, "tex"), tex_pth)
+
+
+def egg2bam(egg_pth, bam_pth=None):
+    # Make a .bam
+    if bam_pth is None:
+        bam_pth = os.path.splitext(egg_pth)[0] + '.bam'
+    call("egg2bam -o %s %s" % (bam_pth, egg_pth), shell=True)
+
+
+def normalize_obj(model_pth, out_root, ext=".obj", f_force=False):
 
     # Model info scripts
     model_categories_py = "model_categories"
@@ -93,9 +143,13 @@ def blender_convert(model_pth, out_root, ext=".obj", f_force=False):
         
         out_pths = []
         out_pths.append(os.path.join(out_root, outname, outname + ext))
-        out_pths.append(os.path.join(out_root, outname, "tex"))
+        new_tex_pth = os.path.join(out_root, outname, "tex")
+        out_pths.append(new_tex_pth)
         if ext == ".obj":
-            out_pths.append(os.path.join(out_root, outname, outname + ".mtl"))
+            new_mtl_pth = os.path.join(out_root, outname, outname + ".mtl")
+            out_pths.append(new_mtl_pth)
+        else:
+            new_mtl_pth = None
         
         # un-tar, un-gz into a temp directory
         fulltargzname = os.path.join(model_pth, targzname)
@@ -114,20 +168,40 @@ def blender_convert(model_pth, out_root, ext=".obj", f_force=False):
         # The params are the angles
         params = angledict[modelname]
 
-        ## Do the conversion from .obj to .<out>
-        # Fix the .mtl and texture names
-        mtl_path = os.path.splitext(obj_pth)[0] + ".mtl"
-        mt.fix_tex_names(mtl_path)
-        # Run the blender script
-        call_blender(obj_pth, out_pths[0], blender_command_base, params)
-        # Fix the .mtl and texture names
-        mtl_path = os.path.splitext(out_pths[0])[0] + ".mtl"
-        mt.fix_tex_names(mtl_path)
+        # Fix the .mtl and texture names and move them
+        mtl_pth = os.path.splitext(obj_pth)[0] + ".mtl"
+        mt.fix_tex_names(mtl_pth)
+
+        ## Do the conversion from .obj to .obj using homebrew tools
+        if ext == ".obj":
+            # Transform vertices
+            rot = (params[0] + np.pi / 2., params[1] + np.pi / 2., params[2])
+            T0 = mt.build_rot(rot)
+            mt.transform_obj(obj_pth, out_pths[0], T0=T0)
+            # Copy .mtl file over
+            shutil.copy2(mtl_pth, new_mtl_pth)
+            # # Clean mesh with meshlabserver
+            # script_pth = "clean-mesh.mlx"
+            # mlb_cmd = ("meshlabserver -i %s -o %s -s %s -om vc vn fc wt"
+            #            % (out_pths[0], out_pths[0], script_pth))
+            # try:
+            #     check_call(mlb_cmd, shell=True)
+            # except Exception as details:
+            #     print "Tried to call: "
+            #     print mlb_cmd
+            #     print
+            #     print "Failed with exception: %s" % details
+            #     pdb.set_trace()
+            # os.rename(out_pths[0] + ".mtl", new_mtl_pth)
+        elif ext == ".egg":
+            ## Do the conversion from .obj to .egg using Blender
+            # Run the blender script
+            call_blender(obj_pth, out_pths[0], blender_command_base, params)
+        else:
+            raise ValueError("Extension type not supported: %s" % ext)
         # Copy the textures from the .obj path to the .<out> path
-        tex_pth = os.path.join(os.path.split(out_pths[0])[0], "tex")
-        copy_tex(os.path.split(obj_pth)[0], tex_pth)
-
-
+        mt.copy_tex(os.path.join(os.path.split(mtl_pth)[0], "tex"), new_tex_pth)
+            
         # Convert the .<out> to a .tgz
         with tarfile.open(outtgz_pth, mode="w:gz") as tf:
             for out_pth in out_pths:
@@ -203,7 +277,8 @@ def panda_convert(inout_pths, ext=".egg"):
                 # One-step conversion, to egg.
                 egg_pth = out_pth
             # Convert .obj to .egg
-            obj2egg(in_pth, egg_pth=egg_pth)
+            if not os.path.isfile(egg_pth):
+                obj2egg(in_pth, egg_pth=egg_pth)
             if ext1 == ".bam":
                 # Convert .egg to .bam
                 egg2bam(egg_pth, bam_pth=out_pth)
@@ -260,51 +335,6 @@ def call_blender(obj_pth, out_pth, blender_command_base, params):
         print
         print "Failed with exception: %s" % details
         pdb.set_trace()
-
-
-def obj2egg(obj_pth, egg_pth=None, f_force_tex=True):
-    ## Make an .egg
-    if egg_pth is None:
-        egg_pth = os.path.splitext(obj_pth)[0] + '.egg'
-    # Call obj2egg.py script to convert
-    o2e.main(argv=["", obj_pth])
-    egg_pth0 = os.path.splitext(obj_pth)[0] + '.egg'
-    if egg_pth0 != egg_pth:
-        shutil.move(egg_pth0, egg_pth)
-        pth0 = os.path.split(obj_pth)[0]
-        pth = os.path.split(egg_pth)[0]
-        tex_pth = os.path.join(pth, "tex")
-        if os.path.isdir(tex_pth):
-            if f_force_tex:
-                shutil.rmtree(tex_pth)
-            else:
-                raise IOError("Directory exists: %s" % tex_pth)
-        shutil.copytree(os.path.join(pth0, "tex"), tex_pth)
-
-
-def egg2bam(egg_pth, bam_pth=None):
-    # Make a .bam
-    if bam_pth is None:
-        bam_pth = os.path.splitext(egg_pth)[0] + '.bam'
-    call("egg2bam -o %s %s" % (bam_pth, egg_pth), shell=True)
-
-
-def copy_tex(obj_pth, tex_pth):
-    """ Copy texture images from .obj's directory to .egg's directory """
-
-    # Tex image files in obj_pth
-    tex_filenames0 = [name for name in os.listdir(obj_pth)
-                      if os.path.splitext(name)[1].lower() in mt.img_exts]
-
-    # Make the directory if need be, and error if it is a file already
-    if os.path.isfile(tex_pth):
-        raise IOError("File exists: '%s'")
-    elif not os.path.isdir(tex_pth):
-        os.makedirs(tex_pth)
-
-    for name in tex_filenames0:
-        new_tex_pth = os.path.join(tex_pth, name)
-        shutil.copy2(os.path.join(obj_pth, name), new_tex_pth)
 
 
 def main(f_panda=True):

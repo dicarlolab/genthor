@@ -1,5 +1,6 @@
 """ General tools for manipulating models."""
 import genthor as gt
+import numpy as np
 import os
 import re
 import shutil
@@ -75,6 +76,24 @@ def resolve_model_path(modelpth0):
     return modelpth
 
 
+def copy_tex(obj_pth, tex_pth):
+    """ Copy texture images from .obj's directory to .egg's directory """
+
+    # Tex image files in obj_pth
+    tex_filenames0 = [name for name in os.listdir(obj_pth)
+                      if os.path.splitext(name)[1].lower() in img_exts]
+
+    # Make the directory if need be, and error if it is a file already
+    if os.path.isfile(tex_pth):
+        raise IOError("File exists: '%s'")
+    elif not os.path.isdir(tex_pth):
+        os.makedirs(tex_pth)
+
+    for name in tex_filenames0:
+        new_tex_pth = os.path.join(tex_pth, name)
+        shutil.copy2(os.path.join(obj_pth, name), new_tex_pth)
+
+
 def parse_dir_imgs(root_pth):
     """ Search through pth and all sub-directories for image files and
     return a list of their names."""
@@ -133,14 +152,98 @@ def parse_mtl_imgs(mtl_pth, f_edit=False, imgdirname="tex"):
     return mtlnames
 
 
+def build_rot(rot, f_homog=True):
+    # x,y,z rotation matrices
+    Rx = np.array(((1., 0, 0),
+                   (0, np.cos(rot[0]), -np.sin(rot[0])),
+                   (0, np.sin(rot[0]), np.cos(rot[0]))))
+    Ry = np.array(((np.cos(rot[1]), 0, np.sin(rot[1])),
+                   (0, 1., 0),
+                   (-np.sin(rot[1]), 0, np.cos(rot[1]))))
+    Rz = np.array(((np.cos(rot[2]), -np.sin(rot[2]), 0),
+                   (np.sin(rot[2]), np.cos(rot[2]), 0),
+                   (0, 0, 1.)))
+    R = np.dot(np.dot(Rx, Ry), Rz)
+    if f_homog:
+        R = np.hstack((np.vstack((R, np.zeros(3))),
+                       np.array(((0, 0, 0, 1.),)).T))
+    return R
+
+
+def transform_obj(obj_pth, out_pth=None, T0=None, f_normalize=True):
+    """ Reads an .obj file and transforms the model according to the
+    transformation matrix T."""
+    # Default out_pth is obj_pth
+    if out_pth is None:
+        out_pth = obj_pth
+    # Default transformation matrix
+    if T0 is None:
+        T0 = np.eye(4)
+    # Make the path absolute
+    if not os.path.isabs(obj_pth):
+        obj_pth = os.path.join(os.getcwd(), obj_pth)
+    # RE pattern
+    patstr = "v[ \t]+([\.\-\d]+)[ \t]+([\.\-\d]+)[ \t]+([\.\-\d]+)[\f\n\r]+"
+    rx = re.compile(patstr, re.IGNORECASE)
+    # Open .obj
+    with open(obj_pth, "r") as fid:
+        filestr = fid.read()
+    ## Normalize by re-scaling so long edge is 1 and center is 0,0,0
+    if f_normalize:
+        # Get vertices
+        V0 = np.array([m.groups() for m in rx.finditer(filestr)], dtype="f8")
+        # Transform it
+        V1 = np.dot(np.hstack((V0, np.ones((V0.shape[0], 1.)))), T0)[:, :3]
+        # Scale of mesh
+        ptp = V1.ptp(axis=0)
+        # Re-scale factor (makes longest dimension = 1)
+        scale = 10. / np.max(ptp)
+        # Centering translation
+        trans = -(V1.min(axis=0) + ptp / 2.)
+        # Make the normalizing transformation matrix
+        Ts = np.hstack((np.vstack((np.eye(3) * scale, np.zeros(3))),
+                        np.array(((0, 0, 0, 1.),)).T))
+        Tt = np.hstack((np.vstack((np.eye(3), trans)),
+                        np.array(((0, 0, 0, 1.),)).T))
+        Tn = np.dot(Tt, Ts)
+        # Transformation matrix
+        T = np.dot(T0, Tn)
+    else:
+        T = T0
+    # Replacement function
+    def repl(m):
+        # Input point
+        p0 = np.array(m.groups() + (1.,), dtype="f8")
+        # Output point
+        p1 = np.dot(p0, T)[:-1]
+        # Replacement points
+        rep = " ".join(p1.astype("S100"))
+        # First and last points in match
+        i = m.start(1) - m.start()
+        j = m.end(3) - m.start()
+        match = m.group()
+        # Make a substitute for the match
+        newmatch = match[:i] + rep + match[j:]
+        return newmatch
+    # Search for matches and substitute in fixed path
+    newfilestr = rx.subn(repl, filestr)[0]
+    # Save the .obj file
+    dir_pth = os.path.dirname(out_pth)
+    if not os.path.isdir(dir_pth):
+        # Make image directory, if necessary
+        os.makedirs(dir_pth)
+    with open(out_pth, "w") as fid:
+        fid.write(newfilestr)
+
+
 def fix_tex_names(mtl_pth, imgdirname="tex", f_verify=True):
     """ Make all .mtl image file names lowercase and relative paths,
     so they are compatible with linux and are portable.  Also change
     the actual image file names."""
-
+    # Make the path absolute
     if not os.path.isabs(mtl_pth):
         mtl_pth = os.path.join(os.getcwd(), mtl_pth)
-    # Directory path that the .mtl file is in
+    # Directory path that the file is in
     dir_pth = os.path.split(mtl_pth)[0]
     # Directory for the images to go
     img_pth = os.path.join(dir_pth, imgdirname)
