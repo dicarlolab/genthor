@@ -320,7 +320,7 @@ def call_blender(obj_pth, out_pth, blender_command_base, params=None):
     else:
         # Assemble the full blender command
         blender_command = "%s %s %s" % (blender_command_base, obj_pth, out_pth)
-
+    
     # Run the blender conversion
     try:
         check_call(blender_command, shell=True)
