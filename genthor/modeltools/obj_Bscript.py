@@ -31,12 +31,13 @@ def export_obj(pth):
 
     
 def export_egg(pth):
+    import io_scene_egg
+    io_scene_egg.register() 
     import io_scene_egg.yabee_libs.egg_writer
     #from io_scene_egg.yabee_libs import egg_writer
     print("RELOADING MODULES")
     import imp
     imp.reload(io_scene_egg.yabee_libs.egg_writer)
-
     #: { "animation_name" : (start_frame, end_frame, frame_rate) }
     ANIMATIONS = {"anim1":(0,10,5), }
     #: "True" to interprete an image in the uv layer as the texture
