@@ -32,7 +32,7 @@ def export_obj(pth):
     
 def export_egg(pth):
     import io_scene_egg
-    #io_scene_egg.register() 
+    io_scene_egg.register() 
     import io_scene_egg.yabee_libs.egg_writer
     #from io_scene_egg.yabee_libs import egg_writer
     print("RELOADING MODULES")
