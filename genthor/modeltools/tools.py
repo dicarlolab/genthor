@@ -197,7 +197,7 @@ def transform_obj(obj_pth, out_pth=None, T0=None, f_normalize=True):
         # Scale of mesh
         ptp = V1.ptp(axis=0)
         # Re-scale factor (makes longest dimension = 1)
-        scale = 10. / np.max(ptp)
+        scale = 1. / np.max(ptp)
         # Centering translation
         trans = -(V1.min(axis=0) + ptp / 2.)
         # Make the normalizing transformation matrix
