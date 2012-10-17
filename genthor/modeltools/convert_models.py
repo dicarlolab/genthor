@@ -47,7 +47,7 @@ def obj2egg(obj_pth, egg_pth=None, f_blender=True): #, f_force_tex=True):
         egg_pth = os.path.splitext(obj_pth)[0] + '.egg'
     # Blender script and conversion command.
     blender_pth = os.path.join(os.environ["HOME"], "bin", "blender")
-    blender_script_name = "obj_Bscript.py"
+    blender_script_name = os.path.join(gt.GENTHOR_PATH, "obj_Bscript.py")
     blender_command_base = "%s -b -P %s --" % (blender_pth, blender_script_name)
 
     ## Do the conversion from .obj to .egg using Blender
@@ -320,7 +320,7 @@ def call_blender(obj_pth, out_pth, blender_command_base, params=None):
     else:
         # Assemble the full blender command
         blender_command = "%s %s %s" % (blender_command_base, obj_pth, out_pth)
-
+    
     # Run the blender conversion
     try:
         check_call(blender_command, shell=True)
