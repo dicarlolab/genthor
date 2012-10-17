@@ -68,6 +68,7 @@ def sample(rng, num=1, f_log=False, rand=0):
     
     
 def download_s3_directory(bucket_name, target):
+    return
     conn = boto.connect_s3()
     b = conn.get_bucket(bucket_name)
     L = list(b.list())
