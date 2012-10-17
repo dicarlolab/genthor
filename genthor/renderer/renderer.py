@@ -71,8 +71,6 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr, bgscale, bghp,
         scene = lbase.rootnode
 
     bgpath = mt.resolve_bg_path(bgpath)
-    modelpath = mt.resolve_model_path(modelpath)
-    modelpath = cm.autogen_egg(modelpath)
     
     # Modelpath points to the model .egg/.bam file
 
@@ -93,7 +91,7 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr, bgscale, bghp,
     assert len(modelpaths) == len(scales) == len(hprs) == len(poses)
         
     modelpaths = map(mt.resolve_model_path, modelpaths)
-    map(cm.autogen_egg, modelpaths)
+    modelpaths = map(cm.autogen_egg, modelpaths)
     objnodes = []
     for mpth, scale, hpr, pos in zip(modelpaths, scales, hprs, poses):
         objnode = tools.read_file(lbase.loader.loadModel, mpth)
