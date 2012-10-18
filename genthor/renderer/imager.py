@@ -83,7 +83,7 @@ class ImgRendererResizer(object):
             modelpath = [os.path.join(self.model_root, mn) for mn in m['obj']]      
             scale = [[ms] for ms in m['s']]
             pos = zip(m['ty'], m['tz'])
-            hpr = zip(m['rxy'], m['rxz'], m['rxy'])
+            hpr = zip(m['ryz'], m['rxz'], m['rxy'])
             
         bgpath = os.path.join(self.bg_root, m['bgname'])
 

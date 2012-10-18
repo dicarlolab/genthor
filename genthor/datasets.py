@@ -477,7 +477,7 @@ class GenerativeDataset3(GenerativeDatasetBase):
                   }]
 
 
-class GenerativeDataset3a(GenerativeDatasetBase):    
+class GenerativeDataset3(GenerativeDatasetBase):    
     models = model_info.MODEL_SUBSET_3
     bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
                        'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
@@ -487,13 +487,13 @@ class GenerativeDataset3a(GenerativeDatasetBase):
     good_backgrounds = [_b for _b in model_info.BACKGROUNDS
                                                   if _b not in bad_backgrounds]
     templates = [
-                 {'n_ex_per_model': 250,
+                 {'n_ex_per_model': 200,
                   'name': 'var1', 
                   'template': {'bgname': choice(good_backgrounds),
                      'bgscale': 1.,
                      'bgpsi': 0,
                      'bgphi': uniform(-180.0, 180.),
-                     's': loguniform(np.log(2./3), np.log(3.)),
+                     's': loguniform(np.log(2./3), np.log(2.)),
                      'ty': uniform(-1.0, 1.0),
                      'tz': uniform(-1.0, 1.0),
                      'ryz': uniform(-180., 180.),
@@ -501,6 +501,46 @@ class GenerativeDataset3a(GenerativeDatasetBase):
                      'rxz': uniform(-180., 180.),
                      }
                   }]
+
+
+class GenerativeDatasetTestAll(GenerativeDatasetBase):    
+    models = list(itertools.chain(*model_info.MODEL_CATEGORIES.values()))
+    bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
+                       'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
+                       'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
+                       'INTERIOR_07ST.jpg', 'INTERIOR_06ST.jpg',
+                       'INTERIOR_05ST.jpg']
+    good_backgrounds = [_b for _b in model_info.BACKGROUNDS
+                                                  if _b not in bad_backgrounds]
+    templates = [
+                 {'n_ex_per_model': 1,
+                  'name': 'var1', 
+                  'template': {'bgname': choice(good_backgrounds),
+                     'bgscale': 1.,
+                     'bgpsi': 0,
+                     'bgphi': uniform(-180.0, 180.),
+                     's': 1.75,
+                     'ty': 0,
+                     'tz': 0,
+                     'ryz': 0,
+                     'rxy': 0,
+                     'rxz': 0,
+                     }
+                  },
+                  {'n_ex_per_model': 1,
+                  'name': 'var1', 
+                  'template': {'bgname': choice(good_backgrounds),
+                     'bgscale': 1.,
+                     'bgpsi': 0,
+                     'bgphi': uniform(-180.0, 180.),
+                     's': 1.75,
+                     'ty': 0,
+                     'tz': 0,
+                     'ryz': 45,
+                     'rxy': 45,
+                     'rxz': 45,
+                     }}
+                   ]
     
 
 class GenerativeDataset4(GenerativeDatasetBase):    
