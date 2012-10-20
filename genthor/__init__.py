@@ -8,6 +8,7 @@ BASE_URL = 'http://50.19.109.25'
 MODEL_URL = BASE_URL + ':9999/3dmodels?'
 S3_URL = "http://dicarlocox-datasets.s3.amazonaws.com"
 s3_resource_bucket = 'genthor-resources'
+s3_old_model_bucket = 'dicarlocox-3dmodels-v1'
 
 BASE_NAME = 'genthor'
 # Scikits data genthor directory

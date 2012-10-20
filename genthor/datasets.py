@@ -10,6 +10,7 @@ import Image
 import tabular as tb
 from yamutils.fast import reorder_to, isin
 from yamutils.basic import dict_inverse
+import boto
 
 import pyll
 choice = pyll.scope.choice
@@ -33,11 +34,19 @@ import pdb
 
 
 class DatasetBase(object):
+    RESOURCE_PATH = RESOURCE_PATH
+    OBJ_PATH = gt.OBJ_PATH
+    BACKGROUND_PATH = gt.BACKGROUND_PATH
+    CACHE_PATH = gt.CACHE_PATH
+    
     def resource_home(self, *suffix_paths):
-        return os.path.join(gt.RESOURCE_PATH, *suffix_paths)
+        return os.path.join(self.RESOURCE_PATH, *suffix_paths)
+
+    def obj_home(self, *suffix_paths):
+        return os.path.join(self.OBJ_PATH, *suffix_paths)
 
     def cache_home(self, *suffix_paths):
-        return os.path.join(gt.CACHE_PATH, *suffix_paths)
+        return os.path.join(self.CACHE_PATH, *suffix_paths)
 
     def fetch(self):
         """Download and extract the dataset."""
@@ -53,6 +62,16 @@ class DatasetBase(object):
             tools.download_s3_directory(gt.s3_resource_bucket,
                                         resource_home)
 
+    def get_model(self, name):
+        dir = self.obj_home(name)
+        os.mkdir(dir)
+        path = os.path.join(dir, name + '.tgz')
+        old_model_bucket = gt.s3_old_model_bucket
+        conn = boto.connect_s3()
+        k = conn.get_bucket(old_model_bucket).get_key(name)
+        k.get_contents_to_filename(path)
+        #tools.upload_s3_directory(gt.s3_resource_bucket, dir)
+        
     @property
     def meta(self):
         if not hasattr(self, '_meta'):
@@ -73,10 +92,17 @@ class GenerativeBase(DatasetBase):
     def __init__(self, data=None):
         self.data = data
         self.specific_name = self.__class__.__name__ + '_' + get_image_id(data)
-        model_root = gt.OBJ_PATH
-        bg_root = gt.BACKGROUND_PATH
+        model_root = self.OBJ_PATH
+        bg_root = self.BACKGROUND_PATH
         self.imager = Imager(model_root, bg_root, 
                              check_penetration=self.check_penetration)
+    
+    def get_image(self, preproc, config):
+        dname = self.obj_home(config['obj'])
+        if not os.path.exists(dname):
+            self.get_model(config['obj'])
+        irr = self.imager.get_map(preproc, 'texture')
+        return irr(config)
 
     def get_images(self, preproc):
         name = self.specific_name + '_' + get_image_id(preproc)

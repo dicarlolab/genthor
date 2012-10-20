@@ -87,4 +87,3 @@ def download_s3_directory(bucket_name, target):
             if not os.path.exists(pathname):
                 print(n)
                 l.get_contents_to_filename(pathname)
-         
