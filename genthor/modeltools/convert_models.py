@@ -163,7 +163,7 @@ def build_objs(out_root, modeldict, outdict, angledict=None,
         # un-tar, un-gz into a temp directory
         tmp_tar_pth = os.path.join(tmp_root, "tartmp")
         allnames = mt.untar(targzname, tmp_tar_pth)
-
+        
         # Get target's path
         names = [n for n in allnames if os.path.split(n)[1] == objname]
         # Raise exception if there are not exactly 1
@@ -233,7 +233,6 @@ def convert(inout_pths, ext=".egg", f_blender=True, f_force=False):
             # un-tar, un-gz into a temp directory
             tmp_tar_pth = os.path.join(tmp_root, "tartmp")
             allnames = mt.untar(in_pth, tmp_tar_pth)
-
             # Get target's path
             names = [n for n in allnames
                      if os.path.splitext(n)[1] in (".egg", ".obj")]
