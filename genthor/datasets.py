@@ -34,7 +34,7 @@ import pdb
 
 
 class DatasetBase(object):
-    RESOURCE_PATH = RESOURCE_PATH
+    RESOURCE_PATH = gt.RESOURCE_PATH
     OBJ_PATH = gt.OBJ_PATH
     BACKGROUND_PATH = gt.BACKGROUND_PATH
     CACHE_PATH = gt.CACHE_PATH
@@ -63,13 +63,17 @@ class DatasetBase(object):
                                         resource_home)
 
     def get_model(self, name):
-        dir = self.obj_home(name)
-        os.mkdir(dir)
-        path = os.path.join(dir, name + '.tgz')
+        dirn = self.obj_home(name)
+        path = os.path.join(dirn, name + '.tgz')
         old_model_bucket = gt.s3_old_model_bucket
         conn = boto.connect_s3()
-        k = conn.get_bucket(old_model_bucket).get_key(name)
-        k.get_contents_to_filename(path)
+        k = conn.get_bucket(old_model_bucket).get_key(name + '.tar.gz')
+        if k is not None:
+            os.mkdir(dirn)
+            print('downloading %s' % k.name)
+            k.get_contents_to_filename(path)
+        else:
+            raise ValueError("didn't find key %s" % name)  
         #tools.upload_s3_directory(gt.s3_resource_bucket, dir)
         
     @property
@@ -98,9 +102,13 @@ class GenerativeBase(DatasetBase):
                              check_penetration=self.check_penetration)
     
     def get_image(self, preproc, config):
-        dname = self.obj_home(config['obj'])
-        if not os.path.exists(dname):
-            self.get_model(config['obj'])
+        if not isinstance(config['obj'], list):
+            dname = [self.obj_home(config['obj'])]
+        else:
+            dname = [self.obj_home(co) for co in config['obj']]
+        for d, co in zip(dname, config['obj']):
+            if not os.path.exists(d):
+                self.get_model(co)
         irr = self.imager.get_map(preproc, 'texture')
         return irr(config)
 
