@@ -2,7 +2,9 @@
 \usepackage{graphicx}
 \usepackage{apacite}
 \usepackage{times}
-\usepackage{amssymb, amsmath, amsthm}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{amsthm}
 
 %% Margin control
 \textwidth 7.0in
@@ -10,126 +12,168 @@
 \textheight 9.5in
 \topmargin -0.75in
 
-
 \begin{document}
-\noindent
-(Overview of Dan Yamins' and Peter Battaglia's visual reasoning project)
-
+\section*{Genthor}
 \subsection*{Goal}
-This project aims to develop a system for visual processing and
-reasoning about realistic scenes. Some specific goals:
-\begin{enumerate}
-\item To develop a system that unifies Thor and sampling-based
-  inference to improve visual object recognition and localization
-  (especially in depth).
-\item To implement the forward and inferential processes in a
-  biologically plausible way.
-\item To integrate the generative model with Thor's learning more
-  tightly.
-\item To run psychophysics on similar scenes and measure whether the
-  operations of the system, like forward discrimination and recursive
-  inferential reasoning, correlate with patterns in human judgments
-  (latency, errors, confusions, etc).
-\end{enumerate}
+Developing a system for visual inference about naturalistic scenes
+with multiple objects arranged in depth.
 
-\subsection*{Problem domain and definitions}
-We focus on simple 3D scenes ($S$), that consist of a background ($B$)
-that has a unique ID ($b$) and two spherical pose coordinates
-($p_{0B}, p_{1B}$), plus a set of several ($n=1-2$ to start) objects
-$O=(o_1,\dots,o_n)$, each of which belongs to one category ($c_i$),
-has 3 position coordinates ($x_i,y_i,z_i$) and 3 rotation coordinates
-($r_{0i},r_{1i},r_{2i}$). The scene is unobserved, but it generates
+\subsection*{Definitions}
+We focus on simple 3D scenes ($S$), that consist of a background
+($o_0$) that has a unique ID ($b$) and two spherical rotation
+coordinates ($r_{x,0}, r_{y,0}$), plus a set of foreground objects ($n
+< 6$, for now) $(o_1,\dots,o_n)$, each of which belongs to one
+category ($c_i$), has 3 position coordinates ($x_i,y_i,z_i$), 3 scale
+coordinates ($s_{x,i},s_{y,i},s_{z,i}$), and 3 rotation coordinates
+($r_{x,i},r_{y,i},r_{z,i}$). The scene is unobserved, but it generates
 images ($I$) through a rendering function ($\mathrm{R}(\cdot)$) plus
 some Gaussian pixel noise $\omega$.
 \begin{align*}
-  S &= (B, O)\\
-  B &= (b, p_{0B}, p_{1B})\\
-  O &= (o_1,\dots,o_n)\\
-  o_i &= (c_i, x_i,y_i,z_i, r_{0i},r_{1i},r_{2i})\\
+  S &= (n,o_0,o_1,\dots,o_n)\\
+  o_0 &= (b, r_{x,0}, r_{y,0})\\
+  o_i &= (c_i, x_i,y_i,z_i, s_{x,i},s_{y,i},s_{z,i}, r_{x,i},r_{y,i},r_{z,i});\ i > 0\\
   I &= \mathrm{R}(S) + \omega
 \end{align*}
 
 \subsection*{Generative model}
 The generative model specifies the joint probability distribution over
-scenes and images, $\Pr(I,S) = \Pr(I | S)\Pr(S)$, from which we can
-draw forward samples and evaluate the prior (we must approximate the
-likelihood, though). Here, we assume a uniform prior over $S$, $\Pr(S)
-= \mathrm{Unif}$, and a Gaussian conditional probability of $I$ given
-$S$ (captures pixel noise, reflected at bounds), $\Pr(I | S) =
-\mathrm{Normal}(I; \mathrm{R}(S), \sigma_I)$.
-
-The visual inference problem is to compute the posterior distribution,
-$\Pr(S | I) = \frac{\Pr(I | S)\Pr(S)}{\sum_S \Pr(I | S)\Pr(S)}$, given
-an input image, $I$.
+scenes and images, $\Pr(I,S) = \Pr(I | S)\Pr(S)$. It lets us draw
+joint $S,I)$ samples and evaluate the prior and likelihood ($\Pr(S)$,
+$\Pr(I|S)$). 
+\begin{align*}
+  \Pr(S) &= \mathrm{Unif}(S)\\
+  \Pr(I | S) &= \mathrm{Normal}(I; \mathrm{R}(S), \sigma_I)
+\end{align*}
 
 \subsection*{Inference}
-The system will use Monte Carlo sampling to approximate Bayesian
-inference. It draws a set of scene samples,
-$\{\tilde{S}_0,\dots,\tilde{S}_N\}$, which support expectations, modes,
-other estimates, etc. Naive Monte Carlo sampling is exponential in the
-number of scene parameters, so we reduce the complexity of the
-inference problem by using a feedforward classification/regression
-model (Thor) to guide the sampler.
+Visual inference is defined as computing the Bayesian posterior
+distribution,
+\[
+\Pr(S | I) = \frac{\Pr(I | S)\Pr(S)}{\sum_S \Pr(I | S)\Pr(S)}
+\]
+Monte Carlo sampling can be used to draw scene posterior scene
+samples, $\{\tilde{S}_0,\dots,\tilde{S}_N\}$, which support
+expectations, modes, density estimates, etc. Rejection or importance
+sampling using proposals from the prior is inefficient because the
+latent space is large. Instead, we use proposals drawn from a
+feedforward discriminative model (Thor) to target high probability of
+the latent space.
 
 We approximate the unormalized posterior, $\Pr(I | S)\Pr(S) \approx
 \pi(S; I)$. 
 
-\subsubsection*{Thor (Dan will fill in + correct this)}
-Thor is a system for feedforward visual recognition based on
-convolutional neural networks that uses a sequences of nonlinear
-filtering steps to compute a feature vector that supports simple
-linear classification of objects. The input is a multichannel 2D
-image. Each filtering step is composed of 5 sub-steps: 1. Linear
-filtering through random projections, 2. Activation nonlinearity
-(sigmoid), 3. Pooling, 4. Normalization (optional), 5. Rescaling
-(subsampling). The output is an $i\times j\times f$ feature tensor
-that is input to a linear SVM. The training uses a sort of
-backpropagation (?? I didn't catch this part).
+\subsubsection*{Thor (Dan -- fill in / correct)}
+Thor is a system for feedforward visual recognition, based on
+convolutional neural networks, that uses a sequences of nonlinear
+filtering operations to compute a feature vector that supports linear
+classification of objects. The input is a multichannel 2D image. Each
+filtering step is composed of 5 sub-steps: 1. Linear filtering through
+random projections, 2. Activation nonlinearity (sigmoid), 3. Pooling,
+4. Normalization (optional), 5. Rescaling (subsampling). The output is
+an $i\times j\times f$ feature tensor that is input to a linear
+SVM. The training uses a sort of backpropagation (?? how does it
+learn?).
 
-Thor is a function that takes some parameters, $\theta$, and maps an
-$I$ to an estimate of the scene's contents (or some subset),
-i.e. $\mathrm{T}(I, \theta) = \hat{S}$. Thor's parameters are learned
-through training on a set of virtual examples, $\{(I^{(k)},
-S^{(k)})\}$, by minimizing the objective function $\sum_k
-l(\hat{S}^{(k)}, S^{(k)}) = \sum_k l(\mathrm{T}(I^{(k)}, \theta),
-S^{(k)})$. Thor's output can also be a real-valued vector over each
-scene element possible values, which corresponds to the strength of
-the evidence for that value. By normalizing, it can approximate the
-marginal likelihood/posterior of the $i$-th scene component,
-$\mathbf{s}_i$.
+Abstractly, Thor defines a map, $\mathrm{T}$, from images, $I$, and
+parameters, $\theta$, to feature vectors, $F$, and a map ($\tau$) from
+from $F$ and parameters, $\lambda$, to a subset of the latent scene
+state, $U$ (here I'm using the $I$, $F$, $S$, $U$ loosely to indicate
+sets):
+\begin{align*}
+  \mathrm{T} &: (I, \theta) \rightarrow F\\
+  \tau &: (F, \lambda) \rightarrow U, U \subseteq S
+\end{align*}
 
-\subsubsection*{Importance sampling}
-A simple idea is to use Thor's predicted marginal probability of each
-scene component, $\mathbf{s}_i$, as a proposal distribution for an
-importance sampling algorithm. Specifically, the sampler's proposal
-distribution is,
+The parameters, $\theta$ and $\lambda$, are learned through training
+on a set of virtual examples, $\{(I^{(k)}, U^{(k)});\ k=1, \dots,
+K\}$, by minimizing the distances, $f(\cdot,\cdot)$, between scene
+labels and predictions:
+\begin{align*}
+  \underset{\theta, \lambda}{\operatorname{argmin}} \sum_{k=1, \dots, K}
+  f(U^{(k)}, \tau(\mathrm{T}(I^{(k)}, \theta), \lambda)
+\end{align*}
+
+Thor's $\tau$ can instead map to a real-valued measure of the
+credibility, $e$, over elements in $U$ given $F$:
+\begin{align*}
+  \tau &: (F, \lambda) \rightarrow \mu\\
+  \mu &: U \rightarrow e, U \subseteq S
+\end{align*}
+By normalizing, $\mu$ can approximate the posterior over $U$:
+\begin{align*}
+  \Pr(U|I) \approx \frac{\mu(U)}{\sum_U \mu(U)}
+\end{align*}
+When $U$ is a strict subset of $S$, then for $B$ where $B \cup U = S$,
+$\Pr(U|I)$ is posterior with $B$ marginalized out,
+\begin{align*}
+  \Pr(U|I) = \sum_B \Pr(S|I)
+\end{align*}
+
+
+\subsubsection*{Rejection/importance sampling}
+Thor's predicted posterior marginals can be used as a proposal
+distribution for a rejection or importance sampling
+algorithm. Specifically, the sampler's proposal distribution is,
+\begin{align*}
+\mathrm{Q}(S) = \mathrm{Q}(U) \mathrm{Unif}(B)\\
+\mathrm{Q}(U) = \mathrm{Multinomial}(\frac{\mu(U)}{\sum_U \mu(U)}, n)
+\end{align*}
+where $n$ is a set number of objects (which could, itself, be predicted by Thor).
+
+For rejection sampling, the samples' acceptance probability is,
+\begin{align*}
+  a_j = \frac{\Pr(S_j | I)}{C \mathrm{Q}(S_j)}
+\end{align*}
+where $C$ is the rejection factor.
+
+For importance sampling, the samples' (unnormalized) importances
+weights are,
 \[
-\mathrm{Q}(S) = \prod_i \mathrm{Multinomial}(\mathbf{s}_i, 1)
+w_j = \frac{\Pr(S_j | I)}{\mathrm{Q}(S_j)}
 \]
-And, the samples' importances weights are, 
+
+\subsubsection*{Likelihood based on features}
+In reality, 
 \[
-w_j = \frac{1}{Z} \frac{\pi(S; I)}{\mathrm{Q}(S_j)} =
+\Pr(I | S) \approx 
+\begin{cases}
+  1 , & \text{if } I = \mathrm{R}(S) \\
+  0 , & \text{otherwise}
+\end{cases}
 \]
+But in general, for most $I$ the set $\{S;\ I = \mathrm{R}(S)\}$ is
+small, i.e., 
+\[
+\frac{|\{S;\ I = \mathrm{R}(S)\}|}{|\{S\}|} = \epsilon
+\]
+where $\epsilon$ is exponentially small in $|S|$, so $\Pr(I | S)$ does
+not easily support Monte Carlo sampling.  And since
+$\mathrm{R}^{-1}(I)$ is one-to-many and undefined, analytical methods
+are hard to develop.
+
+We need an approximation to $\Pr(I|S)$ that will make inference
+easier.  Our goal is to find distance kernels, $d(I_0, I_1)$ and
+$d'(S_0, S_1)$, where $I_k = \mathrm{S_k}$, 
 
 
+induce a qualitative isomorphism between
 
-\subsection*{Training and evaluating our results}
-We will evaluate our systems results by testing object classification
-and localization performance on novel scenes that contain object
-instances which fall into one of many possible categories. Two types
-of scenes will be tested: 1. Virtual scenes composed of rendered
-objects, 2) Pascal challenge test data.
+Approximations that put a noise term on the pixels might help
+soften the posterior, but it does not 
 
-\subsection*{Additional notes}
-Some possible ideas include using a crappy renderer inside the
-sampler, scoring against Thor features instead of pixels.
+Target: small covariance
+$\mathrm{E}[d(I_0, I_1) d'(S_0, S_1)]$.  Is this a good way to define
+the problem -- Spearman correlation? Pearson?  Mutual information?
 
-In the near future we must measure performance on a test case for
-baseline Thor, naive sampling, importance/max/rejection samples from
-Thor's marginals, Gibbs/MH sampling. 
+Our solution is to use an alternative rendering function,
+\begin{align*}
+  \mathrm{R}^* = \mathrm{R} \circ \mathrm{T} : S \rightarrow I \rightarrow F\\
+  \Pr(F | S) = \mathcal{N}(F;S, \sigma)
+\end{align*}
 
-Down the road, we might consider learning/updating Thor parameters
-from difference images (between input image and synthesized images
-from scenes estimated by classifier/sampler).
+The Spearman correlation coefficient mea
+
+ABC?
+
 
 \end{document}
