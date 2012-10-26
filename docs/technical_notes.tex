@@ -105,33 +105,34 @@ $\mathcal{U}_j \subseteq \mathcal{S}$:
 where $\theta$ and $\lambda$ are parameters.
 
 The parameters, $\theta$ and $\lambda$, are learned through training
-on a set of virtual examples, $\{(D^{(k)}, U^{(k)});\ k=1, \dots,
+on a set of virtual examples, $\{(D^{(k)}, S^{(k)});\ k=1, \dots,
 K\}$, by minimizing the distances, $f(\cdot,\cdot)$, between scene
 labels and predictions:
 \begin{align*}
   \underset{\theta, \lambda}{\operatorname{argmin}} \sum_{k=1, \dots, K}
-  f(U^{(k)}, \tau(\mathrm{T}(D^{(k)}, \theta), \lambda)
+  f(S^{(k)}, \tau(\mathrm{T}(D^{(k)}, \theta), \lambda)
 \end{align*}
 
-Thor's $\tau$ can instead map to a real-valued measure, $\mu \in
-\mathcal{M}$, of the credibility, $e \in \mathcal{E}$, over elements
-in $\mathcal{U}_j$ given $\mathcal{F}$:
+Thor's $\tau$ can instead map to a measure, $e \in \mathcal{E}$, of
+the strength of evidence for members of $\mathcal{U}_j$ given
+$\mathcal{F}$,
 \begin{align*}
-  \tau(\cdot, \lambda) &: \mathcal{F} \rightarrow \mathcal{M}\\
-  \mu(\cdot) &: \mathcal{U}_j \rightarrow e
+  \tau(\cdot, \lambda) &: \mathcal{F} \rightarrow \mathcal{E}\\
+  e &: \mathcal{U}_j \rightarrow \mathbb{R}^+
 \end{align*}
-By normalizing, $\mu$ can approximate the posterior over $U$:
+which can then be transformed into an approximation of the posterior
+over $S$:
 \begin{align*}
-  \Pr(U|D) \approx \frac{\mu(U)}{\sum_U \mu(U)}
+  \Pr(S|D) \approx \frac{e(S)}{\sum_{S \in \mathcal{U}_j} e(S)}
 \end{align*}
 When $\mathcal{U}_j$ is a strict subset of $\mathcal{S}$, then for
-$\mathcal{B} = \mathcal{U}_j \setminus \mathcal{S}$, $\Pr(U|D)$ is the
-posterior with $B$ marginalized out,
+$\mathcal{B} = \mathcal{U}_j \setminus \mathcal{S}$, $\Pr(S|D)$ is the
+posterior with $\mathcal{B}$ marginalized out,
 \begin{align*}
-  \Pr(U|D) = \sum_B \Pr(S|D) \text{,}
+  \Pr(S|D) = \sum_{S \in \mathcal{B}} \Pr(S|D) \text{ ,}
 \end{align*}
 and when $\mathcal{U}_j$ contains only one type of element (e.g.,
-$p_{x,i}$) then, $\Pr(U|D)$ is the posterior marginal distribution
+$r_{x,0}$), then $\Pr(S|D)$ is the marginal posterior distribution
 over that element.
 
 
@@ -140,14 +141,16 @@ Thor's predicted posterior marginals can be used as a proposal
 distribution for a rejection or importance sampling
 algorithm. Specifically, the sampler's proposal distribution is,
 \begin{align*}
-\mathrm{Q}(S) = \mathrm{Q}(U) \mathrm{Unif}(B)\\
-\mathrm{Q}(U) = \mathrm{Multinomial}(\frac{\mu(U)}{\sum_U \mu(U)}, n)
+  \mathrm{Q}(S) =
+  \mathrm{Multinomial}\left(\frac{e(S)}{\sum_{\mathcal{U}_j} e(S)} , n
+  \right)
 \end{align*}
-where $n$ is a set number of objects (which could, itself, be predicted by Thor).
+where $n$ is a set number of objects (which could also be predicted by
+Thor).
 
 For rejection sampling, the samples' acceptance probability is,
 \begin{align*}
-  a_j = \frac{\Pr(S_j | D)}{C \mathrm{Q}(S_j)}
+  a_j = \frac{\Pr(S_j | D)}{C \cdot \mathrm{Q}(S_j)}
 \end{align*}
 where $C$ is the rejection factor.
 
@@ -166,27 +169,28 @@ In reality,
   0 , & \text{otherwise}
 \end{cases}
 \]
-But in general, for most $D$ the set $\{S;\ D = \mathrm{R}(S)\}$ is
-relatively small, i.e.,
-\[
-\frac{|\{S;\ D = \mathrm{R}(S)\}|}{|\{S\}|} = \epsilon
-\]
-where $\epsilon$ is exponentially small in $|S|$. Thus, $\Pr(D | S)$
-does not easily support Monte Carlo sampling.
+But generally, given $d$, $| \{s;\ d = \mathrm{R}(s), s \in
+\mathcal{S} \} |$ is exponentially small in $|\mathcal{S}|$, so $\Pr(D
+| S)$ does not support efficient Monte Carlo sampling.
 
 We seek an approximation to $\Pr(D|S)$ that will make inference
-easier.  Our goal is to find distance kernels, $\delta(D_0, D_1)$ and
-$\delta'(S_0, S_1)$, where $D_k = \mathrm{S_k}$,
+easier.  Ideally, we'd find two distance measures,
+\begin{align*}
+  \rho & : \mathcal{D} \times \mathcal{D} \rightarrow \mathbb{R}^+ \\
+  \rho' & : \mathcal{S} \times \mathcal{S} \rightarrow \mathbb{R}^+ \\
+\end{align*}
+such that,
+\begin{align*}
+  \mathrm{abs} \left( \rho(\mathrm{R}(S_i), \mathrm{R}(S_j)) -
+    \rho'(S_i, S_j) \right) < \epsilon \text{ ,}
+\end{align*}
+for small $\epsilon$.
 
+[Check that 2011 Doucet paper for how they define their kernels]
 
-induce a qualitative isomorphism between
-
-Approximations that put a noise term on the pixels might help
-soften the posterior, but it does not 
-
-Target: small covariance
-$\mathrm{E}[\delta(D_0, D_1) \delta'(S_0, S_1)]$.  Is this a good way to define
-the problem -- Spearman correlation? Pearson?  Mutual information?
+An approximation that adds noise to the pixels might help soften the
+posterior, but it does not necessarily fulfill the qualitative
+isomorphism we need.
 
 Our solution is to use an alternative rendering function,
 \begin{align*}
