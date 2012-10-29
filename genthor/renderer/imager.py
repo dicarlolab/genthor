@@ -71,7 +71,7 @@ class ImgRendererResizer(object):
             return self._dtype
         raise AttributeError(attr)
         
-    def __call__(self, m):
+    def __call__(self, m, remove=True):
         if isinstance(m['obj'], str):
             modelpath = os.path.join(self.model_root, 
                                  m['obj'])
@@ -94,9 +94,10 @@ class ImgRendererResizer(object):
                                               *args,
                           check_penetration=self.check_penetration)
         self.lbase.render_frame()
-        for objnode in objnodes:
-            objnode.removeNode()
-        bgnode.removeNode()
+        if remove:
+            for objnode in objnodes:
+                objnode.removeNode()
+            bgnode.removeNode()
         tex = self.output.getTexture()
         im = Image.fromarray(self.lbase.get_tex_image(tex))
         if im.mode != self.mode:
