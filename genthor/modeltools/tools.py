@@ -29,7 +29,15 @@ def resolve_bg_path(bgpth0):
     else:
         bgpth = bgpth0
     return bgpth
-    
+
+
+def resolve_texture_path(texpath):
+    if (texpath is not None) and not os.path.isfile(texpath):
+        texpath = os.path.join(gt.EGG_PATH, texpath)
+        if not os.path.isfile(texpath):
+            raise IOError("not a valid texture file: %d" % texpath)
+    return texpath
+        
 
 def resolve_model_path(modelpth0):
     """ Finds a valid model path. It will convert an .obj model to an
