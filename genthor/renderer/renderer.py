@@ -12,6 +12,7 @@ from pandac.PandaModules import CullFaceAttrib
 from pandac.PandaModules import NodePath
 from pandac.PandaModules import TexGenAttrib
 from pandac.PandaModules import TextureStage
+from pandac.PandaModules import Texture
 import sys
 import pdb
 
@@ -103,10 +104,15 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
     for mpth, scale, hpr, pos, t in zip(modelpaths, scales, hprs, poses, textures):
         objnode = tools.read_file(lbase.loader.loadModel, mpth)
         if t is not None: 
+            ts = TextureStage('ts')
+            ts.setMode(TextureStage.MReplace) 
             tex = tools.read_file(lbase.loader.loadTexture, t) 
-            objnode.setTexGen(TextureStage.getDefault(), TexGenAttrib.MWorldNormal)
+            objnode.setTexGen(ts, TexGenAttrib.MWorldNormal)
+            #tex.setWrapU(Texture.WMMirror)
+            #tex.setWrapV(Texture.WMMirror)
             #objnode.setTexProjector(TextureStage.getDefault(), scene, objnode)
             objnode.setTexture(tex, 1)
+            
         objnode.setScale(scale[0], scale[0], scale[0])
         objnode.setPos(pos[0], 0., pos[1])
         objnode.setHpr(hpr[2], hpr[1], hpr[0])
