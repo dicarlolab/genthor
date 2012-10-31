@@ -35,7 +35,7 @@ with multiple objects arranged in depth.
 We focus on simple 3D scenes, $s \in \mathcal{S}$, that consist of a
 background ($o_0$) that has a unique ID, $b$, and two spherical
 rotation coordinates, $(r_{x,0}, r_{y,0})$, plus a set of foreground
-objects ($n < 6$, for now) $(o_1,\dots,o_n)$, each of which belongs to
+objects ($n < 6$, for now) $(o_1,\dots,o_n)$. Each $o_i$ belongs to
 one category, $c_i$, has 3 position coordinates,
 $(p_{x,i},p_{y,i},p_{z,i})$, 3 scale coordinates,
 $(w_{x,i},w_{y,i},w_{z,i})$, and 3 rotation coordinates,
@@ -48,17 +48,18 @@ $\mathrm{R}(\cdot)$, plus some noise, $\omega$.
   o_i &= (c_i, x_i,y_i,z_i, w_{x,i},w_{y,i},w_{z,i}, r_{x,i},r_{y,i},r_{z,i});\ i > 0\\
   d &= \mathrm{R}(s) + \omega
 \end{align*}
-We assume all values are discrete.
+We assume all values are discrete (for now).
 
 \subsection*{Generative model}
-The generative model specifies our assumptions about how scenes
-generate images using prior and conditional probability distributions,
-$\Pr(S=s)$ and $\Pr(D=d | S=s)$, using a joint probability distribution: 
+Our assumed generative model specifies how scenes generate images
+using prior and conditional probability distributions, $\Pr(S=s)$ and
+$\Pr(D=d | S=s)$, to form a joint probability distribution that lets
+us draw $(S,D)$ samples and evaluate their probabilities,
 \[
 \Pr(D=d,S=s) = \Pr(D=d | S=s)\Pr(S=s)
 \]
-We abbreviate $\Pr(X=x)$ as $\Pr(X)$.  We can draw $(S,D)$ samples and
-evaluate their probabilities. A simple example is:
+We abbreviate $\Pr(X=x)$ as $\Pr(X)$.  Simple distribution assumptions
+are:
 \begin{align*}
   \Pr(S) &= \mathrm{Unif}(S)\\
   \Pr(D | S) &= \mathrm{Normal}(D; \mathrm{R}(S), \sigma_d)
@@ -79,9 +80,6 @@ because the latent space is large. Instead, we use proposals drawn
 from a feedforward discriminative model (Thor) to target high
 probability of the latent space.
 
-We approximate the unormalized posterior, $\Pr(S | D) \approx \pi(S;
-D)$.
-
 \subsubsection*{Thor (Dan -- fill in / correct)}
 Thor is a system for feedforward visual recognition, based on
 convolutional neural networks, that uses a sequences of nonlinear
@@ -96,11 +94,11 @@ true?? how does it learn?).
 
 Abstractly, Thor defines a map, $\mathrm{T}$, from images,
 $\mathcal{D}$ to a set of feature vectors, $\mathcal{F}$, and a map,
-$\tau$, from $\mathcal{F}$ to a subset of the latent scene state,
-$\mathcal{U}_j \subseteq \mathcal{S}$:
+$\tau_{\mathcal{P}}$, from $\mathcal{F}$ to the power set of $\mathcal{S}$,
+$\mathcal{P}(\mathcal{S})$:
 \begin{align*}
   \mathrm{T}(\cdot, \theta) &: \mathcal{D} \rightarrow \mathcal{F}\\
-  \tau(\cdot, \lambda) &: \mathcal{F} \rightarrow \mathcal{U}_j
+  \tau_{\mathcal{P}}(\cdot, \lambda) &: \mathcal{F} \rightarrow \mathcal{P}(\mathcal{S})
 \end{align*}
 where $\theta$ and $\lambda$ are parameters.
 
@@ -113,39 +111,28 @@ labels and predictions:
   f(S^{(k)}, \tau(\mathrm{T}(D^{(k)}, \theta), \lambda)
 \end{align*}
 
-Thor's $\tau$ can instead map to a measure, $e \in \mathcal{E}$, of
-the strength of evidence for members of $\mathcal{U}_j$ given
-$\mathcal{F}$,
+Alternatively, Thor's $\tau$ can instead map to a measure, $e \in
+\mathcal{E}$, of the strength of evidence for elements of $\mathcal{S}$, 
 \begin{align*}
-  \tau(\cdot, \lambda) &: \mathcal{F} \rightarrow \mathcal{E}\\
-  e &: \mathcal{U}_j \rightarrow \mathbb{R}^+
+  \tau_{\mathcal{E}}(\cdot, \lambda) &: \mathcal{F} \rightarrow \mathcal{E}\\
+  e &: \mathcal{S} \rightarrow \mathbb{R}^+
 \end{align*}
 which can then be transformed into an approximation of the posterior
 over $S$:
 \begin{align*}
-  \Pr(S|D) \approx \frac{e(S)}{\sum_{S \in \mathcal{U}_j} e(S)}
+  \Pr(S|D) \approx \frac{e(S)}{\sum_S e(S)}
 \end{align*}
-When $\mathcal{U}_j$ is a strict subset of $\mathcal{S}$, then for
-$\mathcal{B} = \mathcal{U}_j \setminus \mathcal{S}$, $\Pr(S|D)$ is the
-posterior with $\mathcal{B}$ marginalized out,
-\begin{align*}
-  \Pr(S|D) = \sum_{S \in \mathcal{B}} \Pr(S|D) \text{ ,}
-\end{align*}
-and when $\mathcal{U}_j$ contains only one type of element (e.g.,
-$r_{x,0}$), then $\Pr(S|D)$ is the marginal posterior distribution
-over that element.
-
 
 \subsubsection*{Rejection/importance sampling}
-Thor's predicted posterior marginals can be used as a proposal
+Thor's predicted approximate posterior can be used as a proposal
 distribution for a rejection or importance sampling
 algorithm. Specifically, the sampler's proposal distribution is,
 \begin{align*}
   \mathrm{Q}(S) =
-  \mathrm{Multinomial}\left(\frac{e(S)}{\sum_{\mathcal{U}_j} e(S)} , n
+  \mathrm{Multinomial}\left(\frac{e(S)}{\sum_S e(S)} , n
   \right)
 \end{align*}
-where $n$ is a set number of objects (which could also be predicted by
+where $n$ is the number of objects (which could also be predicted by
 Thor).
 
 For rejection sampling, the samples' acceptance probability is,
@@ -177,30 +164,24 @@ We seek an approximation to $\Pr(D|S)$ that will make inference
 easier.  Ideally, we'd find two distance measures,
 \begin{align*}
   \rho & : \mathcal{D} \times \mathcal{D} \rightarrow \mathbb{R}^+ \\
-  \rho' & : \mathcal{S} \times \mathcal{S} \rightarrow \mathbb{R}^+ \\
+  \rho' & : \mathcal{S} \times \mathcal{S} \rightarrow \mathbb{R}^+ 
 \end{align*}
 such that,
 \begin{align*}
   \mathrm{abs} \left( \rho(\mathrm{R}(S_i), \mathrm{R}(S_j)) -
     \rho'(S_i, S_j) \right) < \epsilon \text{ ,}
 \end{align*}
-for small $\epsilon$.
-
-[Check that 2011 Doucet paper for how they define their kernels]
+for small $\epsilon$.  Spearman rank correlation might be good.
 
 An approximation that adds noise to the pixels might help soften the
 posterior, but it does not necessarily fulfill the qualitative
 isomorphism we need.
 
-Our solution is to use an alternative rendering function,
+Our solution is to compose the Thor transform with the rendering
+function and then assume (Gaussian) noise on the output features,
 \begin{align*}
-  \mathrm{R}^* = \mathrm{R} \circ \mathrm{T} : \mathcal{S} \rightarrow \mathcal{D} \rightarrow \mathcal{F}\\
+  \mathrm{R}^* = \mathrm{R} \circ \mathrm{T} : \mathcal{S} \rightarrow \mathcal{F}\\
   \Pr(F | S) = \mathcal{N}(F;S, \sigma_F)
 \end{align*}
-
-Spearman rank correlation
-
-ABC?
-
 
 \end{document}
