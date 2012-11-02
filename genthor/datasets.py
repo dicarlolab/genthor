@@ -104,9 +104,11 @@ class GenerativeBase(DatasetBase):
     def get_image(self, preproc, config):
         if not isinstance(config['obj'], list):
             dname = [self.obj_home(config['obj'])]
+            cobj = [config['obj']]
         else:
             dname = [self.obj_home(co) for co in config['obj']]
-        for d, co in zip(dname, config['obj']):
+            cobj = config['obj']
+        for d, co in zip(dname, cobj):
             if not os.path.exists(d):
                 self.get_model(co)
         irr = self.imager.get_map(preproc, 'texture')
