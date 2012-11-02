@@ -71,20 +71,21 @@ class ImgRendererResizer(object):
             return self._dtype
         raise AttributeError(attr)
         
-    def __call__(self, m):
+    def __call__(self, m, remove=True):
         if isinstance(m['obj'], str):
             modelpath = os.path.join(self.model_root, 
                                  m['obj'])
             scale = [m['s']]
             pos = [m['ty'], m['tz']]
-            hpr = [m['ryz'], m['rxz'], m['rxy']]                                 
+            hpr = [m['ryz'], m['rxz'], m['rxy']]
+            texture = m.get('texture')
         else:
             assert hasattr(m['obj'], '__iter__')
             modelpath = [os.path.join(self.model_root, mn) for mn in m['obj']]      
             scale = [[ms] for ms in m['s']]
             pos = zip(m['ty'], m['tz'])
             hpr = zip(m['ryz'], m['rxz'], m['rxy'])
-            
+            texture = m.get('texture')
         bgpath = os.path.join(self.bg_root, m['bgname'])
 
         bgscale = [m['bgscale']]
@@ -92,11 +93,14 @@ class ImgRendererResizer(object):
         args = (modelpath, bgpath, scale, pos, hpr, bgscale, bghp)
         objnodes, bgnode = gr.construct_scene(self.lbase, 
                                               *args,
-                          check_penetration=self.check_penetration)
+                          check_penetration=self.check_penetration,
+                          texture=texture)
+
         self.lbase.render_frame()
-        for objnode in objnodes:
-            objnode.removeNode()
-        bgnode.removeNode()
+        if remove:
+            for objnode in objnodes:
+                objnode.removeNode()
+            bgnode.removeNode()
         tex = self.output.getTexture()
         im = Image.fromarray(self.lbase.get_tex_image(tex))
         if im.mode != self.mode:

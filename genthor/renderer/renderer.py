@@ -12,6 +12,7 @@ from pandac.PandaModules import CullFaceAttrib
 from pandac.PandaModules import NodePath
 from pandac.PandaModules import TexGenAttrib
 from pandac.PandaModules import TextureStage
+from pandac.PandaModules import Texture
 import sys
 import pdb
 
@@ -62,7 +63,9 @@ def setup_renderer(window_type, size=(256, 256)):
     return lbase, output
 
 
-def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr, bgscale, bghp,
+def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr, 
+                    bgscale, bghp,
+                    texture=None,
                     scene=None, check_penetration=False):
     """ Constructs the scene per the parameters. """
 
@@ -79,37 +82,51 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr, bgscale, bghp,
         scales = [scale]
         poses = [pos]
         hprs = [hpr]
+        textures = [texture]
     else:  
         modelpaths = modelpath
         scales = scale
         poses = pos
         hprs = hpr
+        textures = texture
+
     assert hasattr(modelpaths, '__iter__')
     assert hasattr(scales, '__iter__')
     assert hasattr(poses, '__iter__')
     assert hasattr(hprs, '__iter__')
-    assert len(modelpaths) == len(scales) == len(hprs) == len(poses)
+    assert hasattr(textures, '__iter__')
+    assert len(modelpaths) == len(scales) == len(hprs) == len(poses) == len(textures)
         
     modelpaths = map(mt.resolve_model_path, modelpaths)
     modelpaths = map(cm.autogen_egg, modelpaths)
+    textures = map(mt.resolve_texture_path, textures)
     objnodes = []
-    for mpth, scale, hpr, pos in zip(modelpaths, scales, hprs, poses):
+    for mpth, scale, hpr, pos, t in zip(modelpaths, scales, hprs, poses, textures):
         objnode = tools.read_file(lbase.loader.loadModel, mpth)
+        if t is not None: 
+            ts = TextureStage('ts')
+            ts.setMode(TextureStage.MReplace) 
+            tex = tools.read_file(lbase.loader.loadTexture, t) 
+            objnode.setTexGen(ts, TexGenAttrib.MWorldNormal)
+            #tex.setWrapU(Texture.WMMirror)
+            #tex.setWrapV(Texture.WMMirror)
+            #objnode.setTexProjector(TextureStage.getDefault(), scene, objnode)
+            objnode.setTexture(tex, 1)
+            
         objnode.setScale(scale[0], scale[0], scale[0])
-        #objnode.setPos(pos[0], pos[1], 0.)
         objnode.setPos(pos[0], 0., pos[1])
         objnode.setHpr(hpr[2], hpr[1], hpr[0])
         objnode.setTwoSided(1)
         objnodes.append(objnode)
 
     # Environment map
-    if bgpath and False:
-        envtex = tools.read_file(lbase.loader.loadTexture, bgpath)
-        # Map onto object
-        ts = TextureStage('env')
-        ts.setMode(TextureStage.MBlendColorScale)
-        objnode.setTexGen(ts, TexGenAttrib.MEyeSphereMap)
-        objnode.setTexture(ts, envtex)
+    #if bgpath and False:
+    #    envtex = tools.read_file(lbase.loader.loadTexture, bgpath)
+    #    # Map onto object
+    #    ts = TextureStage('env')
+    #    ts.setMode(TextureStage.MBlendColorScale)
+    #    objnode.setTexGen(ts, TexGenAttrib.MEyeSphereMap)
+    #    objnode.setTexture(ts, envtex)
 
     if bgpath:
         bgtex = tools.read_file(lbase.loader.loadTexture, bgpath)
