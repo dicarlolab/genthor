@@ -156,7 +156,7 @@ class CanonicalBase(GenerativeBase):
         else:
             raise Exception('Parameters must include "user" and "obj" fields')
 
-    def getCanonical(self,obj,user,version=0):
+    def getCanonical(self, obj, user, version=0):
         #Returns most recent database entry to match query, if it exists.
         return self.col.find_one({'obj' : obj, 'user' : user, 'version' : version})
 
