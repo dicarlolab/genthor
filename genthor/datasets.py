@@ -142,14 +142,19 @@ class CanonicalBase(GenerativeBase):
         self.col.ensure_index([('obj', pymongo.ASCENDING),
                                  ('user', pymongo.ASCENDING),
                                  ('version', pymongo.DESCENDING)],
-                                unique=True)
+                              unique=True)
 
     def saveCanonical(self, preproc, config):
-        #Checks to see that config contains necessary fields. Increments all prior versions of obj
-        #submitted by user by 1, and adds new database entry with version = 0. Returns rendered image.
+        """Checks to see that config contains necessary fields. 
+        Increments all prior versions of obj
+        submitted by user by 1, and adds new database entry with version = 0. 
+        Returns rendered image.
+        """
         keys_passed = config.keys()
         if ('user' in keys_passed) and ('obj' in keys_passed):
-            self.col.update({'obj' : config['obj'], 'user' : config['user']}, {'$inc' : {'version' : 1}}, multi=True, safe=True)
+            self.col.update({'obj': config['obj'],
+                             'user': config['user']},
+                             {'$inc': {'version': 1}}, multi=True, safe=True)
             config['version'] = 0
             self.col.insert(config, safe=True)
             return self.get_image(preproc, config)
@@ -158,12 +163,14 @@ class CanonicalBase(GenerativeBase):
 
     def getCanonical(self, obj, user, version=0):
         #Returns most recent database entry to match query, if it exists.
-        return self.col.find_one({'obj' : obj, 'user' : user, 'version' : version})
+        return self.col.find_one({'obj': obj,
+                                  'user': user,
+                                  'version': version})
 
 
 class GenerativeDatasetBase(GenerativeBase):
     """A class that generates randomly sampled metadata for single objects 
-    from a set of templates.   Datasets are implemented as subclasses of this 
+    from a set of templates.  Datasets are implemented as subclasses of this 
     class which define the "templates" attribute 
     as class attributes
     """
