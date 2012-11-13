@@ -3,6 +3,7 @@ import itertools
 import re
 import hashlib
 import cPickle
+import pymongo
 
 import lockfile
 import numpy as np
@@ -104,9 +105,11 @@ class GenerativeBase(DatasetBase):
     def get_image(self, preproc, config):
         if not isinstance(config['obj'], list):
             dname = [self.obj_home(config['obj'])]
+            cobj = [config['obj']]
         else:
             dname = [self.obj_home(co) for co in config['obj']]
-        for d, co in zip(dname, config['obj']):
+            cobj = config['obj']
+        for d, co in zip(dname, cobj):
             if not os.path.exists(d):
                 self.get_model(co)
         irr = self.imager.get_map(preproc, 'texture')
@@ -119,13 +122,55 @@ class GenerativeBase(DatasetBase):
         window_type = 'texture'
         size = preproc['size']
         irr = self.imager.get_map(preproc, window_type)
-        image_map = larray.lmap(irr, meta)
+        image_map = larray.lmap(irr, meta)	
         return larray.cache_memmap(image_map, name=name, basedir=cachedir)
+        
+        
+class CanonicalBase(GenerativeBase):
+	#Subclass to save canonical scale/pose in a database.
+	#Runs get_image and saves parameters in database each time.
+
+    def __init__(self, dbname='canonicalviews', colname='handset', hostname='localhost', port=27017):
+        GenerativeBase.__init__(self, data=None)
+        self.dbname = dbname
+        self.colname = colname
+        self.hostname = hostname
+        self.port = port
+        self.conn = pymongo.Connection(port=self.port, host=self.hostname) #Open connection
+        self.db = self.conn[self.dbname]
+        self.col = self.db[self.colname]
+        self.col.ensure_index([('obj', pymongo.ASCENDING),
+                                 ('user', pymongo.ASCENDING),
+                                 ('version', pymongo.DESCENDING)],
+                              unique=True)
+
+    def saveCanonical(self, preproc, config):
+        """Checks to see that config contains necessary fields. 
+        Increments all prior versions of obj
+        submitted by user by 1, and adds new database entry with version = 0. 
+        Returns rendered image.
+        """
+        keys_passed = config.keys()
+        if ('user' in keys_passed) and ('obj' in keys_passed):
+            self.col.update({'obj': config['obj'],
+                             'user': config['user']},
+                             {'$inc': {'version': 1}}, multi=True, safe=True)
+            config['version'] = 0
+            self.col.insert(config, safe=True)
+            return self.get_image(preproc, config)
+        else:
+            raise Exception('Parameters must include "user" and "obj" fields')
+
+    def getCanonical(self, obj, user, version=0):
+        #Returns most recent database entry to match query, if it exists.
+        return self.col.find_one({'obj': obj,
+                                  'user': user,
+                                  'version': version})
 
 
 class GenerativeDatasetBase(GenerativeBase):
     """A class that generates randomly sampled metadata for single objects 
-    from a set of templates.   Datasets are implemented as subclasses of this 
+    from a set of templates.  Datasets are implemented as subclasses of this 
     class which define the "templates" attribute 
     as class attributes
     """
