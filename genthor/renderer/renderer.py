@@ -90,6 +90,15 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
         hprs = hpr
         textures = texture
 
+    texmodes = []
+    for _i, _t in enumerate(textures):
+        if isinstance(_t, tuple):
+            texfile, texmode = _t
+            texmodes.append(texmode)
+            textures[_i] = texfile
+        else:
+            texmodes.append(TexGenAttrib.MWorldNormal)    
+
     assert hasattr(modelpaths, '__iter__')
     assert hasattr(scales, '__iter__')
     assert hasattr(poses, '__iter__')
@@ -101,17 +110,15 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
     modelpaths = map(cm.autogen_egg, modelpaths)
     textures = map(mt.resolve_texture_path, textures)
     objnodes = []
-    for mpth, scale, hpr, pos, t in zip(modelpaths, scales, hprs, poses, textures):
+    for mpth, scale, hpr, pos, t, tm in zip(modelpaths, scales, hprs, poses, textures, texmodes):
         objnode = tools.read_file(lbase.loader.loadModel, mpth)
         if t is not None: 
-            ts = TextureStage('ts')
+            #ts = TextureStage('ts')
+            ts = TextureStage.get_default()
             ts.setMode(TextureStage.MReplace) 
             tex = tools.read_file(lbase.loader.loadTexture, t) 
-            objnode.setTexGen(ts, TexGenAttrib.MWorldNormal)
-            #tex.setWrapU(Texture.WMMirror)
-            #tex.setWrapV(Texture.WMMirror)
-            #objnode.setTexProjector(TextureStage.getDefault(), scene, objnode)
-            objnode.setTexture(tex, 1)
+            objnode.setTexGen(ts, tm)
+            objnode.setTexture(tex, 6)
             
         objnode.setScale(scale[0], scale[0], scale[0])
         objnode.setPos(pos[0], 0., pos[1])
