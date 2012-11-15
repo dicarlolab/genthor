@@ -211,7 +211,9 @@ class GenerativeDatasetBase(GenerativeBase):
                            float(l['tz']),
                            float(l['s']),
                            tname,
-                           l['id'])
+                           l['id'],
+                           l.get('texture'),
+                           l.get('texture_mode'))
                     latents.append(rec)
         meta = tb.tabarray(records=latents, names = ['bgname',
                                                      'bgphi',
@@ -226,7 +228,9 @@ class GenerativeDatasetBase(GenerativeBase):
                                                      'tz',
                                                      's',
                                                      'tname',
-                                                     'id'])
+                                                     'id', 
+                                                     'texture',
+                                                     'texture_mode'])
         return meta
         
         
@@ -716,7 +720,8 @@ class GenerativeDataset5NewSurfaces(GenerativeDataset4):
                      'ryz': uniform(-180., 180.),
                      'rxy': uniform(-180., 180.),
                      'rxz': uniform(-180., 180.),
-                     'texture': choice([None, (choice(model_info.SURFACES), choice([4, 6]))])
+                     'texture': choice(model_info.SURFACES),
+                     'texture_mode': choice([4, 6])
                      }
                   }]   
 

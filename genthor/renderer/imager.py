@@ -78,14 +78,13 @@ class ImgRendererResizer(object):
             scale = [m['s']]
             pos = [m['ty'], m['tz']]
             hpr = [m['ryz'], m['rxz'], m['rxy']]
-            texture = m.get('texture')
         else:
             assert hasattr(m['obj'], '__iter__')
             modelpath = [os.path.join(self.model_root, mn) for mn in m['obj']]      
             scale = [[ms] for ms in m['s']]
             pos = zip(m['ty'], m['tz'])
             hpr = zip(m['ryz'], m['rxz'], m['rxy'])
-            texture = m.get('texture')
+        texture = (m['texture'], m['texture_mode'])
         bgpath = os.path.join(self.bg_root, m['bgname'])
 
         bgscale = [m['bgscale']]
