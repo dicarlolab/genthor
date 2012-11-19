@@ -3,6 +3,7 @@ import itertools
 import re
 import hashlib
 import cPickle
+import copy
 import pymongo
 
 import lockfile
@@ -120,6 +121,8 @@ class GenerativeBase(DatasetBase):
         cachedir = self.cache_home()
         meta = self.meta
         window_type = 'texture'
+        preproc = copy.deepcopy(preproc)
+        preproc['size'] = tuple(preproc['size'])
         size = preproc['size']
         irr = self.imager.get_map(preproc, window_type)
         image_map = larray.lmap(irr, meta)	
