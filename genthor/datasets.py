@@ -7,6 +7,7 @@ import copy
 import pymongo
 import json
 import urllib
+import functools
 
 import lockfile
 import numpy as np
@@ -105,12 +106,89 @@ class DatasetBase(object):
         
     @property
     def human_data(self):
-        hd = copy.deepcopy(self.HUMAN_DATA)
-        for _i, hde in enumerate(hd):
-            hd[_i] = (self.human_home(hde[0].split('/')[-1]),) + hde[1:]
+ 
         if not hasattr(self, '_human_data'):
+            hd = copy.deepcopy(self.HUMAN_DATA)
+            for _i, hde in enumerate(hd):
+                hd[_i] = (self.human_home(hde[0].split('/')[-1]),) + hde[1:]        
+            self.fetch()
             self._human_data = parse_human_data(hd)
-        return self._human_data
+        return get_matching_tasks(self.meta, self._human_data, taskq)
+
+    def human_confusion_mat_by_task(self, task):
+        hds = self.human_data(task)
+        assert len(hds) == 1
+        hdn, hd = hds[0]
+        hdd = hd['data']
+        hdt = hd['task']
+
+        meta = self.meta
+        fns = np.array([fn.split('/')[-1] for fn in meta['filename']])
+        st = fns.argsort()
+        meta = meta[st]
+        fns = fns[st]
+        labelfunc = get_labelfunc_from_config(task['labelfunc'])
+        labels_all, _ = labelfunc(meta)
+
+        train_q = get_lambda_from_query_config(hdt['train_q'])
+        inds_train = np.array(map(train_q, meta)).astype(np.bool)
+        uniques = np.unique(labels_all[inds_train])
+
+        cms = []
+        for rec in hdd:
+            ss = rec['StimShown']
+            response = rec['Response']
+            fns0 = np.array([fn.split('/')[-1] for fn in ss])
+            inds = np.searchsorted(fns, fns0)
+            #actual = labels_all[inds]
+            actual = labels_all[inds][:len(response)]
+            #print(len(actual), len(response), hdn)
+            cms.append([[((actual == v1) & (response == v2)).sum() for v1 in uniques] for v2 in uniques])
+
+        #cms.shape = (actual, grnd truth, subjects)
+        cms = np.array(cms).T
+
+
+def get_matching_tasks(meta, taskdict, taskq):
+    matchlist = []
+    for tn, tdata in taskdict.items():
+        tspec = tdata['task']
+        if taskq.has_key('split_by') and (tspec['split_by'] != taskq['split_by']):
+            continue
+        if taskq.has_key('labelfunc') and (tspec['labelfunc'] != taskq['labelfunc']):
+            continue
+        if taskq.has_key('train_q') and (tspec['train_q'] != taskq['train_q']):
+            continue
+        if taskq.has_key('test_q') and (tspec['test_q'] != taskq['test_q']):
+            continue
+        matchlist.append((tn, tdata))
+    return matchlist
+    
+
+# copied from new_new_bandits.py
+# TODO: don't modify!! (consider using frozendict in the future)
+LABEL_REGISTRY = dict([(k, functools.partial(kfunc, k))
+                for k in ['obj', 'category', 'ty','tz','s', 'ryz', 'rxy', 'rxz']]
+                  + [(k + '_binary', functools.partial(kfuncb, k))
+                for k in ['obj', 'category']]
+                  )
+
+
+def get_labelfunc_from_config(q):
+    """turns a dictionary into a function that returns a label
+    for each record of a metadata table
+    """
+    return LABEL_REGISTRY[q]
+
+
+def get_lambda_from_query_config(q):
+    """turns a dictionary specificying a mongo query (basically)
+    into a lambda for subsetting a data table
+
+    TODO: implement OR or not, etc.
+    See: https://github.com/yamins81/devthor/commit/367d9e0714d5d89dc08c4e37d653d716c87b64be#commitcomment-1657582
+    """
+    return lambda x:  all([x[k] in v for k, v in q.items()])   # per Dan's suggestion..
 
 
 class GenerativeBase(DatasetBase):
