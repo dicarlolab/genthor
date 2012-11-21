@@ -104,8 +104,7 @@ class DatasetBase(object):
     def get_subset_splits(self, *args, **kwargs):
         return get_subset_splits(self.meta, *args, **kwargs) 
         
-    @property
-    def human_data(self):
+    def human_data(self, taskq):
  
         if not hasattr(self, '_human_data'):
             hd = copy.deepcopy(self.HUMAN_DATA)
@@ -123,7 +122,7 @@ class DatasetBase(object):
         hdt = hd['task']
 
         meta = self.meta
-        fns = np.array([fn.split('/')[-1] for fn in meta['filename']])
+        fns = np.array([fn.split('/')[-1] for fn in meta['id']])
         st = fns.argsort()
         meta = meta[st]
         fns = fns[st]
@@ -138,7 +137,7 @@ class DatasetBase(object):
         for rec in hdd:
             ss = rec['StimShown']
             response = rec['Response']
-            fns0 = np.array([fn.split('/')[-1] for fn in ss])
+            fns0 = np.array([fn.split('/')[-1].split('.')[0] for fn in ss])
             inds = np.searchsorted(fns, fns0)
             #actual = labels_all[inds]
             actual = labels_all[inds][:len(response)]
@@ -147,6 +146,8 @@ class DatasetBase(object):
 
         #cms.shape = (actual, grnd truth, subjects)
         cms = np.array(cms).T
+
+        return cms, uniques
 
 
 def get_matching_tasks(meta, taskdict, taskq):
@@ -166,7 +167,19 @@ def get_matching_tasks(meta, taskdict, taskq):
     
 
 # copied from new_new_bandits.py
-# TODO: don't modify!! (consider using frozendict in the future)
+def kfunc(k, x):
+    U = np.sort(np.unique(x[k]))
+    return x[k], U   # U is added for consistency with kfuncb
+
+
+# copied from new_new_bandits.py
+def kfuncb(k, x, U=None):
+    if U is None:
+        U = np.sort(np.unique(x[k]))
+    else:
+        assert set(U) == set(np.sort(np.unique(x[k])))
+    return np.array([x[k] == u for u in U]).T, U
+
 LABEL_REGISTRY = dict([(k, functools.partial(kfunc, k))
                 for k in ['obj', 'category', 'ty','tz','s', 'ryz', 'rxy', 'rxz']]
                   + [(k + '_binary', functools.partial(kfuncb, k))
