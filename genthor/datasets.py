@@ -5,6 +5,8 @@ import hashlib
 import cPickle
 import copy
 import pymongo
+import json
+import urllib
 
 import lockfile
 import numpy as np
@@ -22,7 +24,7 @@ import pyll.stochastic as stochastic
 
 import skdata.larray as larray
 from skdata.data_home import get_data_home
-from skdata.utils.download_and_extract import extract, download
+from skdata.utils.download_and_extract import extract, download, download_boto
 
 import genthor as gt
 import genthor.renderer.renderer as gr
@@ -40,6 +42,7 @@ class DatasetBase(object):
     OBJ_PATH = gt.OBJ_PATH
     BACKGROUND_PATH = gt.BACKGROUND_PATH
     CACHE_PATH = gt.CACHE_PATH
+    HUMAN_PATH = gt.HUMAN_PATH
     HUMAN_DATA = []
 
     def resource_home(self, *suffix_paths):
@@ -70,6 +73,7 @@ class DatasetBase(object):
             os.makedirs(self.human_home())            
         for x, n, task, sha1 in self.HUMAN_DATA:
             filename = self.human_home(x.split('/')[-1])
+            print(filename)
             if not os.path.exists(filename):
                 url = 'http://dicarlocox-datasets.s3.amazonaws.com/' + x
                 print ('downloading %s' % url)
@@ -101,8 +105,11 @@ class DatasetBase(object):
         
     @property
     def human_data(self):
+        hd = copy.deepcopy(self.HUMAN_DATA)
+        for _i, hde in enumerate(hd):
+            hd[_i] = (self.human_home(hde[0].split('/')[-1]),) + hde[1:]
         if not hasattr(self, '_human_data'):
-            self._human_data = parse_human_data(self.HUMAN_DATA)
+            self._human_data = parse_human_data(hd)
         return self._human_data
 
 
@@ -1298,6 +1305,7 @@ def parse_raw_human_data(resultfile, ldict, blocks):
                   
 def parse_human_data(human_data):
     blocks = [('', (None, None))]
+    data = {}
     for (resultfile, name, task, sha1) in human_data:
         R, fields, records = parse_raw_human_data(resultfile, None, blocks)
         data[name] = {'task': task,
