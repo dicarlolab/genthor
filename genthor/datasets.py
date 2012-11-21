@@ -40,7 +40,8 @@ class DatasetBase(object):
     OBJ_PATH = gt.OBJ_PATH
     BACKGROUND_PATH = gt.BACKGROUND_PATH
     CACHE_PATH = gt.CACHE_PATH
-    
+    HUMAN_DATA = []
+
     def resource_home(self, *suffix_paths):
         return os.path.join(self.RESOURCE_PATH, *suffix_paths)
 
@@ -49,6 +50,9 @@ class DatasetBase(object):
 
     def cache_home(self, *suffix_paths):
         return os.path.join(self.CACHE_PATH, *suffix_paths)
+        
+    def human_home(self, *suffix_paths):
+        return os.path.join(self.HUMAN_PATH, *suffix_paths)
 
     def fetch(self):
         """Download and extract the dataset."""
@@ -58,11 +62,18 @@ class DatasetBase(object):
         cachedir = self.cache_home()
         if not os.path.exists(cachedir):
             os.makedirs(cachedir)      
-
         lock = lockfile.FileLock(resource_home)
         with lock:
             tools.download_s3_directory(gt.s3_resource_bucket,
                                         resource_home)
+        if not os.path.exists(self.human_home()):
+            os.makedirs(self.human_home())            
+        for x, n, task, sha1 in self.HUMAN_DATA:
+            filename = self.human_home(x.split('/')[-1])
+            if not os.path.exists(filename):
+                url = 'http://dicarlocox-datasets.s3.amazonaws.com/' + x
+                print ('downloading %s' % url)
+                download_boto(url, (None, ), filename, sha1=sha1)
 
     def get_model(self, name):
         dirn = self.obj_home(name)
@@ -87,6 +98,12 @@ class DatasetBase(object):
 
     def get_subset_splits(self, *args, **kwargs):
         return get_subset_splits(self.meta, *args, **kwargs) 
+        
+    @property
+    def human_data(self):
+        if not hasattr(self, '_human_data'):
+            self._human_data = parse_human_data(self.HUMAN_DATA)
+        return self._human_data
 
 
 class GenerativeBase(DatasetBase):
@@ -699,6 +716,12 @@ class GenerativeDataset5(GenerativeDataset4):
                      }
                   }]   
 
+    HUMAN_DATA = [('dataset5_category.json', 'category', {'labelfunc': 'category',
+                         'split_by': 'obj',
+                         'test_q': {},
+                         'train_q': {}},
+                    'e34830556a6f883de469e79106221945d6fc3446')]
+                  
 
 class GenerativeDataset5NewSurfaces(GenerativeDataset4):   
     models = model_info.MODEL_SUBSET_5
@@ -727,6 +750,11 @@ class GenerativeDataset5NewSurfaces(GenerativeDataset4):
                      'texture_mode': choice([4, 6])
                      }
                   }]   
+
+    HUMAN_DATA = [('dataset5NewSurfaces_category.json', 'category', {'labelfunc': 'category',
+                         'split_by': 'obj',
+                         'test_q': {},
+                         'train_q': {}}, '17a417e2bb41789100b70c17816d2835d7156c9a')]
 
 
 class GenerativeDatasetLoTrans(GenerativeDataset4):   
@@ -1239,3 +1267,40 @@ class GenerativeDatasetLowres(GenerativeDatasetBase):
                      'rxz': uniform(-45., 45.),
                      }
                   }]
+                  
+
+def parse_raw_human_data(resultfile, ldict, blocks):
+    X = open(resultfile, 'rU').read().strip('\n').split('\n')
+    T = [x.split('\t') for x in X]
+    fields = T[0]
+
+    records = []
+    R = []
+    for t in T[1:]:
+        r = [json.loads(tt) if ind != 4 else tt for ind, tt in enumerate(t[:-1]) ]
+        Z = json.loads(t[-1].replace('""','"')[1:-1])[0]
+        ss = map(urllib.url2pathname, map(str, Z['StimShown']))
+        if ldict:
+            resp = np.array([ldict[rs] for rs in Z['Response']])
+        else:
+            resp = np.array(Z['Response'])
+        Z['blocks'] = {}
+        for bn, binds in blocks:
+            Z['blocks'][bn] = {}
+            Z['blocks'][bn]['StimShown'] = ss[binds[0]: binds[1]]
+            Z['blocks'][bn]['Response'] = resp[binds[0]: binds[1]]
+        r.append(Z)
+        R.append(Z)
+        records.append(r)
+
+    return R, fields, records
+                  
+                  
+def parse_human_data(human_data):
+    blocks = [('', (None, None))]
+    for (resultfile, name, task, sha1) in human_data:
+        R, fields, records = parse_raw_human_data(resultfile, None, blocks)
+        data[name] = {'task': task,
+                      'data': [r['blocks'][''] for r in R]}
+                
+    return data
