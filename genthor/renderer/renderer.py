@@ -121,7 +121,7 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
             objnode.setTexture(tex, 6)
             
         objnode.setScale(scale[0], scale[0], scale[0])
-        objnode.setPos(pos[0], 0., pos[1])
+        objnode.setPos(pos[0], -pos[2], pos[1])
         objnode.setHpr(hpr[2], hpr[1], hpr[0])
         objnode.setTwoSided(1)
         objnodes.append(objnode)
