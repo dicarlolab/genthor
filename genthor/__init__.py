@@ -26,6 +26,7 @@ EGG_PATH = os.path.join(RESOURCE_PATH, "eggs")
 # .bam model root directory
 BAM_PATH = os.path.join(RESOURCE_PATH, "bams")
 HUMAN_PATH = os.path.join(RESOURCE_PATH, "human_data")
+TEXTURE_PATH = os.path.join(RESOURCE_PATH, "textures")
 
 def get_canonical_view(m):
     v = json.loads(urllib.urlopen(MODEL_URL + 'query={"id":"' + m + '"}&fields=["canonical_view"]').read())[0]

@@ -45,7 +45,7 @@ class DatasetBase(object):
     CACHE_PATH = gt.CACHE_PATH
     HUMAN_PATH = gt.HUMAN_PATH
     HUMAN_DATA = []
-
+    
     def resource_home(self, *suffix_paths):
         return os.path.join(self.RESOURCE_PATH, *suffix_paths)
 

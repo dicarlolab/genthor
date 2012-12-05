@@ -33,10 +33,14 @@ def resolve_bg_path(bgpth0):
 
 def resolve_texture_path(texpath):
     if (texpath is not None) and not os.path.isfile(texpath):
-        texpath = os.path.join(gt.EGG_PATH, texpath)
-        if not os.path.isfile(texpath):
-            raise IOError("not a valid texture file: %d" % texpath)
-    return texpath
+        ntexpath = os.path.join(gt.EGG_PATH, texpath)
+        if not os.path.isfile(ntexpath):
+            ntexpath = os.path.join(gt.TEXTURE_PATH, texpath)
+            if not os.path.isfile(ntexpath)
+                raise IOError("not a valid texture file: %d" % texpath)
+    else:
+        ntexpath = texpath
+    return ntexpath
         
 
 def resolve_model_path(modelpth0):
