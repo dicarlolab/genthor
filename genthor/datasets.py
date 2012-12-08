@@ -210,13 +210,29 @@ class GenerativeBase(DatasetBase):
 
     check_penetration = False
 
-    def __init__(self, data=None):
+    def __init__(self, data=None, dbname='scaletest', colname='autoset',
+                       hostname='localhost', port=27017, 
+                       canonical_user='esolomon-auto'
+                       use_canonical=False):
         self.data = data
         self.specific_name = self.__class__.__name__ + '_' + get_image_id(data)
         model_root = self.OBJ_PATH
         bg_root = self.BACKGROUND_PATH
         self.imager = Imager(model_root, bg_root, 
                              check_penetration=self.check_penetration)
+    
+        self.dbname = dbname
+        self.colname = colname
+        self.hostname = hostname
+        self.port = port
+        self.use_canonical = use_canonical
+        self.conn = pymongo.Connection(port=self.port, host=self.hostname) #Open connection
+        self.db = self.conn[self.dbname]
+        self.col = self.db[self.colname]
+        self.col.ensure_index([('obj', pymongo.ASCENDING),
+                                 ('user', pymongo.ASCENDING),
+                                 ('version', pymongo.DESCENDING)],
+                              unique=True)
     
     def get_image(self, preproc, config):
         if not isinstance(config['obj'], list):
@@ -242,6 +258,30 @@ class GenerativeBase(DatasetBase):
         irr = self.imager.get_map(preproc, window_type)
         image_map = larray.lmap(irr, meta)	
         return larray.cache_memmap(image_map, name=name, basedir=cachedir)
+
+    def saveCanonical(self, preproc, config):
+        """Checks to see that config contains necessary fields. 
+        Increments all prior versions of obj
+        submitted by user by 1, and adds new database entry with version = 0. 
+        Returns rendered image.
+        """
+        keys_passed = config.keys()
+        if ('user' in keys_passed) and ('obj' in keys_passed):
+            self.col.update({'obj': config['obj'],
+                             'user': config['user']},
+                             {'$inc': {'version': 1}}, multi=True, safe=True)
+            config['version'] = 0
+            self.col.insert(config, safe=True)
+            return self.get_image(preproc, config)
+        else:
+            raise Exception('Parameters must include "user" and "obj" fields')
+
+    def getCanonical(self, obj, user, version=0):
+        #Returns most recent database entry to match query, if it exists.
+        return self.col.find_one({'obj': obj,
+                                  'user': user,
+                                  'version': version})
+
         
         
 class CanonicalBase(GenerativeBase):
@@ -298,7 +338,8 @@ class GenerativeDatasetBase(GenerativeBase):
         #generate params 
         models = self.models
         templates = self.templates
-
+        use_canonical = self.use_canonical
+        
         latents = []
         rng = np.random.RandomState(seed=0)
         model_categories = self.model_categories
@@ -351,6 +392,12 @@ class GenerativeDatasetBase(GenerativeBase):
                                                      'id', 
                                                      'texture',
                                                      'texture_mode'])
+        if use_canonical:
+            objs = np.unique(meta['obj'])
+            cscl = dict([(obj, self.get_canonical(obj, self.canonical_user)['s']) for obj in objs])
+            for obj in objs:
+                meta['s'][meta['obj'] == obj] *= cscl[obj]
+            
         return meta
         
         
@@ -855,6 +902,65 @@ class GenerativeDataset5NewSurfaces(GenerativeDataset4):
                          'split_by': 'obj',
                          'test_q': {},
                          'train_q': {}}, '17a417e2bb41789100b70c17816d2835d7156c9a')]
+
+
+class GenerativeDatasetCategories2(GenerativeDataset4):   
+    models = list(itertools.chain(*model_info.MODEL_CATEGORIES2.values()))
+    bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
+                       'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
+                       'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
+                       'INTERIOR_07ST.jpg', 'INTERIOR_06ST.jpg',
+                       'INTERIOR_05ST.jpg']
+    good_backgrounds = [_b for _b in model_info.BACKGROUNDS
+                                                  if _b not in bad_backgrounds]
+
+    templates = [
+                 {'n_ex_per_model': 250,
+                  'name': 'var1', 
+                  'template': {'bgname': choice(good_backgrounds),
+                     'bgscale': 1.,
+                     'bgpsi': 0,
+                     'bgphi': uniform(-180.0, 180.),
+                     's': uniform(2./3, 3),
+                     'ty': uniform(-0.5, 0.5),
+                     'tz': uniform(-0.5, 0.5),
+                     'ryz': uniform(-180., 180.),
+                     'rxy': uniform(-180., 180.),
+                     'rxz': uniform(-180., 180.),
+                     'texture': None,
+                     'texture_mode': None
+                     }
+                  }]   
+
+
+class GenerativeDatasetCategories2SurfaceReplacement(GenerativeDataset4):   
+    models = list(itertools.chain(*model_info.MODEL_CATEGORIES2.values()))
+    bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
+                       'INTERIOR_11ST.jpg', 'INTERIOR_10ST.jpg',
+                       'INTERIOR_09ST.jpg', 'INTERIOR_08ST.jpg',
+                       'INTERIOR_07ST.jpg', 'INTERIOR_06ST.jpg',
+                       'INTERIOR_05ST.jpg']
+    good_backgrounds = [_b for _b in model_info.BACKGROUNDS
+                                                  if _b not in bad_backgrounds]
+
+    templates = [
+                 {'n_ex_per_model': 250,
+                  'name': 'var1', 
+                  'template': {'bgname': choice(good_backgrounds),
+                     'bgscale': 1.,
+                     'bgpsi': 0,
+                     'bgphi': uniform(-180.0, 180.),
+                     's': uniform(2./3, 3),
+                     'ty': uniform(-0.5, 0.5),
+                     'tz': uniform(-0.5, 0.5),
+                     'ryz': uniform(-180., 180.),
+                     'rxy': uniform(-180., 180.),
+                     'rxz': uniform(-180., 180.),
+                     'texture': choice(model_info.SURFACES2),
+                     'texture_mode': 4
+                     }
+                  }]   
+
 
 
 class GenerativeDatasetLoTrans(GenerativeDataset4):   
