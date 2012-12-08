@@ -36,7 +36,7 @@ def resolve_texture_path(texpath):
         ntexpath = os.path.join(gt.EGG_PATH, texpath)
         if not os.path.isfile(ntexpath):
             ntexpath = os.path.join(gt.TEXTURE_PATH, texpath)
-            if not os.path.isfile(ntexpath)
+            if not os.path.isfile(ntexpath):
                 raise IOError("not a valid texture file: %d" % texpath)
     else:
         ntexpath = texpath

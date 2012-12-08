@@ -104,7 +104,7 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
     assert hasattr(poses, '__iter__')
     assert hasattr(hprs, '__iter__')
     assert hasattr(textures, '__iter__')
-    assert len(modelpaths) == len(scales) == len(hprs) == len(poses) == len(textures)
+    assert len(modelpaths) == len(scales) == len(hprs) == len(poses) == len(textures), (len(modelpaths), len(scales), len(hprs), len(poses), len(textures))
         
     modelpaths = map(mt.resolve_model_path, modelpaths)
     modelpaths = map(cm.autogen_egg, modelpaths)
