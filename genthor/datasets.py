@@ -93,7 +93,14 @@ class DatasetBase(object):
         else:
             raise ValueError("didn't find key %s" % name)  
         #tools.upload_s3_directory(gt.s3_resource_bucket, dir)
-        
+
+    def get_models(self):
+        objs = self.objects
+        for o in objs:
+            pth = self.obj_home(o)
+            if not os.path.exists(pth):
+                self.get_model(o)
+
     @property
     def meta(self):
         if not hasattr(self, '_meta'):
@@ -101,6 +108,18 @@ class DatasetBase(object):
             self._meta = self._get_meta()
         return self._meta
 
+    @property
+    def objects(self):
+        objs = self.meta['obj'].tolist()
+        objs = set(objs)
+        uobjs = []
+        for o in objs:
+            if isstring(o):
+                uobjs.append(o)
+            else:
+                uobjs.extend(o)
+        return uobjs
+                
     def get_subset_splits(self, *args, **kwargs):
         return get_subset_splits(self.meta, *args, **kwargs) 
         
@@ -210,10 +229,10 @@ class GenerativeBase(DatasetBase):
 
     check_penetration = False
 
-    def __init__(self, data=None, dbname='scaletest', colname='autoset',
-                       hostname='localhost', port=27017, 
-                       canonical_user='esolomon-auto'
-                       use_canonical=False):
+    def __init__(self, data=None, **kwargs):
+        if data is None:
+            data = {}
+        data.update(kwargs)
         self.data = data
         self.specific_name = self.__class__.__name__ + '_' + get_image_id(data)
         model_root = self.OBJ_PATH
@@ -221,11 +240,12 @@ class GenerativeBase(DatasetBase):
         self.imager = Imager(model_root, bg_root, 
                              check_penetration=self.check_penetration)
     
-        self.dbname = dbname
-        self.colname = colname
-        self.hostname = hostname
-        self.port = port
-        self.use_canonical = use_canonical
+        self.dbname = kwargs['dbname']
+        self.colname = kwargs['colname']
+        self.hostname = kwargs['hostname']
+        self.port = kwargs['port']
+        self.use_canonical = kwargs['use_canonical']
+        self.canonical_user = kwargs['canonical_user']
         self.conn = pymongo.Connection(port=self.port, host=self.hostname) #Open connection
         self.db = self.conn[self.dbname]
         self.col = self.db[self.colname]
@@ -247,7 +267,9 @@ class GenerativeBase(DatasetBase):
         irr = self.imager.get_map(preproc, 'texture')
         return irr(config)
 
-    def get_images(self, preproc):
+    def get_images(self, preproc, get_models=False):
+        if get_models:
+            self.get_models()
         name = self.specific_name + '_' + get_image_id(preproc)
         cachedir = self.cache_home()
         meta = self.meta
@@ -333,6 +355,7 @@ class GenerativeDatasetBase(GenerativeBase):
     as class attributes
     """
     model_categories = dict_inverse(model_info.MODEL_CATEGORIES)
+    model_categories.update(dict_inverse(model_info.MODEL_CATEGORIES2))
     
     def _get_meta(self):
         #generate params 
@@ -394,10 +417,11 @@ class GenerativeDatasetBase(GenerativeBase):
                                                      'texture_mode'])
         if use_canonical:
             objs = np.unique(meta['obj'])
-            cscl = dict([(obj, self.get_canonical(obj, self.canonical_user)['s']) for obj in objs])
+            cscl = dict([(obj, self.getCanonical(obj, self.canonical_user)) for obj in objs])
             for obj in objs:
-                meta['s'][meta['obj'] == obj] *= cscl[obj]
-            
+                if cscl[obj] is not None:
+                    meta['s'][meta['obj'] == obj] *= cscl[obj]['s']
+                
         return meta
         
         
@@ -818,8 +842,8 @@ class GenerativeDataset4(GenerativeDatasetBase):
                      }
                   }]
     
-    def __init__(self, data=None):
-        GenerativeDatasetBase.__init__(self, data)
+    def __init__(self, data=None, **kwargs):
+        GenerativeDatasetBase.__init__(self, data, **kwargs)
         if self.data and self.data.get('bias_file') is not None:
             froot = os.environ.get('FILEROOT','')
             bias = cPickle.load(open(os.path.join(froot, self.data['bias_file'])))
@@ -944,7 +968,7 @@ class GenerativeDatasetCategories2SurfaceReplacement(GenerativeDataset4):
                                                   if _b not in bad_backgrounds]
 
     templates = [
-                 {'n_ex_per_model': 250,
+                 {'n_ex_per_model': 1,
                   'name': 'var1', 
                   'template': {'bgname': choice(good_backgrounds),
                      'bgscale': 1.,
@@ -1267,6 +1291,7 @@ class GPGenerativeDatasetBase(GenerativeDatasetBase):
         template = self.template
 
         model_categories = dict_inverse(model_info.MODEL_CATEGORIES)
+        model_categories.update(dict_inverse(model_info.MODEL_CATEGORIES2))
         
         import sklearn.gaussian_process as gaussian_process 
         
@@ -1511,3 +1536,12 @@ def parse_human_data(human_data):
                       'data': [r['blocks'][''] for r in R]}
                 
     return data
+
+
+def isstring(x):
+    try:
+        x + ''
+    except TypeError:
+        return False
+    else:
+        return True
