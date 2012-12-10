@@ -240,19 +240,22 @@ class GenerativeBase(DatasetBase):
         self.imager = Imager(model_root, bg_root, 
                              check_penetration=self.check_penetration)
     
-        self.dbname = kwargs['dbname']
-        self.colname = kwargs['colname']
-        self.hostname = kwargs['hostname']
-        self.port = kwargs['port']
-        self.use_canonical = kwargs['use_canonical']
-        self.canonical_user = kwargs['canonical_user']
-        self.conn = pymongo.Connection(port=self.port, host=self.hostname) #Open connection
-        self.db = self.conn[self.dbname]
-        self.col = self.db[self.colname]
-        self.col.ensure_index([('obj', pymongo.ASCENDING),
-                                 ('user', pymongo.ASCENDING),
-                                 ('version', pymongo.DESCENDING)],
-                              unique=True)
+        if 'dbname' in kwargs:
+            self.dbname = kwargs['dbname']
+            self.colname = kwargs['colname']
+            self.hostname = kwargs['hostname']
+            self.port = kwargs['port']
+            self.use_canonical = kwargs['use_canonical']
+            self.canonical_user = kwargs['canonical_user']
+            self.conn = pymongo.Connection(port=self.port, host=self.hostname) #Open connection
+            self.db = self.conn[self.dbname]
+            self.col = self.db[self.colname]
+            self.col.ensure_index([('obj', pymongo.ASCENDING),
+                                     ('user', pymongo.ASCENDING),
+                                     ('version', pymongo.DESCENDING)],
+                                  unique=True)
+        else:
+            self.use_canonical = False
     
     def get_image(self, preproc, config):
         if not isinstance(config['obj'], list):
