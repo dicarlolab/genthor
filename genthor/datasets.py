@@ -837,6 +837,10 @@ class GenerativeDataset4(GenerativeDatasetBase):
                                [int(round(total * bias[m])) for m in models]))
 
 
+class GenerateDatasetAllModels(GenerativeDataset4):
+    models = list(itertools.chain(*model_info.CATEGORIES.values()))
+
+
 class GenerativeDataset5(GenerativeDataset4):   
     models = model_info.MODEL_SUBSET_5
     bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
