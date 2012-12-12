@@ -864,7 +864,7 @@ class GenerativeDataset4(GenerativeDatasetBase):
                                [int(round(total * bias[m])) for m in models]))
 
 
-class GenerativeDatasetAllModels(GenerativeDataset4):
+class GenerativeDatasetAllCategory1(GenerativeDataset4):
     models = list(itertools.chain(*model_info.MODEL_CATEGORIES.values()))
 
 
