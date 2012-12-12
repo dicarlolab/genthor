@@ -540,6 +540,8 @@ def get_subset_splits(meta, npc_train, npc_tests, num_splits,
     all_inds = np.sort(np.unique(train_inds.tolist() + all_test_inds))
     categories = np.array(map(catfunc, meta))
     ucategories = np.unique(categories[all_inds])    
+    utestcategorylist = [np.unique(categories[_t]) for _t in test_ind_list]
+    utraincategories = np.unique(categories[train_inds])    
     rng = np.random.RandomState(0)  #or do you want control over the seed?
     splits = [dict([('train', [])] + \
                    [(tn, []) for tn in test_names]) for _ in range(num_splits)]
@@ -566,20 +568,22 @@ def get_subset_splits(meta, npc_train, npc_tests, num_splits,
                 cat_train_inds = train_inds[categories[train_inds] == cat]
                 cat_train_inds = np.array(
                         list(set(cat_train_inds).difference(cat_validates)))            
-                assert len(cat_train_inds) >= npc_train, ( 
+                if cat in utraincategories:
+                    assert len(cat_train_inds) >= npc_train, ( 
                                     'not enough train for %s, %d, %d' % (cat,
                                                 len(cat_train_inds), npc_train))
                 cat_train_inds.sort()
                 p = rng.permutation(len(cat_train_inds))
                 cat_train_inds_split = cat_train_inds[p[:npc_train]]
                 splits[split_ind]['train'] += cat_train_inds_split.tolist()
-                for _ind, test_inds in enumerate(test_ind_list):
+                for _ind, (test_inds, utc) in enumerate(zip(test_ind_list, utestcategorylist)):
                     npc_test = npc_tests[_ind]
                     cat_test_inds = test_inds[categories[test_inds] == cat]
                     cat_test_inds_c = np.array(list(
                              set(cat_test_inds).difference(
                              cat_train_inds_split).difference(cat_validates)))
-                    assert len(cat_test_inds_c) >= npc_test, (
+                    if cat in utc:
+                        assert len(cat_test_inds_c) >= npc_test, (
                                           'not enough test for %s %d %d' % 
                                       (cat, len(cat_test_inds_c), npc_test))
                     p = rng.permutation(len(cat_test_inds_c))
@@ -588,12 +592,13 @@ def get_subset_splits(meta, npc_train, npc_tests, num_splits,
                     splits[split_ind][name] += cat_test_inds_split.tolist()
             else:
                 all_cat_test_inds = []
-                for _ind, test_inds in enumerate(test_ind_list):
+                for _ind, (test_inds, utc) in enumerate(zip(test_ind_list, utestcategorylist)):
                     npc_test = npc_tests[_ind]
                     cat_test_inds = test_inds[categories[test_inds] == cat]
                     cat_test_inds_c = np.sort(np.array(list(
                              set(cat_test_inds).difference(cat_validates))))
-                    assert len(cat_test_inds_c) >= npc_test, (
+                    if cat in utc:
+                        assert len(cat_test_inds_c) >= npc_test, (
                                     'not enough test for %s %d %d' %
                                       (cat, len(cat_test_inds_c), npc_test))
                     p = rng.permutation(len(cat_test_inds_c))
@@ -603,7 +608,8 @@ def get_subset_splits(meta, npc_train, npc_tests, num_splits,
                     all_cat_test_inds.extend(cat_test_inds_split)
                 cat_train_inds = np.array(list(set(cat_train_inds).difference(
                                  all_cat_test_inds).difference(cat_validates)))
-                assert len(cat_train_inds) >= npc_train, (
+                if cat in utraincategories:
+                    assert len(cat_train_inds) >= npc_train, (
                                'not enough train for %s, %d, %d' % 
                                (cat, len(cat_train_inds), npc_train))
                 cat_train_inds.sort()
