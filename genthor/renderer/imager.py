@@ -61,6 +61,9 @@ class ImgRendererResizer(object):
         self.model_root = model_root
         self.bg_root = bg_root
         self.check_penetration = check_penetration
+        self.noise = preproc.get('noise')
+        if self.noise:
+            self.noise_rng = np.random.RandomState(seed=self.noise['seed'])
     
     def rval_getattr(self, attr, objs):
         if attr == 'shape' and self._shape is not None:
@@ -106,6 +109,8 @@ class ImgRendererResizer(object):
         if im.mode != self.mode:
             im = im.convert(self.mode)
         rval = np.asarray(im, self._dtype)
+        if self.noise:
+            rval += self.noise['magnitude'] * self.rng.uniform(size=rval.shape)
         if self.normalize:
             rval -= rval.mean()
             rval /= max(rval.std(), 1e-3)
