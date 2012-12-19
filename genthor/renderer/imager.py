@@ -34,7 +34,7 @@ class Imager(object):
     def get_map(self, preproc, window_type):
         """ Returns an ImgRendererResizer instance."""
         # Get a valid renderer (new or old)
-        size = preproc["size"]
+        size = tuple(preproc["size"])
         lbase, output = self.renderers.get((window_type, size),
                                            self.get_renderer(window_type, size))
         # Make the irr instance

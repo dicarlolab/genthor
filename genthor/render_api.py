@@ -5,6 +5,7 @@ import hashlib
 import cPickle
 import copy
 
+import boto
 import Image
 import numpy as np
 
@@ -61,17 +62,29 @@ class RenderImageHandler(BaseHandler):
 
 
 def image_response(args, postdata):
-    dataset = gd.GenerativeBase() #pull out into global?   
-    imarray = dataset.get_image(postdata['preproc'], postdata['spec'])
-    im = Image.fromarray(imarray, mode=postdata['preproc']['mode'])
-    resp = {"image": im.tostring()}     
+    sha1 = hashlib.sha1(json.dumps(postdata)).hexdigest()
+    filename = sha1 + '.png'
+    conn = boto.connect_s3()
+    bucket = conn.get_bucket('dicarlo-renderedimages')
+    k = bucket.get_key(filename)
+    if not k:
+        dataset = gd.GenerativeBase() #pull out into global?   
+        imarray = dataset.get_image(postdata['preproc'], postdata['spec'])[::-1]
+        im = Image.fromarray(imarray, mode=postdata['preproc']['mode'])
+        tmp = tempfile.TemporaryFile()
+        im.save(tmp, "png")
+        tmp.seek(0)
+        k = bucket.new_key(filename)
+        k.set_contents_from_string(tmp.read(), headers={'Content-Type' : 'image/png'})
+        k.make_public()
+    url = "http://dicarlo-renderedimages.s3.amazonaws.com/" + filename
+    resp = {"url": url}     
     return resp
         
-
 def jsonize(x):
     try:
         json.dumps(x)
-    except TypeError:
+    except:
         return SONify(x)
     else:
         return x
