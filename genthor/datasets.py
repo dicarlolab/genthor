@@ -239,7 +239,8 @@ class GenerativeBase(DatasetBase):
         bg_root = self.BACKGROUND_PATH
         self.imager = Imager(model_root, bg_root, 
                              check_penetration=self.check_penetration)
-    
+        if 'noise' in kwargs:
+            self.noise=kwargs['noise']
         if 'dbname' in kwargs:
             self.dbname = kwargs['dbname']
             self.colname = kwargs['colname']
@@ -276,6 +277,10 @@ class GenerativeBase(DatasetBase):
         name = self.specific_name + '_' + get_image_id(preproc)
         cachedir = self.cache_home()
         meta = self.meta
+        if self.noise:   
+            preproc = copy.deepcopy(preproc)
+            preproc['noise'] = self.noise
+            meta = meta.addcols(range(len(meta)), names=['noise_seed'])
         window_type = 'texture'
         preproc = copy.deepcopy(preproc)
         preproc['size'] = tuple(preproc['size'])
@@ -905,7 +910,11 @@ class GenerativeDataset5(GenerativeDataset4):
                          'test_q': {},
                          'train_q': {}},
                     'e34830556a6f883de469e79106221945d6fc3446')]
-                  
+
+
+class GenerativeDatasetAllCategory1Mid(GenerativeDataset5):
+    models = list(itertools.chain(*model_info.MODEL_CATEGORIES.values()))
+
 
 class GenerativeDataset5NewSurfaces(GenerativeDataset4):   
     models = model_info.MODEL_SUBSET_5

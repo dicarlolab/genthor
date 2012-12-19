@@ -6,7 +6,7 @@ import Image
 import numpy as np
 import os
 import pdb
-
+import scipy.ndimage as ndimage
 
 class Imager(object):
     """ Manages renderers and can produce ImgRenderResizer instances."""
@@ -62,9 +62,7 @@ class ImgRendererResizer(object):
         self.bg_root = bg_root
         self.check_penetration = check_penetration
         self.noise = preproc.get('noise')
-        if self.noise:
-            self.noise_rng = np.random.RandomState(seed=self.noise['seed'])
-    
+            
     def rval_getattr(self, attr, objs):
         if attr == 'shape' and self._shape is not None:
             return self._shape
@@ -110,9 +108,12 @@ class ImgRendererResizer(object):
             im = im.convert(self.mode)
         rval = np.asarray(im, self._dtype)
         if self.noise:
-            rval += self.noise['magnitude'] * self.rng.uniform(size=rval.shape)
+            noise = self.noise['magnitude'] * np.random.RandomState(seed=m['noise_seed']).uniform(size=rval.shape[:2]) * rval.std()
+            if rval.ndim == 3:
+                noise = noise[:, :, np.newaxis]
+            rval = ndimage.gaussian_filter(rval + noise, sigma=self.noise['smoothing'])
         if self.normalize:
-            rval -= rval.mean()
+            rval = rval - rval.mean()
             rval /= max(rval.std(), 1e-3)
         else:
             if 'float' in str(self._dtype):
