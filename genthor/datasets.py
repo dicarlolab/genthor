@@ -239,8 +239,8 @@ class GenerativeBase(DatasetBase):
         bg_root = self.BACKGROUND_PATH
         self.imager = Imager(model_root, bg_root, 
                              check_penetration=self.check_penetration)
-        if 'noise' in kwargs:
-            self.noise=kwargs['noise']
+        self.noise = kwargs.get('noise')
+            
         if 'dbname' in kwargs:
             self.dbname = kwargs['dbname']
             self.colname = kwargs['colname']
@@ -363,7 +363,7 @@ class GenerativeDatasetBase(GenerativeBase):
     as class attributes
     """
     model_categories = dict_inverse(model_info.MODEL_CATEGORIES)
-    model_categories.update(dict_inverse(model_info.MODEL_CATEGORIES2))
+    #model_categories.update(dict_inverse(model_info.MODEL_CATEGORIES2))
     
     def _get_meta(self):
         #generate params 
@@ -913,7 +913,9 @@ class GenerativeDataset5(GenerativeDataset4):
 
 
 class GenerativeDatasetAllCategory1Mid(GenerativeDataset5):
-    models = list(itertools.chain(*model_info.MODEL_CATEGORIES.values()))
+    models = list(itertools.chain(*[v for k, v in model_info.MODEL_CATEGORIES.items() if k != 'plants']))
+    templates = GenerativeDataset5.templates
+    templates[0]['n_ex_per_model'] = 100
 
 
 class GenerativeDataset5NewSurfaces(GenerativeDataset4):   
