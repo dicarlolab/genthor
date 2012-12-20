@@ -36,16 +36,17 @@ class App(tornado.web.Application):
 
 
 class BaseHandler(tornado.web.RequestHandler):
-    def post(self):
+    def get(self):
         args = self.request.arguments
         for k in args.keys():
             args[k] = args[k][0]
         args = dict([(str(x),y) for (x,y) in args.items()])  
-        callback = args.pop('callback',None)   
-        
-        postdata = json.loads(self.request.body)
+        args['preproc'] = json.loads(args['preproc'])
+        args['spec'] = json.loads(args['spec'])
 
-        resp = jsonize(self.get_response(args, postdata))
+        callback = args.pop('callback', None)   
+        
+        resp = jsonize(self.get_response(args))
 
         if callback:
             self.write(callback + '(')
@@ -57,20 +58,20 @@ class BaseHandler(tornado.web.RequestHandler):
 
 
 class RenderImageHandler(BaseHandler):
-    def get_response(self, args, postdata):
-        return image_response(args, postdata)
+    def get_response(self, args):
+        return image_response(args)
 
 
-def image_response(args, postdata):
-    sha1 = hashlib.sha1(json.dumps(postdata)).hexdigest()
+def image_response(args):
+    sha1 = hashlib.sha1(json.dumps(args)).hexdigest()
     filename = sha1 + '.png'
     conn = boto.connect_s3()
     bucket = conn.get_bucket('dicarlo-renderedimages')
     k = bucket.get_key(filename)
     if not k:
         dataset = gd.GenerativeBase() #pull out into global?   
-        imarray = dataset.get_image(postdata['preproc'], postdata['spec'])[::-1]
-        im = Image.fromarray(imarray, mode=postdata['preproc']['mode'])
+        imarray = dataset.get_image(args['preproc'], args['spec'])[::-1]
+        im = Image.fromarray(imarray, mode=args['preproc']['mode'])
         tmp = tempfile.TemporaryFile()
         im.save(tmp, "png")
         tmp.seek(0)
