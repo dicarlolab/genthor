@@ -918,6 +918,12 @@ class GenerativeDatasetAllCategory1Mid(GenerativeDataset5):
     templates[0]['n_ex_per_model'] = 100
 
 
+class GenerativeDatasetAllCategory1Mid2(GenerativeDataset5):
+    models = list(itertools.chain(*[v for k, v in model_info.MODEL_CATEGORIES.items() if k != 'plants']))
+    templates = GenerativeDataset5.templates
+    templates[0]['n_ex_per_model'] = 200
+
+
 class GenerativeDataset5NewSurfaces(GenerativeDataset4):   
     models = model_info.MODEL_SUBSET_5
     bad_backgrounds = ['INTERIOR_13ST.jpg', 'INTERIOR_12ST.jpg',
