@@ -62,22 +62,31 @@ class RenderImageHandler(BaseHandler):
         return image_response(args)
 
 
+DATASET = None
+BUCKET = None
 def image_response(args):
     sha1 = hashlib.sha1(json.dumps(args)).hexdigest()
     filename = sha1 + '.png'
-    conn = boto.connect_s3()
-    bucket = conn.get_bucket('dicarlo-renderedimages')
-    k = bucket.get_key(filename)
+    global BUCKET
+    if BUCKET is None:
+        conn = boto.connect_s3()
+        BUCKET = conn.get_bucket('dicarlo-renderedimages')
+    k = BUCKET.get_key(filename)
+    global DATASET
     if not k:
-        dataset = gd.GenerativeBase() #pull out into global?   
-        imarray = dataset.get_image(args['preproc'], args['spec'])[::-1]
+        if DATASET is None:        
+            DATASET = gd.GenerativeBase() #pull out into global?   
+        imarray = DATASET.get_image(args['preproc'], args['spec'])[::-1]
         im = Image.fromarray(imarray, mode=args['preproc']['mode'])
         tmp = tempfile.TemporaryFile()
         im.save(tmp, "png")
+        del imarray
+        del im
         tmp.seek(0)
-        k = bucket.new_key(filename)
+        k = BUCKET.new_key(filename)
         k.set_contents_from_string(tmp.read(), headers={'Content-Type' : 'image/png'})
         k.make_public()
+        tmp.close()
     url = "http://dicarlo-renderedimages.s3.amazonaws.com/" + filename
     resp = {"url": url}     
     return resp

@@ -241,6 +241,7 @@ class GenerativeBase(DatasetBase):
                              check_penetration=self.check_penetration)
         self.noise = kwargs.get('noise')
             
+        self.irrs = {}
         if 'dbname' in kwargs:
             self.dbname = kwargs['dbname']
             self.colname = kwargs['colname']
@@ -268,7 +269,10 @@ class GenerativeBase(DatasetBase):
         for d, co in zip(dname, cobj):
             if not os.path.exists(d):
                 self.get_model(co)
-        irr = self.imager.get_map(preproc, 'texture')
+        phash = json.dumps(preproc)
+        if phash not in self.irrs:
+            self.irrs[phash] = self.imager.get_map(preproc, 'texture')
+        irr = self.irrs[phash]
         return irr(config)
 
     def get_images(self, preproc, get_models=False):
