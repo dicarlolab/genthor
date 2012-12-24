@@ -66,15 +66,13 @@ def setup_renderer(window_type, size=(256, 256)):
 def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr, 
                     bgscale, bghp,
                     texture=None,
-                    scene=None, check_penetration=False):
+                    cpos=None,
+                    check_penetration=False):
     """ Constructs the scene per the parameters. """
 
     # Default scene is lbase's rootnode
-    if scene is None:
-        scene = lbase.rootnode
-
     bgpath = mt.resolve_bg_path(bgpath)
-    
+    rootnode = lbase.rootnode
     # Modelpath points to the model .egg/.bam file
 
     if isinstance(modelpath, str):
@@ -83,12 +81,14 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
         poses = [pos]
         hprs = [hpr]
         textures = [texture]
+        cposes = [cpos]
     else:  
         modelpaths = modelpath
         scales = scale
         poses = pos
         hprs = hpr
         textures = texture
+        cposes = cpos
 
     texmodes = []
     for _i, _t in enumerate(textures):
@@ -104,13 +104,14 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
     assert hasattr(poses, '__iter__')
     assert hasattr(hprs, '__iter__')
     assert hasattr(textures, '__iter__')
-    assert len(modelpaths) == len(scales) == len(hprs) == len(poses) == len(textures), (len(modelpaths), len(scales), len(hprs), len(poses), len(textures))
+    assert hasattr(cposes, '__iter__')
+    assert len(cposes) == len(modelpaths) == len(scales) == len(hprs) == len(poses) == len(textures), (len(modelpaths), len(scales), len(hprs), len(poses), len(textures), len(cposes))
         
     modelpaths = map(mt.resolve_model_path, modelpaths)
     modelpaths = map(cm.autogen_egg, modelpaths)
     textures = map(mt.resolve_texture_path, textures)
     objnodes = []
-    for mpth, scale, hpr, pos, t, tm in zip(modelpaths, scales, hprs, poses, textures, texmodes):
+    for mpth, scale, hpr, pos, t, tm, cpos in zip(modelpaths, scales, hprs, poses, textures, texmodes, cposes):
         objnode = tools.read_file(lbase.loader.loadModel, mpth)
         if t is not None: 
             #ts = TextureStage('ts')
@@ -119,12 +120,24 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
             tex = tools.read_file(lbase.loader.loadTexture, t) 
             objnode.setTexGen(ts, tm)
             objnode.setTexture(tex, 6)
-            
-        objnode.setScale(scale[0], scale[0], scale[0])
-        objnode.setPos(pos[0], -pos[2], pos[1])
-        objnode.setHpr(hpr[2], hpr[1], hpr[0])
-        objnode.setTwoSided(1)
-        objnodes.append(objnode)
+        
+        robjnode = rootnode.attachNewNode('root_' + objnode.get_name())
+        objnode.reparentTo(robjnode)
+        if cpos:
+            objnode.setPos(-cpos[0], cpos[2], -cpos[1])
+        robjnode.setScale(scale[0], scale[0], scale[0])
+        robjnode.setPos(pos[0], -pos[2], pos[1])
+        robjnode.setHpr(hpr[2], hpr[1], hpr[0])
+        robjnode.setTwoSided(1)
+
+        objnodes.append(robjnode)
+
+    if check_penetration:
+        for (i, n1) in enumerate(objnodes):
+            for j, n2 in enumerate(objnodes[i+1:]):
+                p = is_penetrating(n1, n2)
+                assert not p, 'Nodes %d (%s) and %d (%s) are penetrating' % (i, repr(n1), i+1+j, repr(n2))
+
 
     # Environment map
     #if bgpath and False:
@@ -155,17 +168,7 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
             plight1.detachNode()
     else:
         bgnode = NodePath("empty-bgnode")
-
-    if check_penetration:
-        for (i, n1) in enumerate(objnodes):
-            for j, n2 in enumerate(objnodes[i+1:]):
-                p = is_penetrating(n1, n2)
-                assert not p, 'Nodes %d (%s) and %d (%s) are penetrating' % (i, repr(n1), i+1+j, repr(n2))
-                    
-    # Reparent to a single scene node
-    for objnode in objnodes:
-        objnode.reparentTo(scene)
-    bgnode.reparentTo(scene)
+    bgnode.reparentTo(rootnode)
 
     return objnodes, bgnode
 

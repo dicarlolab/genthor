@@ -273,6 +273,24 @@ class GenerativeBase(DatasetBase):
         if phash not in self.irrs:
             self.irrs[phash] = self.imager.get_map(preproc, 'texture')
         irr = self.irrs[phash]
+        use_canonical = config.get('use_canonical', self.use_canonical)
+        if use_canonical:
+            cscl = [self.getCanonical(obj, self.canonical_user) for obj in cobjs]
+            for (_i, _c) in enumerate(cscl):
+                if len(coobj) > 1:
+                    for _k in ['ty','tx','tz']:
+                        config['c' + _k ][_i] = _c[_k]
+                    config['s'][_i] *= _c['s']
+                else:
+                    for _k in ['ty', 'tx', 'tz']:
+                        config['c' + '_k'] = _c[k]
+                    config['s'] *= _c['s']
+
+        else:
+            for _k in ['cty', 'ctx', 'ctz']:
+                if _k not in config:
+                    config[_k] = [0] * cobj if len(cobj) > 1 else 0
+        print(config)
         return irr(config)
 
     def get_images(self, preproc, get_models=False):
@@ -310,8 +328,10 @@ class GenerativeBase(DatasetBase):
         else:
             raise Exception('Parameters must include "user" and "obj" fields')
 
-    def getCanonical(self, obj, user, version=0):
+    def getCanonical(self, obj, user=None, version=0):
         #Returns most recent database entry to match query, if it exists.
+        if user is None:
+            user = self.canonical_user
         return self.col.find_one({'obj': obj,
                                   'user': user,
                                   'version': version})
@@ -427,12 +447,14 @@ class GenerativeDatasetBase(GenerativeBase):
                                                      'id', 
                                                      'texture',
                                                      'texture_mode'])
+        meta = meta.addcols([np.zeros((len(meta),)) for _ in range(3)], names=['cty','ctz','ctx'])
         if use_canonical:
             objs = np.unique(meta['obj'])
             cscl = dict([(obj, self.getCanonical(obj, self.canonical_user)) for obj in objs])
             for obj in objs:
-                if cscl[obj] is not None:
-                    meta['s'][meta['obj'] == obj] *= cscl[obj]['s']
+                for _k in ['ty','tz','tx']:
+                    meta['c' + _k] -= cscl[obj][_k]
+                meta['s'][meta['obj'] == obj] *= cscl[obj]['s']
                 
         return meta
         
