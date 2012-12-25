@@ -56,7 +56,7 @@ def make_canonical(obj_list):
                         
 			print(config)
 				
-			cb.saveCanonical(preproc,config)    
+			cb.saveCanonical(preproc, config)    
 		
 			lbase.rootnode.getChildren()[2].removeNode()
 			lbase.rootnode.getChildren()[2].removeNode()

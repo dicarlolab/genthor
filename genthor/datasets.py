@@ -258,6 +258,7 @@ class GenerativeBase(DatasetBase):
                                   unique=True)
         else:
             self.use_canonical = False
+        self.internal_canonical = kwargs.get('internal_canonical', False)
     
     def get_image(self, preproc, config):
         if not isinstance(config['obj'], list):
@@ -275,22 +276,21 @@ class GenerativeBase(DatasetBase):
         irr = self.irrs[phash]
         use_canonical = config.get('use_canonical', self.use_canonical)
         if use_canonical:
-            cscl = [self.getCanonical(obj, self.canonical_user) for obj in cobjs]
+            cscl = [self.getCanonical(obj, self.canonical_user) for obj in cobj]
             for (_i, _c) in enumerate(cscl):
-                if len(coobj) > 1:
+                if len(cobj) > 1:
                     for _k in ['ty','tx','tz']:
                         config['c' + _k ][_i] = _c[_k]
                     config['s'][_i] *= _c['s']
                 else:
                     for _k in ['ty', 'tx', 'tz']:
-                        config['c' + '_k'] = _c[k]
+                        config['c' + _k] = _c[_k]
                     config['s'] *= _c['s']
 
         else:
             for _k in ['cty', 'ctx', 'ctz']:
                 if _k not in config:
                     config[_k] = [0] * cobj if len(cobj) > 1 else 0
-        print(config)
         return irr(config)
 
     def get_images(self, preproc, get_models=False):
@@ -394,6 +394,7 @@ class GenerativeDatasetBase(GenerativeBase):
         models = self.models
         templates = self.templates
         use_canonical = self.use_canonical
+        internal_canonical = self.internal_canonical
         
         latents = []
         rng = np.random.RandomState(seed=0)
@@ -447,14 +448,16 @@ class GenerativeDatasetBase(GenerativeBase):
                                                      'id', 
                                                      'texture',
                                                      'texture_mode'])
-        meta = meta.addcols([np.zeros((len(meta),)) for _ in range(3)], names=['cty','ctz','ctx'])
         if use_canonical:
+            meta = meta.addcols([np.zeros((len(meta),)) for _ in range(3)], names=['cty','ctz','ctx'])
             objs = np.unique(meta['obj'])
             cscl = dict([(obj, self.getCanonical(obj, self.canonical_user)) for obj in objs])
             for obj in objs:
                 for _k in ['ty','tz','tx']:
                     meta['c' + _k] -= cscl[obj][_k]
                 meta['s'][meta['obj'] == obj] *= cscl[obj]['s']
+        if internal_canonical:
+            meta = meta.addcols([np.ones((len(meta),))], names = ['internal_canonical'])
                 
         return meta
         

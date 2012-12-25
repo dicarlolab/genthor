@@ -66,7 +66,7 @@ def setup_renderer(window_type, size=(256, 256)):
 def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr, 
                     bgscale, bghp,
                     texture=None,
-                    cpos=None,
+                    internal_canonical=False,
                     check_penetration=False):
     """ Constructs the scene per the parameters. """
 
@@ -81,14 +81,12 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
         poses = [pos]
         hprs = [hpr]
         textures = [texture]
-        cposes = [cpos]
     else:  
         modelpaths = modelpath
         scales = scale
         poses = pos
         hprs = hpr
         textures = texture
-        cposes = cpos
 
     texmodes = []
     for _i, _t in enumerate(textures):
@@ -104,14 +102,13 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
     assert hasattr(poses, '__iter__')
     assert hasattr(hprs, '__iter__')
     assert hasattr(textures, '__iter__')
-    assert hasattr(cposes, '__iter__')
-    assert len(cposes) == len(modelpaths) == len(scales) == len(hprs) == len(poses) == len(textures), (len(modelpaths), len(scales), len(hprs), len(poses), len(textures), len(cposes))
+    assert len(modelpaths) == len(scales) == len(hprs) == len(poses) == len(textures), (len(modelpaths), len(scales), len(hprs), len(poses), len(textures))
         
     modelpaths = map(mt.resolve_model_path, modelpaths)
     modelpaths = map(cm.autogen_egg, modelpaths)
     textures = map(mt.resolve_texture_path, textures)
     objnodes = []
-    for mpth, scale, hpr, pos, t, tm, cpos in zip(modelpaths, scales, hprs, poses, textures, texmodes, cposes):
+    for mpth, scale, hpr, pos, t, tm in zip(modelpaths, scales, hprs, poses, textures, texmodes):
         objnode = tools.read_file(lbase.loader.loadModel, mpth)
         if t is not None: 
             #ts = TextureStage('ts')
@@ -123,8 +120,14 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
         
         robjnode = rootnode.attachNewNode('root_' + objnode.get_name())
         objnode.reparentTo(robjnode)
-        if cpos:
-            objnode.setPos(-cpos[0], cpos[2], -cpos[1])
+        if internal_canonical:
+            vertices = np.array(objnode.getTightBounds())
+            initial_scale_factor = max(abs(vertices[0]-vertices[1]))
+            cscale = 1.2/initial_scale_factor
+            ppos = vertices.mean(0) * cscale
+            objnode.setPos(-ppos[0], -ppos[1], -ppos[2])
+            objnode.setScale(cscale, cscale, cscale)
+            
         robjnode.setScale(scale[0], scale[0], scale[0])
         robjnode.setPos(pos[0], -pos[2], pos[1])
         robjnode.setHpr(hpr[2], hpr[1], hpr[0])

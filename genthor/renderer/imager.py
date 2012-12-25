@@ -78,7 +78,6 @@ class ImgRendererResizer(object):
                                  m['obj'])
             scale = [m['s']]
             pos = [m['ty'], m['tz'], m['tx']]
-            cpos = [m['cty'], m['ctz'], m['ctx']]
             hpr = [m['ryz'], m['rxz'], m['rxy']]
             texture = (m['texture'], m['texture_mode'])
         else:
@@ -86,9 +85,9 @@ class ImgRendererResizer(object):
             modelpath = [os.path.join(self.model_root, mn) for mn in m['obj']]      
             scale = [[ms] for ms in m['s']]
             pos = zip(m['ty'], m['tz'], m['tx'])
-            cpos = zip(m['cty'], m['ctz'], m['ctx'])
             hpr = zip(m['ryz'], m['rxz'], m['rxy'])
             texture = zip(m['texture'], m['texture_mode'])
+        internal_canonical=m.get('internal_canonical', False)
         bgpath = os.path.join(self.bg_root, m['bgname'])
 
         bgscale = [m['bgscale']]
@@ -98,7 +97,7 @@ class ImgRendererResizer(object):
                                               *args,
                           check_penetration=self.check_penetration,
                           texture=texture,
-                          cpos=cpos)
+                          internal_canonical=internal_canonical)
 
         self.lbase.render_frame()
         if remove:
