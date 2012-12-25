@@ -87,7 +87,7 @@ class ImgRendererResizer(object):
             pos = zip(m['ty'], m['tz'], m['tx'])
             hpr = zip(m['ryz'], m['rxz'], m['rxy'])
             texture = zip(m['texture'], m['texture_mode'])
-        internal_canonical=m.get('internal_canonical', False)
+        internal_canonical=m['internal_canonical']
         bgpath = os.path.join(self.bg_root, m['bgname'])
 
         bgscale = [m['bgscale']]

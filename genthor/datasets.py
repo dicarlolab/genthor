@@ -291,6 +291,7 @@ class GenerativeBase(DatasetBase):
             for _k in ['cty', 'ctx', 'ctz']:
                 if _k not in config:
                     config[_k] = [0] * cobj if len(cobj) > 1 else 0
+        config.setdefault('internal_canonical', self.internal_canonical)
         return irr(config)
 
     def get_images(self, preproc, get_models=False):
