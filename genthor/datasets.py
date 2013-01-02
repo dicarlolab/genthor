@@ -459,6 +459,8 @@ class GenerativeDatasetBase(GenerativeBase):
                 meta['s'][meta['obj'] == obj] *= cscl[obj]['s']
         if internal_canonical:
             meta = meta.addcols([np.ones((len(meta),))], names = ['internal_canonical'])
+        else:
+            meta = meta.addcols([np.zeros((len(meta),))], names = ['internal_canonical'])
                 
         return meta
         
