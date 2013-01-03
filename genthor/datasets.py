@@ -290,7 +290,7 @@ class GenerativeBase(DatasetBase):
         else:
             for _k in ['cty', 'ctx', 'ctz']:
                 if _k not in config:
-                    config[_k] = [0] * cobj if len(cobj) > 1 else 0
+                    config[_k] = [0] * len(cobj) if len(cobj) > 1 else 0
         config.setdefault('internal_canonical', self.internal_canonical)
         return irr(config)
 
@@ -459,6 +459,8 @@ class GenerativeDatasetBase(GenerativeBase):
                 meta['s'][meta['obj'] == obj] *= cscl[obj]['s']
         if internal_canonical:
             meta = meta.addcols([np.ones((len(meta),))], names = ['internal_canonical'])
+        else:
+            meta = meta.addcols([np.zeros((len(meta),))], names = ['internal_canonical'])
                 
         return meta
         
