@@ -1,5 +1,5 @@
 """ Part of the YABEE
-    rev 12.1
+    rev 1.1
 """
 bl_info = {
     "name": "Panda3d EGG format",
@@ -81,7 +81,7 @@ class YABEEProperty(bpy.types.PropertyGroup):
             name="TBS generation",
             description="Export all textures as MODULATE or bake texture layers",
             items=(('PANDA', "Panda", "Use egg-trans to calculate TBS (Need installed Panda3D)."),
-                   #('INTERNAL', "Internal", "Use internal YABEE TBS generator"),
+                   ('INTERNAL', "Internal", "Use internal YABEE TBS generator"),
                    ('NO', "No", "Do not generate TBS.")),
             default='NO',
             )
@@ -339,7 +339,7 @@ class ExportPanda3DEGG(bpy.types.Operator, ExportHelper):
                             sett.opt_anim_only,
                             sett.opt_copy_tex_files, 
                             sett.opt_tex_path, 
-                            6,
+                            3,
                             sett.opt_tbs_proc,
                             sett.opt_tex_proc,
                             sett.get_bake_dict(),
@@ -372,17 +372,7 @@ def register():
     bpy.types.Scene.yabee_settings = PointerProperty(type=YABEEProperty)
     # Hack again. I use custom property to be able to get basic 
     # object name in the copy of the scene.
-    bpy.types.Object.yabee_name = StringProperty(name="YABEE_Name", default="Unknown")
-    bpy.types.Mesh.yabee_name = StringProperty(name="YABEE_Name", default="Unknown")
-    bpy.types.Material.yabee_name = StringProperty(name="YABEE_Name", default="Unknown")
-    bpy.types.Texture.yabee_name = StringProperty(name="YABEE_Name", default="Unknown")
-    bpy.types.Armature.yabee_name = StringProperty(name="YABEE_Name", default="Unknown")
-    bpy.types.Curve.yabee_name = StringProperty(name="YABEE_Name", default="Unknown")
-    #bpy.types.ShapeKey.yabee_name = StringProperty(name="YABEE_Name", default="Unknown")
-    bpy.types.Key.yabee_name = StringProperty(name="YABEE_Name", default="Unknown")
-    bpy.types.Image.yabee_name = StringProperty(name="YABEE_Name", default="Unknown")
-    bpy.types.Bone.yabee_name = StringProperty(name="YABEE_Name", default="Unknown")
-    bpy.types.PoseBone.yabee_name = StringProperty(name="YABEE_Name", default="Unknown")
+    setattr(bpy.types.Object, 'yabee_name', StringProperty(name="YABEE_Name", default="Unknown"))
 
     bpy.types.INFO_MT_file_export.append(menu_func_export)
 
@@ -391,9 +381,7 @@ def unregister():
     bpy.utils.unregister_module(__name__)
     bpy.types.INFO_MT_file_export.remove(menu_func_export)
 
-
 if __name__ == "__main__":
     register()
-
     # test call
     #bpy.ops.export.panda3d_egg('INVOKE_DEFAULT')
