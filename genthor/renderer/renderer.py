@@ -256,3 +256,4 @@ if __name__ == "__main__":
 class PenetrationError(Exception):
     def __init__(self, i, j, n1, n2):
         self.msg = 'Nodes %d (%s) and %d (%s) are penetrating' % (i, repr(n1), i+1+j, repr(n2))
+        print(self.msg)
