@@ -139,8 +139,10 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
         for (i, n1) in enumerate(objnodes):
             for j, n2 in enumerate(objnodes[i+1:]):
                 p = is_penetrating(n1, n2)
-                assert not p, 'Nodes %d (%s) and %d (%s) are penetrating' % (i, repr(n1), i+1+j, repr(n2))
-
+                if p:
+                    for onode in objnodes:
+                        onode.removeNode()
+                    raise PenetrationError(i, j, n1, n2)
 
     # Environment map
     #if bgpath and False:
@@ -250,3 +252,7 @@ if __name__ == "__main__":
 
     raw_input("press ENTER to exit...")
 
+
+class PenetrationError(Exception):
+    def __init__(self, i, j, n1, n2):
+        self.msg = 'Nodes %d (%s) and %d (%s) are penetrating' % (i, repr(n1), i+1+j, repr(n2))
