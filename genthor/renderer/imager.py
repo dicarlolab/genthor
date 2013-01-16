@@ -71,7 +71,12 @@ class ImgRendererResizer(object):
         if attr == 'dtype':
             return self._dtype
         raise AttributeError(attr)
-        
+    
+    def remove(self):
+        children = list(self.lbase.rootnode.getChildren())
+        for c in children[2:]:
+            c.removeNode()
+
     def __call__(self, m, remove=True):
         if isinstance(m['obj'], str):
             modelpath = os.path.join(self.model_root, 
@@ -93,17 +98,20 @@ class ImgRendererResizer(object):
         bgscale = [m['bgscale']]
         bghp = [m['bgphi'], m['bgpsi']]
         args = (modelpath, bgpath, scale, pos, hpr, bgscale, bghp)
-        objnodes, bgnode = gr.construct_scene(self.lbase, 
+        try:
+            objnodes, bgnode = gr.construct_scene(self.lbase, 
                                               *args,
                           check_penetration=self.check_penetration,
                           texture=texture,
                           internal_canonical=internal_canonical)
 
-        self.lbase.render_frame()
-        if remove:
-            for objnode in objnodes:
-                objnode.removeNode()
-            bgnode.removeNode()
+            self.lbase.render_frame()
+        except Exception, e:
+            if remove:
+                self.remove()
+            raise e
+        if remove: 
+            self.remove()
         tex = self.output.getTexture()
         im = Image.fromarray(self.lbase.get_tex_image(tex))
         if im.mode != self.mode:
