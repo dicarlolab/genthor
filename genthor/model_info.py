@@ -205,6 +205,7 @@ BACKGROUNDS = ['DH-ITALY01SN.jpg',
  'MOUNT_32SN.jpg',
  'MOUNT_33SN.jpg']
 
+MOUNTAIN_BACKGROUNDS = filter(lambda x: x.startswith('MOUNT_'), BACKGROUNDS)
 
 SURFACES = ['MB26897/tex/wheel02.jpg',
             'MB26897/tex/shield04.jpg',

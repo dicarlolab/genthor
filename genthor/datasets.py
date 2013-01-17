@@ -13,7 +13,7 @@ import lockfile
 import numpy as np
 import Image
 import tabular as tb
-from yamutils.fast import reorder_to, isin
+from yamutils.fast import reorder_to, isin, uniqify
 from yamutils.basic import dict_inverse
 import boto
 
@@ -110,8 +110,7 @@ class DatasetBase(object):
 
     @property
     def objects(self):
-        objs = self.meta['obj'].tolist()
-        objs = set(objs)
+        objs = set(map(lambda x : x if isstring(x) else tuple(x), self.meta['obj'].tolist()))
         uobjs = []
         for o in objs:
             if isstring(o):
