@@ -218,7 +218,8 @@ def convert(inout_pths, ext=".egg", f_blender=True, f_force=False):
     if ext not in (".egg", ".bam"):
         raise ValueError("Unsupported output type: %s" % ext)
     # Temporary path in which to extract .obj files before conversion.
-    tmp_root = os.path.join(os.environ["HOME"], "tmp", "scrap")
+    random_id = str(np.random.randint(1e8))
+    tmp_root = os.path.join(os.environ["HOME"], "tmp", "scrap_%s" % random_id)
 
     # Loop over models, converting
     for in_pth, out_pth in inout_pths.iteritems():
