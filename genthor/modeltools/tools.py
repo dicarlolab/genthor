@@ -292,12 +292,13 @@ def check_format(pth, imgdirname="tex"):
     1 : Couldn't find model
     2 : Couldn't find required texture images
     """
+    random_id = str(np.random.randint(1e8))
+    tmp_pth = os.path.join(os.environ["HOME"], "tmp", "scrap_%s" % random_id)
     def returnfunc():
         # Remove tmp path
         if os.path.isdir(tmp_pth):
             shutil.rmtree(tmp_pth)
     # Temporary path
-    tmp_pth = os.path.join(os.environ["HOME"], "tmp", "scrap")
     try:
         # Get the model's path
         modelpth = resolve_model_path(pth)
