@@ -905,8 +905,12 @@ def get_egg_materials_str():
             mat_str += '  <Scalar> diffr { %s }\n' % STRF(mat.diffuse_color[0] * mat.diffuse_intensity)
             mat_str += '  <Scalar> diffg { %s }\n' % STRF(mat.diffuse_color[1] * mat.diffuse_intensity)
             mat_str += '  <Scalar> diffb { %s }\n' % STRF(mat.diffuse_color[2] * mat.diffuse_intensity)
-            if mat.alpha != 1.0:
-                mat_str += '  <Scalar> diffa { %s }\n' % STRF(mat.alpha)
+            if mat.alpha == 0.0:
+                mata = 1.0
+            else:
+                mata = mat.alpha
+            if mata != 1.0:
+                mat_str += '  <Scalar> diffa { %s }\n' % STRF(mata)
         elif TEXTURE_PROCESSOR == 'BAKE':
             mat_str += '  <Scalar> diffr { 1.0 }\n'
             mat_str += '  <Scalar> diffg { 1.0 }\n'
@@ -918,8 +922,11 @@ def get_egg_materials_str():
         mat_str += '  <Scalar> emitr { %s }\n' % STRF(mat.emit * 0.1)
         mat_str += '  <Scalar> emitg { %s }\n' % STRF(mat.emit * 0.1)
         mat_str += '  <Scalar> emitb { %s }\n' % STRF(mat.emit * 0.1)
-        if mat.specular_alpha != 1.0:
-            mat_str += '  <Scalar> speca { %s }\n' % STRF(mat.specular_alpha)
+        matas = mat.specular_alpha
+        if matas == 0.0:
+            matas = 1.0
+        if matas != 1.0:
+            mat_str += '  <Scalar> speca { %s }\n' % STRF(matas)
         #file.write('  <Scalar> ambr { %s }\n' % STRF(mat.ambient))
         #file.write('  <Scalar> ambg { %s }\n' % STRF(mat.ambient))
         #file.write('  <Scalar> ambb { %s }\n' % STRF(mat.ambient))
