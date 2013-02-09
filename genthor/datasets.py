@@ -209,7 +209,10 @@ def get_labelfunc_from_config(q):
     """turns a dictionary into a function that returns a label
     for each record of a metadata table
     """
-    return LABEL_REGISTRY[q]
+    if hasattr(q, '__call__'):
+        return q
+    else:
+        return LABEL_REGISTRY[q]
 
 
 def get_lambda_from_query_config(q):
@@ -219,7 +222,10 @@ def get_lambda_from_query_config(q):
     TODO: implement OR or not, etc.
     See: https://github.com/yamins81/devthor/commit/367d9e0714d5d89dc08c4e37d653d716c87b64be#commitcomment-1657582
     """
-    return lambda x:  all([x[k] in v for k, v in q.items()])   # per Dan's suggestion..
+    if hasattr(q, '__call__'):
+        return q
+    else:
+        return lambda x:  all([x[k] in v for k, v in q.items()])   # per Dan's suggestion..
 
 
 class GenerativeBase(DatasetBase):
