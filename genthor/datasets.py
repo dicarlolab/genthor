@@ -945,13 +945,13 @@ class GenerativeDataset5(GenerativeDataset4):
 
 class GenerativeDatasetAllCategory1Mid(GenerativeDataset5):
     models = list(itertools.chain(*[v for k, v in model_info.MODEL_CATEGORIES.items() if k != 'plants']))
-    templates = GenerativeDataset5.templates
+    templates = copy.deepcopy(GenerativeDataset5.templates)
     templates[0]['n_ex_per_model'] = 100
 
 
 class GenerativeDatasetAllCategory1Mid2(GenerativeDataset5):
     models = list(itertools.chain(*[v for k, v in model_info.MODEL_CATEGORIES.items() if k != 'plants']))
-    templates = GenerativeDataset5.templates
+    templates = copy.deepcopy(GenerativeDataset5.templates)
     templates[0]['n_ex_per_model'] = 200
 
 
