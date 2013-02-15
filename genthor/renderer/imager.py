@@ -93,7 +93,10 @@ class ImgRendererResizer(object):
             hpr = zip(m['ryz'], m['rxz'], m['rxy'])
             texture = zip(m['texture'], m['texture_mode'])
         internal_canonical=m['internal_canonical']
-        bgpath = os.path.join(self.bg_root, m['bgname'])
+        if m['bgname'] is not None:
+            bgpath = os.path.join(self.bg_root, m['bgname'])
+        else:
+            bgpath = None
 
         bgscale = [m['bgscale']]
         bghp = [m['bgphi'], m['bgpsi']]
@@ -110,6 +113,7 @@ class ImgRendererResizer(object):
             if remove:
                 self.remove()
             raise e
+        print (list(self.lbase.rootnode.getChildren()))
         if remove: 
             self.remove()
         tex = self.output.getTexture()

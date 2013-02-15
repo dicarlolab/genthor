@@ -52,10 +52,10 @@ def setup_renderer(window_type, size=(256, 256)):
     lbase.cameras.lookAt(0, 0, 0)
     camera_rot.setH(0.)
     # Lights
-    lights = LightBase.make_lights()
-    lights.reparentTo(rootnode)
-    for light in lights.getChildren():
-        rootnode.setLight(light)
+    #lights = LightBase.make_lights()
+    #lights.reparentTo(rootnode)
+    #for light in lights.getChildren():
+    #    rootnode.setLight(light)
 
     # # Pause while setup finishes
     # time.sleep(0.02)
@@ -71,7 +71,8 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
     """ Constructs the scene per the parameters. """
 
     # Default scene is lbase's rootnode
-    bgpath = mt.resolve_bg_path(bgpath)
+    if bgpath is not None:
+        bgpath = mt.resolve_bg_path(bgpath)
     rootnode = lbase.rootnode
     # Modelpath points to the model .egg/.bam file
 
@@ -168,9 +169,11 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
         bgnode.setPos(0, 0, 0) #0)
         bgnode.setHpr(bghp[0], bghp[1], 0.)
         # Detach point light
-        plight1 = lbase.rootnode.find('**/plight1')
-        if plight1:
-            plight1.detachNode()
+        #plight1 = lbase.rootnode.find('**/plight1')
+        #alight = lbase.rootnode.find('**/alight')
+        #if alight:
+        #    plight1.detachNode()
+        #    alight.detachNode()
     else:
         bgnode = NodePath("empty-bgnode")
     bgnode.reparentTo(rootnode)
