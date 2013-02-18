@@ -2,3 +2,4 @@ numpy>=1.3
 nose>=1.0
 #thoreano
 yamutils
+requests
