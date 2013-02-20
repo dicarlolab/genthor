@@ -17,7 +17,7 @@ import sys
 import pdb
 
 
-def setup_renderer(window_type, size=(256, 256)):
+def setup_renderer(window_type, size=(256, 256), light_spec=None):
     """ Sets up the LightBase rendering stuff."""
 
     # Initialize
@@ -52,10 +52,10 @@ def setup_renderer(window_type, size=(256, 256)):
     lbase.cameras.lookAt(0, 0, 0)
     camera_rot.setH(0.)
     # Lights
-    #lights = LightBase.make_lights()
-    #lights.reparentTo(rootnode)
-    #for light in lights.getChildren():
-    #    rootnode.setLight(light)
+    lights = LightBase.make_lights(light_spec=light_spec)
+    lights.reparentTo(rootnode)
+    for light in lights.getChildren():
+        rootnode.setLight(light)
 
     # # Pause while setup finishes
     # time.sleep(0.02)
@@ -67,7 +67,8 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
                     bgscale, bghp,
                     texture=None,
                     internal_canonical=False,
-                    check_penetration=False):
+                    check_penetration=False, 
+                    light_spec=None):
     """ Constructs the scene per the parameters. """
 
     # Default scene is lbase's rootnode
@@ -154,6 +155,7 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
     #    objnode.setTexGen(ts, TexGenAttrib.MEyeSphereMap)
     #    objnode.setTexture(ts, envtex)
 
+    lbase.rootnode.clearLight()
     if bgpath:
         bgtex = tools.read_file(lbase.loader.loadTexture, bgpath)
         # Set as background
@@ -169,14 +171,19 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
         bgnode.setPos(0, 0, 0) #0)
         bgnode.setHpr(bghp[0], bghp[1], 0.)
         # Detach point light
-        #plight1 = lbase.rootnode.find('**/plight1')
-        #alight = lbase.rootnode.find('**/alight')
-        #if alight:
-        #    plight1.detachNode()
-        #    alight.detachNode()
+        plight1 = lbase.rootnode.find('**/plight1')
+        if plight1:
+            plight1.detachNode()
     else:
         bgnode = NodePath("empty-bgnode")
     bgnode.reparentTo(rootnode)
+
+    if light_spec is not None:
+        lights = LightBase.make_lights(light_spec=light_spec, lname='scene_lights')
+        lights.reparentTo(rootnode)
+        for light in lights.getChildren():
+            print(light)
+            rootnode.setLight(light)
 
     return objnodes, bgnode
 

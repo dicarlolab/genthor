@@ -21,22 +21,23 @@ class Imager(object):
         self.bg_root = bg_root
         self.check_penetration=check_penetration
 
-    def get_renderer(self, window_type, size):
+    def get_renderer(self, window_type, size, light_spec=None):
         """ Initializes a new renderer and adds it to the
         Imager.renderers dict."""
         # Create the LightBase instance/output
         lbase, output = self.renderers.get((window_type, size),
-                                           gr.setup_renderer(window_type, size))
+                                           gr.setup_renderer(window_type, size, 
+                                               light_spec=light_spec))
         # Add to the Imager.renderers
         self.renderers[(window_type, size)] = lbase, output
         return lbase, output
 
-    def get_map(self, preproc, window_type):
+    def get_map(self, preproc, window_type, light_spec=None):
         """ Returns an ImgRendererResizer instance."""
         # Get a valid renderer (new or old)
         size = tuple(preproc["size"])
         lbase, output = self.renderers.get((window_type, size),
-                                           self.get_renderer(window_type, size))
+                                           self.get_renderer(window_type, size, light_spec=light_spec))
         # Make the irr instance
         irr = ImgRendererResizer(self.model_root, self.bg_root,
                                  preproc, lbase, output,
@@ -92,7 +93,11 @@ class ImgRendererResizer(object):
             pos = zip(m['ty'], m['tz'], m['tx'])
             hpr = zip(m['ryz'], m['rxz'], m['rxy'])
             texture = zip(m['texture'], m['texture_mode'])
-        internal_canonical=m['internal_canonical']
+        internal_canonical = m['internal_canonical']
+        try:
+            light_spec = m['light_spec']
+        except:
+            light_spec = None
         if m['bgname'] is not None:
             bgpath = os.path.join(self.bg_root, m['bgname'])
         else:
@@ -106,14 +111,14 @@ class ImgRendererResizer(object):
                                               *args,
                           check_penetration=self.check_penetration,
                           texture=texture,
-                          internal_canonical=internal_canonical)
+                          internal_canonical=internal_canonical,
+                          light_spec=light_spec)
 
             self.lbase.render_frame()
         except Exception, e:
             if remove:
                 self.remove()
             raise e
-        print (list(self.lbase.rootnode.getChildren()))
         if remove: 
             self.remove()
         tex = self.output.getTexture()

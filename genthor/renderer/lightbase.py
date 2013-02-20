@@ -4,7 +4,9 @@ from direct.showbase import Loader
 from libpanda import BitMask32
 import numpy as np
 import os
-from pandac.PandaModules import AmbientLight
+from pandac.PandaModules import (AmbientLight,
+                                 Spotlight,
+                                 DirectionalLight)
 from pandac.PandaModules import Camera
 from pandac.PandaModules import Filename
 from pandac.PandaModules import FrameBufferProperties
@@ -367,21 +369,45 @@ class LightBase(object):
         return aspect_ratio
 
     @staticmethod
-    def make_lights():
+    def make_lights(light_spec=None, lname=None):
         """ Create one point light and an ambient light."""
-        lights = NodePath('lights')
+        if lname is None:
+            lname = 'lights'
+        lights = NodePath(lname)
 
-        # Create point lights
-        plight = PointLight('plight1')
-        light = lights.attachNewNode(plight)
-        plight.setColor((0.1, 0.1, 0.1, 1.0))
-        light.setPos((-10, -10, 100))
-        light.lookAt(0, 0, 1)
+        if light_spec is None:
+            # Create point lights
+            plight = PointLight('plight1')
+            light = lights.attachNewNode(plight)
+            plight.setColor((0.1, 0.1, 0.1, 1.0))
+            light.setPos((-2, -6, 4))
+            light.lookAt(0, 0, 0)
 
         # Create ambient light
-        alight = AmbientLight('alight')
-        alight.setColor((1., 1., 1., 1.0))
-        lights.attachNewNode(alight)
+            alight = AmbientLight('alight')
+            alight.setColor((1, 1, 1, 1.0))
+            lights.attachNewNode(alight)
+        else:
+            for lspec in light_spec:
+                light_type = lspec['type']
+                light_name = lspec['name']
+                assert light_type in ['AmbientLight', 'PointLight',  'DirectionalLight', 'SpotLight'], light_type
+                if light_type == 'AmbientLight':
+                    light = AmbientLight(light_name)
+                    light.setColor(lspec['color'])
+                    lights.attachNewNode(light)
+                elif light_type == 'PointLight':
+                    light = PointLight(light_name)
+                    lights.attachNewNode(light)
+                    light.setColor(lspec['color'])
+                    light.setPoint(lspec['pos'])
+                elif light_type == 'DirectionalLight':
+                    light = DirectionalLight(light_name)
+                    lights.attachNewNode(light)
+                    light.setColor(lspec['color'])
+                    light.setPoint(lspec['pos'])
+                    light.setDirection(lspec['direction'])
+                    
 
         return lights
 
