@@ -156,7 +156,6 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
         objnode.setTexGen(ts, TexGenAttrib.MEyeSphereMap)
         objnode.setTexture(ts, envtex)
 
-    lbase.rootnode.clearLight()
     if bgpath:
         bgtex = tools.read_file(lbase.loader.loadTexture, bgpath)
         # Set as background
@@ -180,6 +179,7 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
     bgnode.reparentTo(rootnode)
 
     if light_spec is not None:
+        lbase.rootnode.clearLight()
         lights = LightBase.make_lights(light_spec=light_spec, lname='scene_lights')
         lights.reparentTo(rootnode)
         for light in lights.getChildren():
