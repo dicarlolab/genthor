@@ -183,7 +183,6 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
         lights = LightBase.make_lights(light_spec=light_spec, lname='scene_lights')
         lights.reparentTo(rootnode)
         for light in lights.getChildren():
-            print(light)
             rootnode.setLight(light)
 
     return objnodes, bgnode
