@@ -102,6 +102,10 @@ class ImgRendererResizer(object):
             bgpath = os.path.join(self.bg_root, m['bgname'])
         else:
             bgpath = None
+        try:
+            use_envmap = m['use_envmap']
+        except:
+            use_envmap = False            
 
         bgscale = [m['bgscale']]
         bghp = [m['bgphi'], m['bgpsi']]
@@ -112,7 +116,8 @@ class ImgRendererResizer(object):
                           check_penetration=self.check_penetration,
                           texture=texture,
                           internal_canonical=internal_canonical,
-                          light_spec=light_spec)
+                          light_spec=light_spec, 
+                          use_envmap=use_envmap)
 
             self.lbase.render_frame()
         except Exception, e:

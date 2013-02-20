@@ -68,7 +68,8 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
                     texture=None,
                     internal_canonical=False,
                     check_penetration=False, 
-                    light_spec=None):
+                    light_spec=None, 
+                    use_envmap=False):
     """ Constructs the scene per the parameters. """
 
     # Default scene is lbase's rootnode
@@ -147,13 +148,13 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
                     raise PenetrationError(i, j, n1, n2)
 
     # Environment map
-    #if bgpath and False:
-    #    envtex = tools.read_file(lbase.loader.loadTexture, bgpath)
-    #    # Map onto object
-    #    ts = TextureStage('env')
-    #    ts.setMode(TextureStage.MBlendColorScale)
-    #    objnode.setTexGen(ts, TexGenAttrib.MEyeSphereMap)
-    #    objnode.setTexture(ts, envtex)
+    if bgpath and use_envmap:
+        envtex = tools.read_file(lbase.loader.loadTexture, bgpath)
+        # Map onto object
+        ts = TextureStage('env')
+        ts.setMode(TextureStage.MBlendColorScale)
+        objnode.setTexGen(ts, TexGenAttrib.MEyeSphereMap)
+        objnode.setTexture(ts, envtex)
 
     lbase.rootnode.clearLight()
     if bgpath:
