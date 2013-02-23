@@ -298,6 +298,7 @@ class GenerativeBase(DatasetBase):
                     config[_k] = [0] * len(cobj) if len(cobj) > 1 else 0
         config.setdefault('internal_canonical', self.internal_canonical)
         config.setdefault('light_spec', None)
+        config.setdefault('use_envmap', False)
         return irr(config)
 
     def get_images(self, preproc, global_light_spec=None, get_models=False):

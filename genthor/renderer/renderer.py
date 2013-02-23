@@ -153,8 +153,9 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
         # Map onto object
         ts = TextureStage('env')
         ts.setMode(TextureStage.MBlendColorScale)
-        objnode.setTexGen(ts, TexGenAttrib.MEyeSphereMap)
-        objnode.setTexture(ts, envtex)
+        for _objnode in objnodes:
+            _objnode.setTexGen(ts, TexGenAttrib.MEyeSphereMap)
+            _objnode.setTexture(ts, envtex)
 
     if bgpath:
         bgtex = tools.read_file(lbase.loader.loadTexture, bgpath)
