@@ -5,7 +5,7 @@ import os
 import numpy as np
 import pandac.PandaModules as pm
 # Project
-from genthor.API import RendererAPI, FeaturesAPI, PredictionAPI, ScoreAPI
+from genthor.API import SimpleAPI
 from genthor.renderer.lightbase import LightBase
 import genthor.renderer.renderer as gr
 import genthor.tools as tools
@@ -60,12 +60,11 @@ def mlmlpdf(x, mu, sigma):
 
 
 
-class BayesianSampler(object):
-    """ Basic MCMC sampler for visual inference."""
-
-    def __init__(self, image, renderer=None, rand=0):
+class BaseSampler(object):
+    """ Basic MCMC sampler."""
+    def __init__(self, image, renderer=None, RSO=0):
         # Initialize a random object
-        self.rand = tools.init_rand(rand)
+        self.RSO = tools.init_RSO(RSO)
         # Initial/null values
         self.image = image
         self.state0 = None
@@ -86,16 +85,16 @@ class BayesianSampler(object):
             self.renderer = renderer
         self.true_features = self.get_features(self.image)
         # Initialize proposal mechanism
-        self.init_proposer(rand=rand)
+        self.init_proposer(RSO=RSO)
         # Initialize the sampler
         self.init_state()
         # Parameters
         self.param = {"llik_sigma": 200.,}
 
-    def init_proposer(self, rand=0):
+    def init_proposer(self, RSO=0):
         """ Initialize the proposal mechanism."""
         # Create a proposal generation object
-        self.proposer = Proposer(rand=rand)
+        self.proposer = Proposer(RSO=RSO)
 
     def init_state(self, state=None):
         """ Initialize the sampler's state to 'state'."""
@@ -168,7 +167,7 @@ class BayesianSampler(object):
         # MH ratio
         ratio = proposal_score - score - fwdprob + bakprob
         # random flip
-        flip = np.log(self.rand.rand())
+        flip = np.log(self.RSO.rand())
         # Boolean indicating accept vs reject
         accepted = ratio >= flip
         # Extra info useful to store
@@ -221,20 +220,20 @@ class BayesianSamplerWithModel(BayesianSampler):
     """ Main MCMC sampler class when a feedforward model is used to
     drive proposals and provide approximate likelihoods."""
 
-    def __init__(self, image, get_features, get_margins, renderer=None, rand=0):
+    def __init__(self, image, get_features, get_margins, renderer=None, RSO=0):
         # Make self copies of the get_features and get_margins functions
         self.get_features = get_features
         self.get_margins = get_margins
         # Call parent constructor
-        super(type(self), self).__init__(image, renderer=renderer, rand=rand)
+        super(type(self), self).__init__(image, renderer=renderer, RSO=RSO)
 
-    def init_proposer(self, rand=0):
+    def init_proposer(self, RSO=0):
         """ Initialize the proposal mechanism."""
 
         # Compute the margins
         self.margins = self.get_margins(self.true_features)
         # Create a proposal generation object
-        self.proposer = ThorProposer(rand=rand)
+        self.proposer = ThorProposer(RSO=RSO)
 
     def init_state(self, state=None):
         """ Use the feedforward model to initialize, when state is not
@@ -254,8 +253,8 @@ class BayesianSamplerWithModel(BayesianSampler):
 class Proposer(object):
     """ Draw proposals conditioned on latent states."""
 
-    def __init__(self, rand=0):
-        self.rand = tools.init_rand(rand)
+    def __init__(self, RSO=0):
+        self.RSO = tools.init_RSO(RSO)
         self.init_state_info()
 
     def init_state_info(self):
@@ -291,10 +290,10 @@ class Proposer(object):
 
             # modelname and bgname
             sn = "modelname"
-            r = self.rand.randint(len(self._state_info[sn]))
+            r = self.RSO.randint(len(self._state_info[sn]))
             proposal[sn] = self._state_info[sn][r]
             sn = "bgname"
-            r = self.rand.randint(len(self._state_info[sn]))
+            r = self.RSO.randint(len(self._state_info[sn]))
             proposal[sn] = self._state_info[sn][r]
 
             # the remaining states
@@ -313,16 +312,16 @@ class Proposer(object):
 
             # modelname
             sn = "modelname"
-            if self.rand.rand() < Sd:
-                r = self.rand.randint(len(self._state_info[sn]))
+            if self.RSO.rand() < Sd:
+                r = self.RSO.randint(len(self._state_info[sn]))
                 proposal[sn] = self._state_info[sn][r]
             else:
                 proposal[sn] = state[sn]
 
             # bgname
             sn = "bgname"
-            if self.rand.rand() < Sd:
-                r = self.rand.randint(len(self._state_info[sn]))
+            if self.RSO.rand() < Sd:
+                r = self.RSO.randint(len(self._state_info[sn]))
                 proposal[sn] = self._state_info[sn][r]
             else:
                 proposal[sn] = state[sn]
@@ -339,7 +338,7 @@ class Proposer(object):
                 rng[0] = np.max(np.vstack((state[sn] - delta, rng[0])), 0)
                 rng[1] = np.min(np.vstack((state[sn] + delta, rng[1])), 0)
                 # Draw the proposal
-                proposal[sn] = sample(rng.T, rand=self.rand).ravel()
+                proposal[sn] = sample(rng.T, RSO=self.RSO).ravel()
 
         # # TODO: remove
         # proposal["modelname"] = "MB26897"
@@ -369,16 +368,16 @@ class Proposer(object):
 class ThorProposer(Proposer):
     """ Draw proposals conditioned on latent states, using Thor."""
 
-    def __init__(self, rand=0):
-        super(type(self), self).__init__(rand=rand)
+    def __init__(self, RSO=0):
+        super(type(self), self).__init__(RSO=RSO)
 
     def propose(self, state, margins):
         """ Draws proposal conditioned on 'state' and
         'reference_state', presumably using the feedforward model."""
 
-        reference_state = self.rand.multinomial(margins)
+        reference_state = self.RSO.multinomial(margins)
         diff = reference_state - state
-        proposal = self.rand.rand() * diff + state
+        proposal = self.RSO.rand() * diff + state
         return proposal
 
     def compute_proposal_probs(self, proposal):
@@ -464,7 +463,7 @@ if __name__ == "__main__":
     seed = 1
 
     # Dumb inference
-    sampler0 = BayesianSampler(image, renderer=R, rand=seed)
+    sampler0 = BayesianSampler(image, renderer=R, RSO=seed)
     # Initialize the sampler's state
     sampler0.init_state()
     # Run it
@@ -504,7 +503,7 @@ if __name__ == "__main__":
         time.sleep(0.1)
 
     # # Smart inference
-    # sampler1 = BayesianSamplerWithModel(image, renderer=R, rand=seed)
+    # sampler1 = BayesianSamplerWithModel(image, renderer=R, RSO=seed)
     # # Initialize the sampler's state
     # sampler1.init_state()
     # # Run it

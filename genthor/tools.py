@@ -18,18 +18,18 @@ def read_file(func, filepth):
     return out
 
 
-def init_rand(rand):
+def init_RSO(RSO):
     """ Takes either an existing mtrand.RandomState object, or a seed,
     and returns an mtrand.RandomState object."""
     
     # Random state
-    if not isinstance(rand, np.random.mtrand.RandomState):
-        # rand is a seed
-        rand = np.random.RandomState(seed=rand)
-    return rand
+    if not isinstance(RSO, np.random.mtrand.RandomState):
+        # RSO is a seed
+        RSO = np.random.RandomState(seed=RSO)
+    return RSO
 
 
-def sample(rng, num=1, f_log=False, rand=0):
+def sample(rng, num=1, f_log=False, RSO=0):
     """ Samples 'num' random values in some range 'rng'.
     
     rng: range (can be either (2,) or (m,2)) 
@@ -53,9 +53,9 @@ def sample(rng, num=1, f_log=False, rand=0):
         # add dimension to make operations broadcast properly
         arng = arng[:, None]
 
-    # random values in [0, 1]
-    rand = init_rand(rand)
-    r = rand.rand(num, arng.shape[1])
+    # Random values in [0, 1]
+    RSO = init_RSO(RSO)
+    r = RSO.rand(num, arng.shape[1])
 
     # fit them to the range
     val = r * (arng[[1]] - arng[[0]]) + arng[[0]]
