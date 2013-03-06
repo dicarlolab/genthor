@@ -264,6 +264,7 @@ class GenerativeBase(DatasetBase):
         else:
             self.use_canonical = False
         self.internal_canonical = kwargs.get('internal_canonical', False)
+        self.use_envmap = kwargs.get('use_envmap', False)
     
     def get_image(self, preproc, config, global_light_spec=None):
         if not isinstance(config['obj'], list):
