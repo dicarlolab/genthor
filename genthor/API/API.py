@@ -3,7 +3,7 @@
 # Standard
 import argparse
 import os
-# Third party
+# External
 import requests
 
 
