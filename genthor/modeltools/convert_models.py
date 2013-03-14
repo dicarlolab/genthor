@@ -262,6 +262,9 @@ def convert(inout_pths, ext=".egg", f_blender=True, f_force=False):
 
         # Do the conversion, depending on ext1 type
         if ext0 == ".obj":
+            mtl_pth = resolve_mtl_path(in_pth)
+            if mtl_pth:
+                mt.fix_tex_names(mtl_pth, imgdirname='tex', f_verify=False)
             if ext1 == ".bam":
                 # Two-step conversion, first to egg, then to bam
                 egg_pth = os.path.join(tmp_root, "eggtmp", "tmp.egg")
@@ -372,3 +375,13 @@ if __name__ == "__main__":
 # Make cmd line interface better using argparse
 # 
 
+def resolve_mtl_path(in_pth):
+    mtl_pth = os.path.splitext(in_pth)[0] + ".mtl"
+    if os.path.exists(mtl_pth):
+        return mtl_pth
+    else:
+        dirname = os.path.split(in_pth)[0]
+        mtls = [_x for _x in os.listdir(dirname) if _x.endswith('.mtl')]
+        if len(mtls) > 0:
+            return os.path.join(dirname, mtls[0])
+    return False
