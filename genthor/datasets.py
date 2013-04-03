@@ -305,7 +305,10 @@ class GenerativeBase(DatasetBase):
     def get_images(self, preproc, global_light_spec=None, get_models=False):
         if get_models:
             self.get_models()
-        name = self.specific_name + '_' + get_image_id(preproc)
+        preproc_c = copy.deepcopy(preproc)
+        if global_light_spec is not None:
+            preproc_c['global_light_spec'] = global_light_spec
+        name = self.specific_name + '_' + get_image_id(preproc_c)
         cachedir = self.cache_home()
         meta = self.meta
         if self.noise:   
