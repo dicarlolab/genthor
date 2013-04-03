@@ -136,6 +136,7 @@ class ImgRendererResizer(object):
             if rval.ndim == 3:
                 noise = noise[:, :, np.newaxis]
             rval = ndimage.gaussian_filter(rval + noise, sigma=self.noise['smoothing'])
+            rval = rval.astype(self._dtype)
         if self.normalize:
             rval = rval - rval.mean()
             rval /= max(rval.std(), 1e-3)
