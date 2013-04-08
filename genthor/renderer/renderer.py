@@ -13,6 +13,8 @@ from pandac.PandaModules import NodePath
 from pandac.PandaModules import TexGenAttrib
 from pandac.PandaModules import TextureStage
 from pandac.PandaModules import Texture
+from panda3d.core import *
+from direct.gui.OnscreenImage import OnscreenImage
 import sys
 import pdb
 
@@ -164,9 +166,10 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
                 _objnode.setTexGen(ts, TexGenAttrib.MEyeSphereMap)
                 _objnode.setTexture(ts, envtex0)
 
-    if bgpath:
+    if bgpath and not np.isinf(bghp[0]):
         bgtex = tools.read_file(lbase.loader.loadTexture, bgpath)
         # Set as background
+        #plane = cm.autogen_egg(mt.resolve_model_path('plane2d'))
         bgnode = lbase.loader.loadModel('smiley')
         # Get material list
         bgnode.clearMaterial()
@@ -177,11 +180,14 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
         c = 5.
         bgnode.setScale(c * bgscale[0], c * bgscale[0], c * bgscale[0])
         bgnode.setPos(0, 0, 0) #0)
-        bgnode.setHpr(bghp[0], bghp[1], 0.)
+        bgnode.setHpr(bghp[0], bghp[1], 0.) 
         # Detach point light
         plight1 = lbase.rootnode.find('**/plight1')
         if plight1:
             plight1.detachNode()
+    elif bgpath:
+        bgnode = NodePath("empty-bgnode")
+        imageObject = OnscreenImage(image = bgpath, pos = (0, 0, 0), scale=tuple(bgscale), parent=bgnode, base=lbase)
     else:
         bgnode = NodePath("empty-bgnode")
     bgnode.reparentTo(rootnode)
