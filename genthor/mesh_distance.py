@@ -1,8 +1,19 @@
+"""
+compute distances between two 3-d models via surface distortion mapping metric
+"""
+
 from pandac.PandaModules import *
 import numpy as np
 import genthor.datasets as gd; reload(gd)
 
 def dist(o1, o2):
+    """
+    returns distance between two 3-d models o1 and o2
+        example: 
+             >>>d = md.dist('face0001', 'schnauzer')
+             >>>d
+                0.26658963019761267
+    """
     preproc = {'dtype':'float32', 'size':(128, 128), 'normalize':False, 'mode':'L'}
     dataset = gd.GenerativeDatasetBase()
     fmap = dataset.imager.get_map(preproc, 'texture')
