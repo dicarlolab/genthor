@@ -53,7 +53,9 @@ def dist_rot(obj, rxy, rxz, ryz, fmap, dataset, poses):
     P = [list(queue.getEntry(i).getSurfacePoint(root)) for i in range(queue.getNumEntries())]
     pdict = {}
     for p in poses:
-        p_poses = [np.array(x) for x in P if is_collinear(p, x)][0]
+        cfs = np.array([1 - np.corrcoef(x, p)[0, 1] for x in P])
+        p_poses = np.array(P[cfs.argmin()])
+        #p_poses = [np.array(x) for x in P if is_collinear(p, x)][0]
         pdict[p] = p_poses
      
     root.getChildren()[2].removeNode()
@@ -85,11 +87,16 @@ def thing(root,poses):
 
 def is_collinear(A, B):
     tol = 1e-3
-    K = [float(a) / b if np.abs(b) > tol else np.abs(a) < tol  for a, b in zip(A, B) ]
-    if False in K:
+    K = [float(a) / b if np.abs(b) > tol else (True if np.abs(a) < tol else 'F')  for a, b in zip(A, B) ]
+    if 'F' in K:
         return False
     else:
         K0 = [k for k in K if k != True]
-        return all([np.abs((k - K0[0])) < tol for k in K0])
-
+        tol_list = [np.abs((k - K0[0])) for k in K0]
+        A = all([t < tol for t in tol_list])
+        if A:
+            return True
+        else:
+            print(tol_list)
+            return False
 
