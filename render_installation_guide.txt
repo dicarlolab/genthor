@@ -1,0 +1,94 @@
+Preliminary:
+
+-Install the following packages:
+
+# % you must have root to install these packages (if you are on mh_17 they are already installed)
+
+apt-get install bison flex
+
+apt-get install -y -q libgl1-mesa-dev
+
+apt-get install -y -q libtiff4-dev
+
+apt-get install -y -q libsdl1.2-dev
+
+
+
+-Copy this obj_Bscript.py in genthor to your ~/.skdata directory:
+
+cp genthor/genthor/modeltools/obj_Bscript.py ~/.skdata/   (make ~/.skdata if it doesn't exist)
+
+
+
+Blender
+
+-Download, extract and install prebuilt blender from website.
+
+http://www.blender.org/download/get-blender/
+Choose the right operation system and copy the downloading link
+Use wget to install in shell
+If installing on mh17 (linux 64), the link is http://download.blender.org/release/Blender2.68/blender-2.68a-linux-glibc211-x86_64.tar.bz2
+
+-Rewrite so that you are installing to a specific directory (let's use ~/renderer) 
+To install blender, first make a new folder called 'render' in HOME directory: mkdir render
+Then, unzip using the proper tar command based on file type: tar jxf filename.tar.bz2
+It doesn't matter where you unzip panda.
+
+-Copy the folders io_scene_egg and io_scene_obj from Blender's addons to the directory containing genthor.
+# all paths are absolute
+# [PATH_TO_GENTHOR] means the folder that contains the genthor module, setup.py, etc
+
+# # no file called io_scene_egg, cannot run
+cp -r ~/[PATHTOBLENDERINSTALL]/2.68/scripts/addons/io_scene_egg ~/[PATHTOGENTHOR]
+# # cannot run the above code. This will cause problem later when redering images!
+
+cp -r ~/[PATHTOBLENDERINSTALL]/2.68/scripts/addons/io_scene_obj ~/[PATHTOGENTHOR]
+
+Then link /bin/blender to your install location
+
+ln -s ~/PATHTOBLENDERINSTALL/blender ~/bin/blender
+
+Panda
+
+-Download panda from source.
+# wget url
+https://www.panda3d.org/download/panda3d-1.8.1/panda3d-1.8.1.tar.gz 
+
+-Unzip using tar -zxvf filename.tar.gz
+
+-Make using
+# make sure you are in the folder where you installed/extracted panda before you run makepanda
+python makepanda/makepanda.py --everything --no-vision
+
+You can then install it in the same location (path to install has to be the same as path you called makepanda)
+
+python makepanda/installpanda.py --prefix=/[PATHYOUWANTTOINSTALLIN]
+
+-Edit panda's Config.prc file (locate or find Config.prc, nano or vi the file) so it looks like this 
+
+#load-display pandagl
+#load-display pandadx9
+#load-display pandadx8
+#load-display pandagles
+load-display p3tinydisplay
+
+
+
+Set sys path of Panda
+
+-add [PATH_TO_PANDA_INSTALL]/usr/local/share/panda3d and [PATH_TO_PANDA_INSTALL]/usr/local/share/panda3d to your python path using
+
+export PYTHON_PATH='~/panda3d-1.8.1/usr/local/lib/panda3d':'~/panda3d-1.8.1/usr/local/share/panda3d'
+
+-then add this line to your .profile so this is done automatically at login
+
+
+In ipython
+-import genthor.datasets as gd
+# When you run genthor for the first time, it will need to load background and models. 
+# You can do this by:
+meta=dataset.meta
+# after define your models, you will need to load models
+dataset.get_models()
+
+
