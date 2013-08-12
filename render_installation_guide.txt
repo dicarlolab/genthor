@@ -14,9 +14,9 @@ apt-get install -y -q libsdl1.2-dev
 
 
 
--Copy this obj_Bscript.py in genthor to your ~/.skdata directory:
+-Copy this obj_Bscript.py in genthor to your ~/.skdata/genthor directory:
 
-cp genthor/genthor/modeltools/obj_Bscript.py ~/.skdata/   (make ~/.skdata if it doesn't exist)
+cp [PATHTOGENTHOR]/genthor/genthor/modeltools/obj_Bscript.py ~/.skdata/genthor   (make ~/.skdata/genthor if it doesn't exist)
 
 
 
@@ -39,14 +39,16 @@ It doesn't matter where you unzip panda.
 # [PATH_TO_GENTHOR] means the folder that contains the genthor module, setup.py, etc
 
 # # no file called io_scene_egg, cannot run
-cp -r ~/[PATHTOBLENDERINSTALL]/2.68/scripts/addons/io_scene_egg ~/[PATHTOGENTHOR]
-# # cannot run the above code. This will cause problem later when redering images!
+cp -r ~/[PATHTOGENTHOR] ~/[PATHTOBLENDERINSTALL]/2.68/scripts/addons/io_scene_egg 
+For example: cp -r ~/genthor/io_scene_obj ~/render/blender-2.68a-linux-glibc211-x86_64/2.68/scripts/addons/ 
 
-cp -r ~/[PATHTOBLENDERINSTALL]/2.68/scripts/addons/io_scene_obj ~/[PATHTOGENTHOR]
+cp -r ~/[PATHTOGENTHOR] ~/[PATHTOBLENDERINSTALL]/2.68/scripts/addons/io_scene_obj 
 
-Then link /bin/blender to your install location
+Then link /bin/blender to your install location:
 
 ln -s ~/PATHTOBLENDERINSTALL/blender ~/bin/blender
+For example: ln -s ~/render/blender-2.68a-linux-glibc211-x86_64/blender ~/bin/blender
+
 
 Panda
 
@@ -90,5 +92,4 @@ In ipython
 meta=dataset.meta
 # after define your models, you will need to load models
 dataset.get_models()
-
 
