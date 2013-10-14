@@ -2,7 +2,7 @@
 """ Contains Imager and ImgRendererResizer class definitions."""
 from genthor.renderer.lightbase import LightBase
 import genthor.renderer.renderer as gr
-import Image
+from PIL import Image
 import numpy as np
 import os
 import pdb
@@ -127,7 +127,9 @@ class ImgRendererResizer(object):
         if remove: 
             self.remove()
         tex = self.output.getTexture()
-        im = Image.fromarray(self.lbase.get_tex_image(tex))
+        _arr = self.lbase.get_tex_image(tex)
+        print('AASS', _arr.shape)
+        im = Image.fromarray(_arr)
         if im.mode != self.mode:
             im = im.convert(self.mode)
         rval = np.asarray(im, self._dtype)
