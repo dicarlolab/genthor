@@ -277,6 +277,10 @@ class GenerativeBase(DatasetBase):
         for d, co in zip(dname, cobj):
             if not os.path.exists(d):
                 self.get_model(co)
+        if global_light_spec is not None:
+            preproc['global_light_spec'] = global_light_spec
+        if global_cam_spec is not None:
+            preproc['global_cam_spec'] = global_cam_spec
         phash = json.dumps(preproc)
         if phash not in self.irrs:
             self.irrs[phash] = self.imager.get_map(preproc, 'texture', 

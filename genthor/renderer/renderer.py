@@ -43,6 +43,7 @@ def setup_renderer(window_type, size=(256, 256), light_spec=None, cam_spec=None)
     # Set up a camera
     if cam_spec is None:
         cam_spec = {}
+    print('cam_spec', cam_spec)
     cam_x, cam_z, cam_y = cam_spec.get('cam_pos', (0., -20., 0.))
     scene_width = cam_spec.get('scene_width', 3.)
     fov = 2. * np.degrees(np.arctan(scene_width / (2. * np.abs(cam_z))))

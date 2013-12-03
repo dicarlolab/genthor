@@ -25,15 +25,22 @@ class Imager(object):
         """ Initializes a new renderer and adds it to the
         Imager.renderers dict."""
         # Create the LightBase instance/output
-        lbase, output = self.renderers.get((window_type, size),
+
+        import hashlib
+        def get_id(l):
+            return hashlib.sha1(repr(l)).hexdigest()
+        ls_id = get_id(light_spec)
+        cs_id = get_id(cam_spec)
+
+        lbase, output = self.renderers.get((window_type, size, ls_id, cs_id),
                                            gr.setup_renderer(window_type, size, 
                                                light_spec=light_spec,
                                                cam_spec=cam_spec))
         # Add to the Imager.renderers
-        self.renderers[(window_type, size)] = lbase, output
+        self.renderers[(window_type, size, ls_id, cs_id)] = lbase, output
         return lbase, output
 
-    def get_map(self, preproc, window_type, light_spec=None):
+    def get_map(self, preproc, window_type, light_spec=None, cam_spec=None):
         """ Returns an ImgRendererResizer instance."""
         # Get a valid renderer (new or old)
         size = tuple(preproc["size"])
