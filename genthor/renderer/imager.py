@@ -21,13 +21,14 @@ class Imager(object):
         self.bg_root = bg_root
         self.check_penetration=check_penetration
 
-    def get_renderer(self, window_type, size, light_spec=None):
+    def get_renderer(self, window_type, size, light_spec=None, cam_spec=None):
         """ Initializes a new renderer and adds it to the
         Imager.renderers dict."""
         # Create the LightBase instance/output
         lbase, output = self.renderers.get((window_type, size),
                                            gr.setup_renderer(window_type, size, 
-                                               light_spec=light_spec))
+                                               light_spec=light_spec,
+                                               cam_spec=cam_spec))
         # Add to the Imager.renderers
         self.renderers[(window_type, size)] = lbase, output
         return lbase, output
@@ -37,7 +38,9 @@ class Imager(object):
         # Get a valid renderer (new or old)
         size = tuple(preproc["size"])
         lbase, output = self.renderers.get((window_type, size),
-                                           self.get_renderer(window_type, size, light_spec=light_spec))
+                                           self.get_renderer(window_type, size, 
+                                           light_spec=light_spec,
+                                           cam_spec=cam_spec))
         # Make the irr instance
         irr = ImgRendererResizer(self.model_root, self.bg_root,
                                  preproc, lbase, output,

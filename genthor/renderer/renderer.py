@@ -19,7 +19,7 @@ import sys
 import pdb
 
 
-def setup_renderer(window_type, size=(256, 256), light_spec=None):
+def setup_renderer(window_type, size=(256, 256), light_spec=None, cam_spec=None):
     """ Sets up the LightBase rendering stuff."""
 
     # Initialize
@@ -41,18 +41,23 @@ def setup_renderer(window_type, size=(256, 256), light_spec=None):
     lbase.render_frame()
 
     # Set up a camera
-    scene_width = 3.
-    cam_z = -20.
+    if cam_spec is None:
+        cam_spec = {}
+    cam_x, cam_z, cam_y = cam_spec.get('cam_pos', (0., -20., 0.))
+    scene_width = cam_spec.get('scene_width', 3.)
     fov = 2. * np.degrees(np.arctan(scene_width / (2. * np.abs(cam_z))))
+    cam_lx, cam_lz, cam_ly = cam_spec.get('cam_lookat', (0., 0., 0.)) 
+    cam_rot = cam_spec.get('cam_rot', 0.)
     camera = lbase.make_camera(output)
     lens = camera.node().getLens()
-    lens.setMinFov(fov)
+    lens.setMinFov(fov)    
     # Position the camera
     camera_rot = rootnode.attachNewNode('camera_rot')
     lbase.cameras.reparentTo(camera_rot)
-    lbase.cameras.setPos(0, cam_z, 0)
-    lbase.cameras.lookAt(0, 0, 0)
-    camera_rot.setH(0.)
+    lbase.cameras.setPos(cam_x, cam_z, cam_y)
+    lbase.cameras.lookAt(cam_lx, cam_lz, cam_ly)
+    camera_rot.setH(cam_rot)
+    
     # Lights
     lights = LightBase.make_lights(light_spec=light_spec)
     lights.reparentTo(rootnode)
