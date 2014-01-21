@@ -2,7 +2,7 @@
 """ Contains Imager and ImgRendererResizer class definitions."""
 from genthor.renderer.lightbase import LightBase
 import genthor.renderer.renderer as gr
-import Image
+from PIL import Image
 import numpy as np
 import os
 import pdb
@@ -21,23 +21,33 @@ class Imager(object):
         self.bg_root = bg_root
         self.check_penetration=check_penetration
 
-    def get_renderer(self, window_type, size, light_spec=None):
+    def get_renderer(self, window_type, size, light_spec=None, cam_spec=None):
         """ Initializes a new renderer and adds it to the
         Imager.renderers dict."""
         # Create the LightBase instance/output
-        lbase, output = self.renderers.get((window_type, size),
+
+        import hashlib
+        def get_id(l):
+            return hashlib.sha1(repr(l)).hexdigest()
+        ls_id = get_id(light_spec)
+        cs_id = get_id(cam_spec)
+
+        lbase, output = self.renderers.get((window_type, size, ls_id, cs_id),
                                            gr.setup_renderer(window_type, size, 
-                                               light_spec=light_spec))
+                                               light_spec=light_spec,
+                                               cam_spec=cam_spec))
         # Add to the Imager.renderers
-        self.renderers[(window_type, size)] = lbase, output
+        self.renderers[(window_type, size, ls_id, cs_id)] = lbase, output
         return lbase, output
 
-    def get_map(self, preproc, window_type, light_spec=None):
+    def get_map(self, preproc, window_type, light_spec=None, cam_spec=None):
         """ Returns an ImgRendererResizer instance."""
         # Get a valid renderer (new or old)
         size = tuple(preproc["size"])
         lbase, output = self.renderers.get((window_type, size),
-                                           self.get_renderer(window_type, size, light_spec=light_spec))
+                                           self.get_renderer(window_type, size, 
+                                           light_spec=light_spec,
+                                           cam_spec=cam_spec))
         # Make the irr instance
         irr = ImgRendererResizer(self.model_root, self.bg_root,
                                  preproc, lbase, output,
@@ -127,7 +137,9 @@ class ImgRendererResizer(object):
         if remove: 
             self.remove()
         tex = self.output.getTexture()
-        im = Image.fromarray(self.lbase.get_tex_image(tex))
+        _arr = self.lbase.get_tex_image(tex)
+        print('AASS', _arr.shape)
+        im = Image.fromarray(_arr)
         if im.mode != self.mode:
             im = im.convert(self.mode)
         rval = np.asarray(im, self._dtype)

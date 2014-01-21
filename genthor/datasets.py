@@ -266,7 +266,8 @@ class GenerativeBase(DatasetBase):
         self.internal_canonical = kwargs.get('internal_canonical', False)
         self.use_envmap = kwargs.get('use_envmap', False)
     
-    def get_image(self, preproc, config, global_light_spec=None):
+    def get_image(self, preproc, config, global_light_spec=None,
+                global_cam_spec=None):
         if not isinstance(config['obj'], list):
             dname = [self.obj_home(config['obj'])]
             cobj = [config['obj']]
@@ -276,9 +277,15 @@ class GenerativeBase(DatasetBase):
         for d, co in zip(dname, cobj):
             if not os.path.exists(d):
                 self.get_model(co)
+        if global_light_spec is not None:
+            preproc['global_light_spec'] = global_light_spec
+        if global_cam_spec is not None:
+            preproc['global_cam_spec'] = global_cam_spec
         phash = json.dumps(preproc)
         if phash not in self.irrs:
-            self.irrs[phash] = self.imager.get_map(preproc, 'texture', light_spec=global_light_spec)
+            self.irrs[phash] = self.imager.get_map(preproc, 'texture', 
+                       light_spec=global_light_spec,
+                       cam_spec=global_cam_spec)
         irr = self.irrs[phash]
         use_canonical = config.get('use_canonical', self.use_canonical)
         if use_canonical:
@@ -302,12 +309,15 @@ class GenerativeBase(DatasetBase):
         config.setdefault('use_envmap', False)
         return irr(config)
 
-    def get_images(self, preproc, global_light_spec=None, get_models=False):
+    def get_images(self, preproc, global_light_spec=None, 
+                    global_cam_spec=None, get_models=False):
         if get_models:
             self.get_models()
         preproc_c = copy.deepcopy(preproc)
         if global_light_spec is not None:
             preproc_c['global_light_spec'] = global_light_spec
+        if global_cam_spec is not None:
+            preproc_c['global_cam_spec'] = global_cam_spec
         name = self.specific_name + '_' + get_image_id(preproc_c)
         cachedir = self.cache_home()
         meta = self.meta
@@ -319,7 +329,9 @@ class GenerativeBase(DatasetBase):
         preproc = copy.deepcopy(preproc)
         preproc['size'] = tuple(preproc['size'])
         size = preproc['size']
-        irr = self.imager.get_map(preproc, window_type, light_spec=global_light_spec)
+        irr = self.imager.get_map(preproc, window_type, 
+                                light_spec=global_light_spec,
+                                cam_spec=global_cam_spec)
         image_map = larray.lmap(irr, meta)	
         return larray.cache_memmap(image_map, name=name, basedir=cachedir)
 

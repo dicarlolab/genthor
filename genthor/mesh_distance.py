@@ -1,9 +1,16 @@
+
 import os
 import cPickle
+
+"""
+compute distances between two 3-d models via surface distortion mapping metric
+"""
+
 
 from pandac.PandaModules import *
 import numpy as np
 import genthor.datasets as gd; reload(gd)
+
 
 def set_dist(oset, outdir):
     Ddict = {}
@@ -18,6 +25,7 @@ def set_dist(oset, outdir):
 def dist(o1, o2, outdir=None):
     if not isinstance(o2, list):
         o2 = [o2]
+
     preproc = {'dtype':'float32', 'size':(128, 128), 'normalize':False, 'mode':'L'}
     dataset = gd.GenerativeDatasetBase()
     fmap = dataset.imager.get_map(preproc, 'texture')
