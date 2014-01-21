@@ -1,8 +1,23 @@
+import os
+import cPickle
+
 from pandac.PandaModules import *
 import numpy as np
 import genthor.datasets as gd; reload(gd)
 
-def dist(o1, o2):
+def set_dist(oset, outdir):
+    Ddict = {}
+    if not os.path.isdir(outdir):  
+        os.mkdir(outdir)
+    for (i, m) in enumerate(oset):
+        mset = [_m for _m in oset[i+1:] if not os.path.exists(os.path.join(outdir, m + '_' + _m + '.pkl'))]
+        Ddict[m] = dist(m, mset, outdir=outdir)
+    return Ddict
+        
+
+def dist(o1, o2, outdir=None):
+    if not isinstance(o2, list):
+        o2 = [o2]
     preproc = {'dtype':'float32', 'size':(128, 128), 'normalize':False, 'mode':'L'}
     dataset = gd.GenerativeDatasetBase()
     fmap = dataset.imager.get_map(preproc, 'texture')
@@ -12,12 +27,22 @@ def dist(o1, o2):
     pdict1 = dist_rot(o1, 0, 0, 0, fmap, dataset, poses)
     M = 72
     rots = [(i, j, k) for i in range(360)[::M] for j in range(360)[::M] for k in range(360)[::M]]
-    Ds = []
-    for r in rots:
-        pdict2 = dist_rot(o2, r[0], r[1], r[2], fmap, dataset, poses)
-        Ds.append(np.mean([np.linalg.norm(pdict2[p] - pdict1[p]) for p in poses]))
-    d = min(Ds)
-    return d
+    dist_dict = {}
+    for _o2 in o2:
+        print(o1, _o2)
+        try:
+            Ds = []
+            for r in rots:
+                pdict2 = dist_rot(_o2, r[0], r[1], r[2], fmap, dataset, poses)
+                Ds.append(np.mean([np.linalg.norm(pdict2[p] - pdict1[p]) for p in poses]))
+            d = min(Ds)
+            pth = os.path.join(outdir, o1 + '_' + _o2 + '.pkl')
+            with open(pth, 'w') as _f:
+                cPickle.dump(d, _f)
+            dist_dict[_o2] = d
+        except (AssertionError, ValueError):
+            print(o1, _o2, 'failure')
+    return dist_dict
     
 
 def dist_rot(obj, rxy, rxz, ryz, fmap, dataset, poses):
