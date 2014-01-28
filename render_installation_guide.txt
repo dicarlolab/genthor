@@ -34,7 +34,7 @@ To install blender, first make a new folder called 'render' in HOME directory: m
 Then, unzip using the proper tar command based on file type: tar jxf filename.tar.bz2
 It doesn't matter where you unzip panda.
 
--Copy the modified folders io_scene_egg and io_scene_obj reader plugin from Blender's addons to the directory containing genthor.
+-Copy the modified folders io_scene_egg and io_scene_obj reader plugin from the genthor install to Blender's addons:
 # all paths are absolute
 # [PATH_TO_GENTHOR] means the folder that contains the genthor module, setup.py, etc (This is the "genthor install" directory, where you cloned the genthor repo into from github.)
 
@@ -61,9 +61,6 @@ https://www.panda3d.org/download/panda3d-1.8.1/panda3d-1.8.1.tar.gz
 # make sure you are in the folder where you installed/extracted panda before you run makepanda
 python makepanda/makepanda.py --everything --no-vision
 
-You can then install it in the same location (path to install has to be the same as path you called makepanda)
-
-python makepanda/installpanda.py --prefix=/[PATHYOUWANTTOINSTALLIN]
 
 -Edit panda's Config.prc file (locate or find Config.prc, nano or vi the file) so it looks like this 
 
@@ -77,12 +74,16 @@ Note: The point of making this change is to allow panda to render to an off-scre
 without displays (e.g. servers). This is an installation-specific thing that, if you were running on your own personal 
 desktop and wanted to see things on the screen as they rendered, you could leave it as it was (e.g. pandagl).
 
+- You can then install it in the same location (path to install has to be the same as path you called makepanda)
+
+python makepanda/installpanda.py --prefix=/[PATHYOUWANTTOINSTALLIN]
+
 
 Set sys path of Panda
 
 -add [PATH_TO_PANDA_INSTALL]/usr/local/share/panda3d and [PATH_TO_PANDA_INSTALL]/usr/local/share/panda3d to your python path using
 
-export PYTHON_PATH='~/panda3d-1.8.1/usr/local/lib/panda3d':'~/panda3d-1.8.1/usr/local/share/panda3d'
+export PYTHONPATH=$PYTHONPATH:[PATH_TO_PANDA_INSTALL]/lib/panda3d':[PATH_TO_PANDA_INSTALL]/share/panda3d
 
 -then add this line to your .profile so this is done automatically at login
 
