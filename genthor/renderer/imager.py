@@ -138,7 +138,6 @@ class ImgRendererResizer(object):
             self.remove()
         tex = self.output.getTexture()
         _arr = self.lbase.get_tex_image(tex)
-        print('AASS', _arr.shape)
         im = Image.fromarray(_arr)
         if im.mode != self.mode:
             im = im.convert(self.mode)
