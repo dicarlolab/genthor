@@ -86,7 +86,7 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
     rootnode = lbase.rootnode
     # Modelpath points to the model .egg/.bam file
 
-    if isinstance(modelpath, str):
+    if isstring(modelpath):
         modelpaths = [modelpath]
         scales = [scale]
         poses = [pos]
@@ -165,7 +165,7 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
             use_envmap = [use_envmap] * len(objnodes)
         for _objnode, ue in zip(objnodes, use_envmap):
             if ue:
-                if isinstance(ue, str):
+                if isstring(ue):
                     envtex0 = tools.read_file(lbase.loader.loadTexture, mt.resolve_texture_path(ue))
                 else:
                     envtex0 = envtex
@@ -287,3 +287,11 @@ class PenetrationError(Exception):
     def __init__(self, i, j, n1, n2):
         self.msg = 'Nodes %d (%s) and %d (%s) are penetrating' % (i, repr(n1), i+1+j, repr(n2))
         print(self.msg)
+
+def isstring(x):
+    try:
+        x + ''
+    except TypeError:
+        return False
+    else:
+        return True
