@@ -83,7 +83,7 @@ Set sys path of Panda
 
 -add [PATH_TO_PANDA_INSTALL]/usr/local/share/panda3d and [PATH_TO_PANDA_INSTALL]/usr/local/share/panda3d to your python path using
 
-export PYTHONPATH=$PYTHONPATH:[PATH_TO_PANDA_INSTALL]/lib/panda3d':[PATH_TO_PANDA_INSTALL]/share/panda3d
+export PYTHONPATH=$PYTHONPATH:[PATH_TO_PANDA_INSTALL]/lib/panda3d:[PATH_TO_PANDA_INSTALL]/share/panda3d
 
 -then add this line to your .profile so this is done automatically at login
 
