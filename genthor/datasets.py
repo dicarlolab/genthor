@@ -263,7 +263,10 @@ class GenerativeBase(DatasetBase):
                                   unique=True)
         else:
             self.use_canonical = False
-        self.internal_canonical = kwargs.get('internal_canonical', False)
+        if 'internal_canonical' in kwargs:
+            self.internal_canonical = kwargs['internal_canonical']
+        elif not hasattr(self, 'internal_canonical'):
+            self.internal_canonical = False
         self.use_envmap = kwargs.get('use_envmap', False)
     
     def get_image(self, preproc, config, global_light_spec=None,
@@ -481,9 +484,11 @@ class GenerativeDatasetBase(GenerativeBase):
                     meta['c' + _k] -= cscl[obj][_k]
                 meta['s'][meta['obj'] == obj] *= cscl[obj]['s']
         if internal_canonical:
-            meta = meta.addcols([np.ones((len(meta),))], names = ['internal_canonical'])
+            meta = meta.addcols([np.ones(len(meta), dtype='bool')],
+                    names=['internal_canonical'])
         else:
-            meta = meta.addcols([np.zeros((len(meta),))], names = ['internal_canonical'])
+            meta = meta.addcols([np.zeros(len(meta), dtype='bool')],
+                    names=['internal_canonical'])
                 
         return meta
         
