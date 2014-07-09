@@ -89,7 +89,7 @@ class ImgRendererResizer(object):
             c.removeNode()
 
     def __call__(self, m, remove=True):
-        if isinstance(m['obj'], str):
+        if isstring(m['obj']):
             modelpath = os.path.join(self.model_root, 
                                  m['obj'])
             scale = [m['s']]
@@ -159,3 +159,10 @@ class ImgRendererResizer(object):
         assert rval.shape[:2] == self._shape[:2], (rval.shape, self._shape)
         return rval
 
+def isstring(x):
+    try:
+        x + ''
+    except TypeError:
+        return False
+    else:
+        return True

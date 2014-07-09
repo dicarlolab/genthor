@@ -12,20 +12,14 @@ import numpy as np
 import genthor.datasets as gd; reload(gd)
 
 
-def set_dist(oset, outdir):
-    Ddict = {}
-    if not os.path.isdir(outdir):  
-        os.mkdir(outdir)
-    for (i, m) in enumerate(oset):
-        mset = [_m for _m in oset[i+1:] if not os.path.exists(os.path.join(outdir, m + '_' + _m + '.pkl'))]
-        Ddict[m] = dist(m, mset, outdir=outdir)
-    return Ddict
-        
-
-def dist(o1, o2, outdir=None):
-    if not isinstance(o2, list):
-        o2 = [o2]
-
+def dist(o1, o2):
+    """
+    returns distance between two 3-d models o1 and o2
+        example:
+             >>>d = md.dist('face0001', 'schnauzer')
+             >>>d
+                0.26658963019761267
+    """
     preproc = {'dtype':'float32', 'size':(128, 128), 'normalize':False, 'mode':'L'}
     dataset = gd.GenerativeDatasetBase()
     fmap = dataset.imager.get_map(preproc, 'texture')
@@ -51,7 +45,7 @@ def dist(o1, o2, outdir=None):
         except (AssertionError, ValueError):
             print(o1, _o2, 'failure')
     return dist_dict
-    
+
 
 def dist_rot(obj, rxy, rxz, ryz, fmap, dataset, poses):
     config = {'bgname': 'DH-ITALY04SN.jpg',
@@ -70,7 +64,7 @@ def dist_rot(obj, rxy, rxz, ryz, fmap, dataset, poses):
                              'texture_mode': [None],
                              'internal_canonical': True,
                              'use_envmap': False}
-                                            
+
     x = fmap(config, remove=False)
     lbase = dataset.imager.renderers[('texture', (128, 128))][0]
     root = lbase.rootnode
@@ -90,11 +84,11 @@ def dist_rot(obj, rxy, rxz, ryz, fmap, dataset, poses):
         p_poses = np.array(P[cfs.argmin()])
         #p_poses = [np.array(x) for x in P if is_collinear(p, x)][0]
         pdict[p] = p_poses
-     
+
     root.getChildren()[2].removeNode()
     root.getChildren()[2].removeNode()
     root.getChildren()[2].removeNode()
-    
+
     return pdict
 
 
