@@ -9,7 +9,7 @@ import genthor.datasets as gd; reload(gd)
 def dist(o1, o2):
     """
     returns distance between two 3-d models o1 and o2
-        example: 
+        example:
              >>>d = md.dist('face0001', 'schnauzer')
              >>>d
                 0.26658963019761267
@@ -29,7 +29,7 @@ def dist(o1, o2):
         Ds.append(np.mean([np.linalg.norm(pdict2[p] - pdict1[p]) for p in poses]))
     d = min(Ds)
     return d
-    
+
 
 def dist_rot(obj, rxy, rxz, ryz, fmap, dataset, poses):
     config = {'bgname': 'DH-ITALY04SN.jpg',
@@ -48,7 +48,7 @@ def dist_rot(obj, rxy, rxz, ryz, fmap, dataset, poses):
                              'texture_mode': [None],
                              'internal_canonical': True,
                              'use_envmap': False}
-                                            
+
     x = fmap(config, remove=False)
     lbase = dataset.imager.renderers[('texture', (128, 128))][0]
     root = lbase.rootnode
@@ -66,11 +66,11 @@ def dist_rot(obj, rxy, rxz, ryz, fmap, dataset, poses):
     for p in poses:
         p_poses = [np.array(x) for x in P if is_collinear(p, x)][0]
         pdict[p] = p_poses
-     
+
     root.getChildren()[2].removeNode()
     root.getChildren()[2].removeNode()
     root.getChildren()[2].removeNode()
-    
+
     return pdict
 
 
