@@ -1548,6 +1548,34 @@ class GenerativeDataset32Objectome_final(GenerativeDatasetBase):
                   }]
     
 
+class GenerativeDatasetObjectomeCarsSubord(GenerativeDatasetBase):
+    models = ['MB28977', 'MB30301', 'MB27534', 'MB29543', 'MB27542', 'MB28490',
+            'MB31417', 'MB29183', 'MB27744', 'MB27752', 'MB27819', 'MB28855',
+            'MB28851', 'MB28307', 'MB27827', 'MB28985', 'MB27431', 'MB28981',
+            'MB29539', 'MB28343', 'MB29535', 'MB27451', 'MB27040', 'MB27803',
+            'MB28000', 'MB30938', 'MB28486', 'MB28315', 'MB27577', 'MB29547']
+    model_categories = \
+            dict_inverse(model_info.OrderedDict([('car', models)]))
+    use_canonical = True
+    internal_canonical = True
+    
+    templates = [
+                 {'n_ex_per_model': 1000,
+                  'name': 'Objectome_cars',
+                  'template': {'bgname': choice(model_info.BACKGROUNDS),
+                     'bgscale': 1.,
+                     'bgpsi': 0,
+                     'bgphi': uniform(-180.0, 180.),
+                     's': uniform(0.7, 1.7),   # 0.7 should be 1 / 1.7, but keeping it to be consistent with Ethan's code
+                     'ty': uniform(-1.0, 1.0),
+                     'tz': uniform(-1.0, 1.0),
+                     'ryz': uniform(-180., 180.),
+                     'rxy': uniform(-180., 180.),
+                     'rxz': uniform(-180., 180.),
+                     }
+                  }]
+
+
 ##XXX TO DO:  TEST simultaneous reads more thoroughly
 def test_generative_dataset():
     dataset = GenerativeDatasetTest()
