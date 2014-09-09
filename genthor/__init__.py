@@ -4,8 +4,6 @@ import json
 import os
 from skdata.data_home import get_data_home
 
-BASE_URL = 'http://50.19.109.25'
-MODEL_URL = BASE_URL + ':9999/3dmodels?'
 S3_URL = "http://dicarlocox-datasets.s3.amazonaws.com"
 s3_resource_bucket = 'genthor-resources'
 s3_old_model_bucket = 'dicarlocox-3dmodels-v1'
@@ -27,11 +25,6 @@ EGG_PATH = os.path.join(RESOURCE_PATH, "eggs")
 BAM_PATH = os.path.join(RESOURCE_PATH, "bams")
 HUMAN_PATH = os.path.join(RESOURCE_PATH, "human_data")
 TEXTURE_PATH = os.path.join(RESOURCE_PATH, "textures")
-
-def get_canonical_view(m):
-    v = json.loads(urllib.urlopen(MODEL_URL + 'query={"id":"' + m + '"}&fields=["canonical_view"]').read())[0]
-    if v.get('canonical_view'):
-        return v['canonical_view']
 
 
 def splitext2(pth, splitpoint=0):

@@ -38,6 +38,27 @@ import pdb
 #         shutil.copytree(os.path.join(pth0, "tex"), tex_pth)
 
 
+def which(program):
+    """Mimics the shell utility "which".  This is a shameless copy of
+    http://stackoverflow.com/questions/377017/test-if-executable-exists-in-python/377028#377028"""
+
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+
+    return None
+
+
 def obj2egg(obj_pth, egg_pth=None, f_blender=True): #, f_force_tex=True):
     """ Convert an .obj file to an .egg using Blender."""
     if not f_blender:
@@ -46,7 +67,13 @@ def obj2egg(obj_pth, egg_pth=None, f_blender=True): #, f_force_tex=True):
     if egg_pth is None:
         egg_pth = os.path.splitext(obj_pth)[0] + '.egg'
     # Blender script and conversion command.
+    # Use local user one first:
     blender_pth = os.path.join(os.environ["HOME"], "bin", "blender")
+    if not os.path.exists(blender_pth):
+        blender_pth = which('blender')
+        if blender_pth is None:
+            raise ValueError('blender not available.')
+
     blender_script_name = os.path.join(gt.GENTHOR_PATH, "obj_Bscript.py")
     blender_command_base = "%s -b -P %s --" % (blender_pth, blender_script_name)
 

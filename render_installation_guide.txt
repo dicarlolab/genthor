@@ -1,4 +1,9 @@
-Preliminary:
+== Preliminary ==
+
+-Copy this obj_Bscript.py in genthor to your ~/.skdata/genthor directory:
+
+cp [PATHTOGENTHOR]/genthor/genthor/modeltools/obj_Bscript.py ~/.skdata/genthor   (make ~/.skdata/genthor if it doesn't exist)
+
 
 -Install the following packages:
 
@@ -14,13 +19,11 @@ apt-get install -y -q libsdl1.2-dev
 
 
 
--Copy this obj_Bscript.py in genthor to your ~/.skdata/genthor directory:
-
-cp [PATHTOGENTHOR]/genthor/genthor/modeltools/obj_Bscript.py ~/.skdata/genthor   (make ~/.skdata/genthor if it doesn't exist)
 
 
+== Blender ==
 
-Blender
+=== Local install (for e.g. non-mh17 systems; see next subsection for mh17) ===
 
 -Download, extract and install prebuilt blender from website.
 
@@ -48,8 +51,39 @@ Then link /bin/blender to your install location:
 ln -s ~/PATHTOBLENDERINSTALL/blender ~/bin/blender
 For example: ln -s ~/render/blender-2.68a-linux-glibc211-x86_64/blender ~/bin/blender
 
+Done.  Proceed to Panda section
 
-Panda
+
+=== Blender on mh17 ===
+
+Blender executables are already installed. 
+
+You'll need to copy the genthor addons under your user-specific local
+directory.  Assuming system-wide version is 2.68 (you can check with
+"/usr/local/bin/blender --version" and see the version string) create the
+following:
+
+mkdir -p ~/.config/blender/2.68/scripts/addons/
+
+Copy or symlink the genthor addon files mentioned in the previous subscetion into the
+directory just created.  For example:
+
+cp -r PATH_TO_GENTHOR/genthor/io_scene_egg ~/.config/blender/2.68/scripts/addons/
+cp -r PATH_TO_GENTHOR/genthor/io_scene_obj ~/.config/blender/2.68/scripts/addons/
+
+NOTE: If you previously have used your local installation of blender and wish
+to use the global one, you need to delete ~/bin/blender.  Otherwise, your
+local version will be continued to be used.
+
+
+
+
+
+== Panda ==
+
+Panda 1.8.1 (or perhaps newer??) is already available on mh17.  Skip this
+section.
+
 
 -Download panda from source.
 # wget url
@@ -87,6 +121,11 @@ export PYTHONPATH=$PYTHONPATH:[PATH_TO_PANDA_INSTALL]/lib/panda3d':[PATH_TO_PAND
 
 -then add this line to your .profile so this is done automatically at login
 
+
+
+
+
+== Bare minimum testing ==
 
 In ipython
 -import genthor.datasets as gd
