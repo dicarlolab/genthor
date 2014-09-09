@@ -71,6 +71,10 @@ directory just created.  For example:
 cp -r PATH_TO_GENTHOR/genthor/io_scene_egg ~/.config/blender/2.68/scripts/addons/
 cp -r PATH_TO_GENTHOR/genthor/io_scene_obj ~/.config/blender/2.68/scripts/addons/
 
+NOTE: If you previously have used your local installation of blender and wish
+to use the global one, you need to delete ~/bin/blender.  Otherwise, your
+local version will be continued to be used.
+
 
 
 
