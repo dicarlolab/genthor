@@ -11,6 +11,7 @@ try:
 except:
     pass
 import pdb
+import numpy as np    # blender should be shipped w numpy
 
 
 """
@@ -29,7 +30,102 @@ def export_obj(pth):
     bpy.ops.export_scene.obj(filepath=pth, use_normals=True,
                              keep_vertex_order=True) 
 
-    
+
+def remove_transp(obj_path, targets=['map_Kd']):
+    dirnm = os.path.abspath(os.path.dirname(obj_path)) + os.path.sep
+    lines = [e.strip() for e in open(obj_path, errors='ignore').readlines()]
+    mtls = [e for e in lines if e.startswith('mtllib')]
+    mtls_processed = []
+    tex_repl = []
+    tex_abspths = []
+
+    # -- find all target images and conver into non-transparent ones
+    for m0 in mtls:
+        mtl = m0.split()[1]     # mtl file
+        mtldirnm = os.path.dirname(mtl) + os.path.sep
+        if not mtl.startswith('/'):
+            mtl = dirnm + mtl
+        if not os.path.exists(mtl):
+            continue
+
+        mtls_processed.append(mtl)
+        lines = [e.strip() for e in open(mtl, errors='ignore').readlines()]
+        for l in lines:
+            found = False
+            for e in targets:
+                if l.startswith(e):
+                    found = True
+                    break
+            if not found:
+                continue
+            # this line contains a candidate texture
+            tex = l.split()[1]
+            tex = dirnm + mtldirnm + tex
+            if not has_actual_alphach(tex):
+                continue
+            # this texture DOES contain valid transpancy info
+            texnoalp = tex + '.noalp.jpg'
+            # above must be .jpg due to the quirkiness of yabee
+            tex_repl.append((os.path.basename(tex),
+                             os.path.basename(texnoalp)))
+            tex_abspths.append(tex)
+            if os.path.exists(texnoalp):
+                print('** skipping: ' + tex)   # debug message
+                # dropping alpha ch has already been done: skip!
+                continue
+            # actual conversion into a non-transparant img
+            print('** converting: ' + tex)   # debug message
+            # Imagemagick must be in PATH
+            cmd = 'convert %s -background white -flatten %s' % \
+                (tex, texnoalp)
+            os.system(cmd)
+
+    # -- modify .mtl files
+    for mtl in mtls_processed:
+        mtl_bak = mtl + '.orig.mtl'
+        if os.path.exists(mtl_bak):
+            continue
+        shutil.copyfile(mtl, mtl_bak)
+        replace_all(mtl, tex_repl)
+
+    return tex_repl, tex_abspths
+
+
+def reintroduce_transp(egg_pth, tex_repl, tex_abspths, texpth='tex'):
+    # revert to the original texture images, with a hack to
+    # introduce a line "  <Scalar> alpha { dual }", which MUST
+    # be added to correctly render e.g. hairs.
+    replace_all(out_path,
+        [(e[1] + '"',
+          e[0] + '"\n  <Scalar> alpha { dual }')
+          for e in tex_repl])
+    dstpth = os.path.abspath(os.path.dirname(egg_pth)) + os.path.sep + \
+        texpth + os.path.sep
+    for tex in tex_abspths:
+        tex0 = os.path.basename(tex)
+        shutil.copyfile(tex, dstpth + tex0)
+
+
+def has_actual_alphach(fn):
+    im = bpy.data.images.load(fn)
+    ch = im.channels
+    if ch == 1 or ch == 3:
+        return False
+    # ...but that stupid blender seems to load it as RGBA always
+    # even if the image was L or RGB
+    I = np.array(list(im.pixels)).reshape((im.size[0], im.size[1], ch))
+    im.user_clear()
+    bpy.data.images.remove(im)
+    return not np.allclose(I[:, :, ch - 1], 1)
+
+
+def replace_all(fn, repl):
+    s = open(fn, 'rt', errors='ignore').read()
+    for r in repl:
+        s = s.replace(r[0], r[1])
+    open(fn, 'wt', errors='ignore').write(s)
+
+
 def export_egg(pth):
     import io_scene_egg
     try:
@@ -148,20 +244,36 @@ def transform_model(rot):
     # bpy.ops.transform.rotate(value=(90.,), axis=(1., 0., 0.))
 
 
-def run(obj_path, out_path, rot=None):
+def run(obj_path, out_path, rot=None, alptweak=True):
+    # When alptweak is True, textures with transparancy
+    # will be tweaked in the following manner IF the final
+    # output formation is .egg:
+    # (1) The texture images will be converted to plain images
+    #     without transparency
+    # (2) Conversion process will be done as before with the
+    #     plain images.
+    # (3) The original transparent images will be reintroduced
+    #     and the corresponding texture sections in the egg 
+    #     file will have an additional "alpha = dual" flag.
+    # The above is done, because either blender or the
+    # egg exporter seems to be confused when given transparent
+    # texture images.
+
     # Empty the current scene
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
+    ext = os.path.splitext(out_path)[1]
 
     try:
         # Import obj into scene
+        if ext == ".egg" and alptweak:
+            repls, abspths = remove_transp(obj_path)
         import_obj(obj_path)
 
         if rot is not None:
             # Do whatever you need to do within the Blender scene
             transform_model(rot)
 
-        ext = os.path.splitext(out_path)[1]
         if ext == ".egg":
             # Export egg
             try:
@@ -173,6 +285,8 @@ def run(obj_path, out_path, rot=None):
                       "(tested on Blender 2.63 and Yabee r12 for Blender2.63a)."
                       " See blender.org and code.google.com/p/yabee "
                       "for those versions.")
+            if alptweak:
+                reintroduce_transp(out_path, repls, abspths)
                     
         elif ext == ".obj":
             # Export obj
