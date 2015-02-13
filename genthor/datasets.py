@@ -227,6 +227,33 @@ def get_lambda_from_query_config(q):
     else:
         return lambda x:  all([x[k] in v for k, v in q.items()])   # per Dan's suggestion..
 
+class WhiteChecker():
+    def __init__(self, dtype, shape):
+        self.dtype = dtype
+        self.shape = shape[0:2]
+
+    def rval_getattr(self, attr, objs):
+        if attr=='dtype':
+            return self.dtype
+        if attr=='shape':
+            return self.shape
+
+    def __call__(self, I):
+        """
+        Returns uint8 array of 1s and 0s, where 1 is white, 0 is non-white
+        :param I: Image used as input
+        :return: :raise ValueError:
+        """
+        assert I.shape[2] == 3, 'Must be RGB to check white, and check for pixel mask'
+        if I.dtype =='float32':
+            white = [[[1,1,1]]]
+        elif I.dtype == 'uint8':
+            white = [[[256,256,256]]]
+        else:
+            raise ValueError, 'data type of image not recognized'
+        return np.uint8(np.all(I==white, 2))
+
+
 
 class GenerativeBase(DatasetBase):
     #must subclass this and define a ._get_meta method the constructs the 
@@ -337,6 +364,35 @@ class GenerativeBase(DatasetBase):
                                 cam_spec=global_cam_spec)
         image_map = larray.lmap(irr, meta)	
         return larray.cache_memmap(image_map, name=name, basedir=cachedir)
+
+    def get_pixel_masks(self, preproc, global_light_spec=None,
+                                 global_cam_spec=None, get_models=False):
+        if get_models:
+            self.get_models()
+        preproc_c = copy.deepcopy(preproc)
+        if global_light_spec is not None:
+            preproc_c['global_light_spec'] = global_light_spec
+        if global_cam_spec is not None:
+            preproc_c['global_cam_spec'] = global_cam_spec
+        name = self.specific_name + '_' + get_image_id(preproc_c) + '_pixel_masks'
+        cachedir = self.cache_home()
+        meta = self.meta
+        if self.noise:
+            preproc = copy.deepcopy(preproc)
+            preproc['noise'] = self.noise
+            meta = meta.addcols(range(len(meta)), names=['noise_seed'])
+        window_type = 'texture'
+        preproc = copy.deepcopy(preproc)
+        preproc['size'] = tuple(preproc['size'])
+        irr = self.imager.get_map(preproc, window_type,
+                                light_spec=global_light_spec,
+                                cam_spec=global_cam_spec)
+        #Delete background and replace with white
+        meta['bgname'] = np.array(['whitebg.jpg']*len(meta)).T
+        image_map = larray.lmap(irr, meta)
+        pixel_mask_map = larray.lmap(WhiteChecker(preproc['dtype'], preproc['size']), image_map)
+        return larray.cache_memmap(pixel_mask_map, name=name, basedir=cachedir)
+
 
     def saveCanonical(self, preproc, config):
         """Checks to see that config contains necessary fields. 
