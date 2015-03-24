@@ -73,6 +73,7 @@ class ImgRendererResizer(object):
         self.bg_root = bg_root
         self.check_penetration = check_penetration
         self.noise = preproc.get('noise')
+        self.shader = preproc.get('shader')
             
     def rval_getattr(self, attr, objs):
         if attr == 'shape' and self._shape is not None:
@@ -120,6 +121,9 @@ class ImgRendererResizer(object):
         bgscale = [m['bgscale']]
         bghp = [m['bgphi'], m['bgpsi']]
         args = (modelpath, bgpath, scale, pos, hpr, bgscale, bghp)
+        if self.shader:
+            print('Using shader', self.shader)
+
         try:
             objnodes, bgnode = gr.construct_scene(self.lbase, 
                                               *args,
@@ -127,7 +131,8 @@ class ImgRendererResizer(object):
                           texture=texture,
                           internal_canonical=internal_canonical,
                           light_spec=light_spec, 
-                          use_envmap=use_envmap)
+                          use_envmap=use_envmap,
+                          shader=self.shader)
 
             self.lbase.render_frame()
         except Exception, e:

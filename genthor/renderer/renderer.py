@@ -13,6 +13,7 @@ from pandac.PandaModules import NodePath
 from pandac.PandaModules import TexGenAttrib
 from pandac.PandaModules import TextureStage
 from pandac.PandaModules import Texture
+from panda3d.core import Shader
 from panda3d.core import *
 from direct.gui.OnscreenImage import OnscreenImage
 import sys
@@ -77,7 +78,8 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
                     internal_canonical=False,
                     check_penetration=False, 
                     light_spec=None, 
-                    use_envmap=False):
+                    use_envmap=False, 
+                    shader=None):
     """ Constructs the scene per the parameters. """
 
     # Default scene is lbase's rootnode
@@ -197,6 +199,12 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
     else:
         bgnode = NodePath("empty-bgnode")
     bgnode.reparentTo(rootnode)
+
+    if shader is not None:
+        vshaderpath, fshaderpath = shader
+        rootnode.setShaderAuto()  
+        shader = Shader.load(Shader.SLGLSL, vshaderpath, fshaderpath)
+        rootnode.setShader(shader)
 
     if light_spec is not None:
         lbase.rootnode.clearLight()
