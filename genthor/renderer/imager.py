@@ -151,8 +151,8 @@ class ImgRendererResizer(object):
             noise = self.noise['magnitude'] * np.random.RandomState(seed=m['noise_seed']).uniform(size=rval.shape[:2]) * rval.std()
             if rval.ndim == 3:
                 noise = noise[:, :, np.newaxis]
-            rval = ndimage.gaussian_filter(rval + noise, sigma=self.noise['smoothing'])
-            rval = rval.astype(self._dtype)
+            rval = ndimage.gaussian_filter(rval + noise, sigma=self.noise['smoothing']).astype(self._dtype)
+            rval = np.maximum(np.minimum(rval, 255.), 0)
         if self.normalize:
             rval = rval - rval.mean()
             rval /= max(rval.std(), 1e-3)
