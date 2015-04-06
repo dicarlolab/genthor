@@ -13,6 +13,7 @@ from pandac.PandaModules import NodePath
 from pandac.PandaModules import TexGenAttrib
 from pandac.PandaModules import TextureStage
 from pandac.PandaModules import Texture
+from panda3d.core import Shader
 from panda3d.core import *
 from direct.gui.OnscreenImage import OnscreenImage
 import sys
@@ -46,7 +47,8 @@ def setup_renderer(window_type, size=(256, 256), light_spec=None, cam_spec=None)
     print('cam_spec', cam_spec)
     cam_x, cam_z, cam_y = cam_spec.get('cam_pos', (0., -20., 0.))
     scene_width = cam_spec.get('scene_width', 3.)
-    fov = 2. * np.degrees(np.arctan(scene_width / (2. * np.abs(cam_z))))
+    nm = np.sqrt(cam_x**2 + cam_y**2 + cam_z**2)
+    fov = 2. * np.degrees(np.arctan(scene_width / (2. * nm)))
     cam_lx, cam_lz, cam_ly = cam_spec.get('cam_lookat', (0., 0., 0.)) 
     cam_rot = cam_spec.get('cam_rot', 0.)
     camera = lbase.make_camera(output)
@@ -77,7 +79,8 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
                     internal_canonical=False,
                     check_penetration=False, 
                     light_spec=None, 
-                    use_envmap=False):
+                    use_envmap=False, 
+                    shader=None):
     """ Constructs the scene per the parameters. """
 
     # Default scene is lbase's rootnode
@@ -197,6 +200,12 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
     else:
         bgnode = NodePath("empty-bgnode")
     bgnode.reparentTo(rootnode)
+
+    if shader is not None:
+        vshaderpath, fshaderpath = shader
+        rootnode.setShaderAuto()  
+        shader = Shader.load(Shader.SLGLSL, vshaderpath, fshaderpath)
+        rootnode.setShader(shader)
 
     if light_spec is not None:
         lbase.rootnode.clearLight()
