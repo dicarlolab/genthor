@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 """
 Convert .obj models to .obj, .egg/.bam (Panda3d format) files
-Peter W Battaglia - 03.2012
+Peter W Battaglia and Daniel Yamins - 03.2012
 PWB - 10.2012 - updates
+DY - 2013-2015 - updates
 """
 import genthor as gt
 import genthor.modeltools.tools as mt
@@ -240,12 +241,12 @@ def build_objs(out_root, modeldict, outdict, angledict=None,
     out_pths.sort()
     return out_pths
     
-
+import hashlib
 def convert(inout_pths, ext=".egg", f_blender=True, f_force=False):
     if ext not in (".egg", ".bam"):
         raise ValueError("Unsupported output type: %s" % ext)
     # Temporary path in which to extract .obj files before conversion.
-    random_id = str(np.random.randint(1e8))
+    random_id = str(np.random.randint(1e8)) + '_' + hashlib.sha1(str(inout_pths)).hexdigest()
     tmp_root = os.path.join(os.environ["HOME"], "tmp", "scrap_%s" % random_id)
 
     # Loop over models, converting
@@ -318,15 +319,20 @@ def convert(inout_pths, ext=".egg", f_blender=True, f_force=False):
 def autogen_egg(model_pth):
     # modelpth is now a valid file, check its extension and create an
     # .egg if it is not a panda file
+    cmp = os.path.commonprefix([model_pth, gt.EGG_PATH])
+    ln = len(gt.EGG_PATH[len(cmp):].split('/'))
+    nm = '/'.join(model_pth[len(cmp):].split('/')[ln:])
     name, ext = gt.splitext2(os.path.basename(model_pth))
+    dirn = os.path.split(nm)[0]
     if ext not in mt.panda_exts:
         # modelpth is not a panda3d extension
         # The .egg's path
-        egg_pth = os.path.join(gt.EGG_PATH, name, name + ".egg")
+        egg_pth = os.path.join(gt.EGG_PATH, dirn, name + ".egg")
 
         if not os.path.isfile(egg_pth):
             # The .egg doesn't exist, so convert the input file
             inout_pth = {model_pth: egg_pth}
+            print('converting to', inout_pth)
             convert(inout_pth, ext=".egg")
     else:
         egg_pth = model_pth

@@ -90,16 +90,22 @@ class ImgRendererResizer(object):
             c.removeNode()
 
     def __call__(self, m, remove=True):
-        if isstring(m['obj']):
+        try:
+            m['obj_path']
+        except:
+            oattr = 'obj'
+        else:
+            oattr = 'obj_path'
+        if isstring(m[oattr]):
             modelpath = os.path.join(self.model_root, 
-                                 m['obj'])
+                                     *(m[oattr].split('/')))
             scale = [m['s']]
             pos = [m['ty'], m['tz'], m['tx']]
             hpr = [m['ryz'], m['rxz'], m['rxy']]
             texture = (m['texture'], m['texture_mode'])
         else:
-            assert hasattr(m['obj'], '__iter__')
-            modelpath = [os.path.join(self.model_root, mn) for mn in m['obj']]      
+            assert hasattr(m[oattr], '__iter__')
+            modelpath = [os.path.join(self.model_root, *(mn.split('/'))) for mn in m[oattr]]
             scale = [[ms] for ms in m['s']]
             pos = zip(m['ty'], m['tz'], m['tx'])
             hpr = zip(m['ryz'], m['rxz'], m['rxy'])
