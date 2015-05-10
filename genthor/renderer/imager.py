@@ -151,7 +151,22 @@ class ImgRendererResizer(object):
         _arr = self.lbase.get_tex_image(tex)
         im = Image.fromarray(_arr)
         if im.mode != self.mode:
-            im = im.convert(self.mode)
+            if self.mode == 'LLL':
+                im = im.convert('L')
+                im = im.convert('RGB')
+            elif self.mode == 'L_alpha':
+                y = np.asarray(im)
+                z = np.zeros(shape=im.size, dtype=y.dtype)
+                z[:] = y[:, :, -1]
+                im = ImageOps.invert(Image.fromarray(z))
+            elif self.mode == 'LLL_alpha':
+                y = np.asarray(im)
+                z = np.zeros(shape=im.size, dtype=y.dtype)
+                z[:] = y[:, :, -1]
+                im = ImageOps.invert(Image.fromarray(z))
+                im = im.convert('RGB')
+            else:
+                im = im.convert(self.mode)
         rval = np.asarray(im, self._dtype)
         if self.noise:
             noise = self.noise['magnitude'] * np.random.RandomState(seed=m['noise_seed']).uniform(size=rval.shape[:2]) * rval.std()
