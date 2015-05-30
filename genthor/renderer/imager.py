@@ -144,6 +144,7 @@ class ImgRendererResizer(object):
         except Exception, e:
             if remove:
                 self.remove()
+            print(e)
             raise e
         if remove: 
             self.remove()
