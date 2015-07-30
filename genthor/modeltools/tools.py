@@ -125,7 +125,10 @@ def parse_dir_imgs(root_pth):
 def parse_mtl_imgs(mtl_pth, f_edit=False, imgdirname="tex"):
     """ Search through the mtl_pth for all image file names and return
     as a list.  f_edit will substitute fixed img names into the .mtl
-    file."""
+    file. 
+    TODO:  parse options in bump declariation (e.g. -bm 0.00) without interfering with image names
+           --related, handle image filenames with spaces better
+    """
     # RE pattern
     pat_fields = "(?:" + "|".join(mtl_img_fields) + ") "
     pat_img_exts = "(.+(?:\\" + "|\\".join(img_exts) + "))"
@@ -261,6 +264,8 @@ def fix_tex_names(mtl_pth, imgdirname="tex", f_verify=True):
     img_pth = os.path.join(dir_pth, imgdirname)
 
     # Parse the .mtl file for the image names
+    print(mtl_pth)
+    raise
     mtlnames = parse_mtl_imgs(mtl_pth, f_edit=True, imgdirname=imgdirname)
     # Get image file names
     imgnames, imgpaths0 = parse_dir_imgs(dir_pth)
