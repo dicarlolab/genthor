@@ -12,21 +12,40 @@ import numpy as np
 import genthor.datasets as gd; reload(gd)
 
 
-def dist(o1, o2):
+class PdictError(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr('No pdict for %s' % value)
+    
+    
+def dist(o1, o2, write=False, outdir=None, N=3.):
     """
     returns distance between two 3-d models o1 and o2
         example:
-             >>>d = md.dist('face0001', 'schnauzer')
+             >>>d = md.dist('face0001', ['schnauzer'])
              >>>d
-                0.26658963019761267
+                {'schnauzer': 0.26658963019761267}
     """
     preproc = {'dtype':'float32', 'size':(128, 128), 'normalize':False, 'mode':'L'}
     dataset = gd.GenerativeDatasetBase()
     fmap = dataset.imager.get_map(preproc, 'texture')
-    N = 3
-    poses = [(np.sin(2*np.pi*phi) * np.cos(2*np.pi*psi), np.sin(2*np.pi*phi) * np.sin(2*np.pi*psi),  np.cos(2*np.pi*phi)) for phi in np.arange(0, 1, 1./N) for psi in np.arange(0, 1, 1./N)]
 
-    pdict1 = dist_rot(o1, 0, 0, 0, fmap, dataset, poses)
+    _N = 0
+    while True:
+        poses = [(np.sin(2*np.pi*phi) * np.cos(2*np.pi*psi), np.sin(2*np.pi*phi) * np.sin(2*np.pi*psi),  np.cos(2*np.pi*phi)) for phi in np.arange(0, 1, 1./N) for psi in np.arange(0, 1, 1./N)]
+
+        pdict1 = dist_rot(o1, 0, 0, 0, fmap, dataset, poses)
+        if not pdict1:
+            if _N < 3:
+                _N += 1
+                N += 2
+            else:
+                print('No pdict1')
+                return {}
+        else:
+            break
+        
     M = 72
     rots = [(i, j, k) for i in range(360)[::M] for j in range(360)[::M] for k in range(360)[::M]]
     dist_dict = {}
@@ -36,14 +55,16 @@ def dist(o1, o2):
             Ds = []
             for r in rots:
                 pdict2 = dist_rot(_o2, r[0], r[1], r[2], fmap, dataset, poses)
-                Ds.append(np.mean([np.linalg.norm(pdict2[p] - pdict1[p]) for p in poses]))
+                if pdict2:
+                    Ds.append(np.mean([np.linalg.norm(pdict2[p] - pdict1[p]) for p in poses]))
             d = min(Ds)
-            pth = os.path.join(outdir, o1 + '_' + _o2 + '.pkl')
-            with open(pth, 'w') as _f:
-                cPickle.dump(d, _f)
+            if write:
+                pth = os.path.join(outdir, o1 + '_' + _o2 + '.pkl')
+                with open(pth, 'w') as _f:
+                    cPickle.dump(d, _f)
             dist_dict[_o2] = d
-        except (AssertionError, ValueError):
-            print(o1, _o2, 'failure')
+        except (AssertionError, ValueError), e:
+            print(o1, _o2, 'failure', e)
     return dist_dict
 
 
@@ -66,7 +87,8 @@ def dist_rot(obj, rxy, rxz, ryz, fmap, dataset, poses):
                              'use_envmap': False}
 
     x = fmap(config, remove=False)
-    lbase = dataset.imager.renderers[('texture', (128, 128))][0]
+    rk = [_k for _k in dataset.imager.renderers if _k[:2] == ('texture', (128, 128))][0]
+    lbase = dataset.imager.renderers[rk][0]
     root = lbase.rootnode
     c = list(root.getChildren())
     if len(c) > 2:
@@ -78,6 +100,9 @@ def dist_rot(obj, rxy, rxz, ryz, fmap, dataset, poses):
     queue = thing(root, poses)
 
     P = [list(queue.getEntry(i).getSurfacePoint(root)) for i in range(queue.getNumEntries())]
+    if not P:
+        return {}
+
     pdict = {}
     for p in poses:
         cfs = np.array([1 - np.corrcoef(x, p)[0, 1] for x in P])
