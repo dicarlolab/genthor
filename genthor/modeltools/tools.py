@@ -264,8 +264,6 @@ def fix_tex_names(mtl_pth, imgdirname="tex", f_verify=True):
     img_pth = os.path.join(dir_pth, imgdirname)
 
     # Parse the .mtl file for the image names
-    print(mtl_pth)
-    raise
     mtlnames = parse_mtl_imgs(mtl_pth, f_edit=True, imgdirname=imgdirname)
     # Get image file names
     imgnames, imgpaths0 = parse_dir_imgs(dir_pth)
