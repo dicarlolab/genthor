@@ -33,7 +33,7 @@ class Imager(object):
         cs_id = get_id(cam_spec)
 
         lbase, output = self.renderers.get((window_type, size, ls_id, cs_id),
-                                           gr.setup_renderer(window_type, size, 
+                                           gr.setup_renderer(window_type, size,
                                                light_spec=light_spec,
                                                cam_spec=cam_spec))
         # Add to the Imager.renderers
@@ -45,7 +45,7 @@ class Imager(object):
         # Get a valid renderer (new or old)
         size = tuple(preproc["size"])
         lbase, output = self.renderers.get((window_type, size),
-                                           self.get_renderer(window_type, size, 
+                                           self.get_renderer(window_type, size,
                                            light_spec=light_spec,
                                            cam_spec=cam_spec))
         # Make the irr instance
@@ -63,7 +63,7 @@ class ImgRendererResizer(object):
             self._shape = tuple(np.array(size)[list(self.transpose)])
         else:
             self._shape = size
-        self._ndim = len(self._shape) 
+        self._ndim = len(self._shape)
         self._dtype = preproc['dtype']
         self.mode = preproc['mode']
         self.normalize = preproc['normalize']
@@ -74,7 +74,10 @@ class ImgRendererResizer(object):
         self.check_penetration = check_penetration
         self.noise = preproc.get('noise')
         self.shader = preproc.get('shader')
-            
+        self.flip_lr = preproc.get('flip_lr', False)
+        self.flip_tb = preproc.get('flip_tb', False)
+
+
     def rval_getattr(self, attr, objs):
         if attr == 'shape' and self._shape is not None:
             return self._shape
@@ -83,7 +86,7 @@ class ImgRendererResizer(object):
         if attr == 'dtype':
             return self._dtype
         raise AttributeError(attr)
-    
+
     def remove(self):
         children = list(self.lbase.rootnode.getChildren())
         for c in children[2:]:
@@ -97,7 +100,7 @@ class ImgRendererResizer(object):
         else:
             oattr = 'obj_path'
         if isstring(m[oattr]):
-            modelpath = os.path.join(self.model_root, 
+            modelpath = os.path.join(self.model_root,
                                      *(m[oattr].split('/')))
             scale = [m['s']]
             pos = [m['ty'], m['tz'], m['tx']]
@@ -122,7 +125,7 @@ class ImgRendererResizer(object):
         try:
             use_envmap = m['use_envmap']
         except:
-            use_envmap = False            
+            use_envmap = False
 
         bgscale = [m['bgscale']]
         bghp = [m['bgphi'], m['bgpsi']]
@@ -131,12 +134,12 @@ class ImgRendererResizer(object):
             print('Using shader', self.shader)
 
         try:
-            objnodes, bgnode = gr.construct_scene(self.lbase, 
+            objnodes, bgnode = gr.construct_scene(self.lbase,
                                               *args,
                           check_penetration=self.check_penetration,
                           texture=texture,
                           internal_canonical=internal_canonical,
-                          light_spec=light_spec, 
+                          light_spec=light_spec,
                           use_envmap=use_envmap,
                           shader=self.shader)
 
@@ -146,7 +149,7 @@ class ImgRendererResizer(object):
                 self.remove()
             print(e)
             raise e
-        if remove: 
+        if remove:
             self.remove()
         tex = self.output.getTexture()
         _arr = self.lbase.get_tex_image(tex)
@@ -183,6 +186,10 @@ class ImgRendererResizer(object):
                 rval /= 255.0
         if self.transpose:
             rval = rval.transpose(*tuple(self.transpose))
+        if self.flip_tb:
+            rval = rval[::-1]
+        if self.flip_lr:
+            rval = rval[:, ::-1]
         assert rval.shape[:2] == self._shape[:2], (rval.shape, self._shape)
         return rval
 
