@@ -11,7 +11,7 @@ import functools
 
 import lockfile
 import numpy as np
-import Image
+from PIL import Image
 import tabular as tb
 from yamutils.fast import reorder_to, isin, uniqify
 from yamutils.basic import dict_inverse
