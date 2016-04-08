@@ -80,7 +80,8 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
                     check_penetration=False, 
                     light_spec=None, 
                     use_envmap=False, 
-                    shader=None):
+                    shader=None,
+                    world_coords=False):
     """ Constructs the scene per the parameters. """
 
     # Default scene is lbase's rootnode
@@ -142,9 +143,23 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
             objnode.setPos(-ppos[0], -ppos[1], -ppos[2])
             objnode.setScale(cscale, cscale, cscale)
             
+        if world_coords:
+            refnodeX = rootnode.attachNewNode('world_coords_x')
+            refnodeY = rootnode.attachNewNode('world_coords_y')
+            refnodeZ = rootnode.attachNewNode('world_coords_z')
+            
+            robjnode.wrtReparentTo(refnodeZ)
+            refnodeZ.setH(refnodeX, hpr[2])
+            robjnode.wrtReparentTo(refnodeY)
+            refnodeY.setP(refnodeX, hpr[1])
+            robjnode.wrtReparentTo(refnodeX)
+            refnodeX.setR(refnodeX, hpr[0])
+            robjnode.wrtReparentTo(rootnode)
+        else:
+            robjnode.setHpr(hpr[2], hpr[1], hpr[0])
+            
         robjnode.setScale(scale[0], scale[0], scale[0])
         robjnode.setPos(pos[0], -pos[2], pos[1])
-        robjnode.setHpr(hpr[2], hpr[1], hpr[0])
         robjnode.setTwoSided(1)
 
         objnodes.append(robjnode)
