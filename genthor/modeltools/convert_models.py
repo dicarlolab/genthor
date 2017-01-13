@@ -141,7 +141,7 @@ def get_modeldata(model_pth):
         raise ValueError("%s does not have info for: %s" % (
             canonical_angles_py, ", ".join(modelnames.difference(names))))
 
-    # Don't rename models 
+    # Don't rename models
     outdict = dict(zip(modeldict.keys(), modeldict.keys()))
     # # Rename models as numbered category instances
     # outnames = []
@@ -191,7 +191,7 @@ def build_objs(out_root, modeldict, outdict, angledict=None,
         # un-tar, un-gz into a temp directory
         tmp_tar_pth = os.path.join(tmp_root, "tartmp")
         allnames = mt.untar(targzname, tmp_tar_pth)
-        
+
         # Get target's path
         names = [n for n in allnames if os.path.split(n)[1] == objname]
         # Raise exception if there are not exactly 1
@@ -212,10 +212,10 @@ def build_objs(out_root, modeldict, outdict, angledict=None,
             # Transform vertices
             rot = (params[0] + np.pi / 2., params[1] + np.pi / 2., params[2])
             T0 = mt.build_rot(rot)
-            # Normalize the obj and move it 
+            # Normalize the obj and move it
             mt.transform_obj(obj_pth, new_obj_pth, T0=T0)
         else:
-            # Normalize the obj and move it 
+            # Normalize the obj and move it
             mt.transform_obj(obj_pth, new_obj_pth)
         # Copy .mtl file over
         shutil.copy2(mtl_pth, new_mtl_pth)
@@ -240,7 +240,7 @@ def build_objs(out_root, modeldict, outdict, angledict=None,
 
     out_pths.sort()
     return out_pths
-    
+
 import hashlib
 def convert(inout_pths, ext=".egg", f_blender=True, f_force=False):
     if ext not in (".egg", ".bam"):
@@ -255,7 +255,7 @@ def convert(inout_pths, ext=".egg", f_blender=True, f_force=False):
             continue
         if not os.path.isfile(in_pth):
             raise IOError("File does not exist: %s" % in_pth)
-         
+
         # Determine file name and extension
         name, ext0 = gt.splitext2(os.path.basename(in_pth))
         if ext0 in (".tgz", ".tar.gz", ".tbz2", ".tar.bz2"):
@@ -264,7 +264,8 @@ def convert(inout_pths, ext=".egg", f_blender=True, f_force=False):
             allnames = mt.untar(in_pth, tmp_tar_pth)
             # Get target's path
             names = [n for n in allnames
-                     if os.path.splitext(n)[1] in (".egg", ".obj")]
+                     if os.path.splitext(n)[1] in (".egg", ".obj") and
+                     not os.path.basename(n).startswith('._')]
             # Raise exception if there are not exactly 1
             if len(names) != 1:
                 raise ValueError("Can't find unique file in tar. Found: %s"
@@ -342,7 +343,7 @@ def autogen_egg(model_pth):
 def call_blender(obj_pth, out_pth, blender_command_base, params=None):
     # Split into directory and filename
     outdir, outname = os.path.split(out_pth)
-    
+
     # Make the outdir directory if it doesn't exist already
     if not os.path.isdir(outdir):
         os.makedirs(outdir)
@@ -356,7 +357,7 @@ def call_blender(obj_pth, out_pth, blender_command_base, params=None):
     else:
         # Assemble the full blender command
         blender_command = "%s %s %s" % (blender_command_base, obj_pth, out_pth)
-    
+
     # Run the blender conversion
     try:
         check_call(blender_command, shell=True)
@@ -397,7 +398,7 @@ def main(f_egg=True):
 class FormatError(Exception):
     def __init__(self, inpth):
         self.msg = 'Input path %s fails to meet check_format criteria' % inpth
-    
+
 
 if __name__ == "__main__":
     main()
@@ -406,7 +407,7 @@ if __name__ == "__main__":
 ## TODO
 #
 # Make cmd line interface better using argparse
-# 
+#
 
 def resolve_mtl_path(in_pth):
     mtl_pth = os.path.splitext(in_pth)[0] + ".mtl"
