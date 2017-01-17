@@ -15,7 +15,7 @@ import numpy as np    # blender should be shipped w numpy
 
 
 """
-Usage: 
+Usage:
 $ blender -b -P obj_Bscript.py -- <.obj filename>
 """
 
@@ -28,7 +28,7 @@ def import_obj(pth):
 def export_obj(pth):
     # Export the .obj
     bpy.ops.export_scene.obj(filepath=pth, use_normals=True,
-                             keep_vertex_order=True) 
+                             keep_vertex_order=True)
 
 
 def remove_transp(obj_path, targets=['map_Kd']):
@@ -140,12 +140,12 @@ def export_egg(pth):
     #: { "animation_name" : (start_frame, end_frame, frame_rate) }
     ANIMATIONS = {"anim1":(0,10,5), }
     #: "True" to interprete an image in the uv layer as the texture
-    EXPORT_UV_IMAGE_AS_TEXTURE = False 
+    EXPORT_UV_IMAGE_AS_TEXTURE = False
     #: "True" to copy texture images together with main.egg
     COPY_TEX_FILES = True
     #: Path for the copied textures. Relative to the main EGG file dir.
     #: For example if main file path is "/home/username/test/test.egg",
-    #: texture path is "./tex", then the actual texture path is 
+    #: texture path is "./tex", then the actual texture path is
     #: "/home/username/test/tex"
     TEX_PATH = "./tex" #os.path.join(os.path.split(pth)[0], "tex")
     #: "True" to write an animation data into the separate files
@@ -154,7 +154,7 @@ def export_egg(pth):
     ANIM_ONLY = False
     #: number of sign after point
     FLOATING_POINT_ACCURACY = 6
-    #: Enable tangent space calculation. Tangent space needed for some 
+    #: Enable tangent space calculation. Tangent space needed for some
     # shaders/autoshaders, but increase exporting time
     # "NO", "INTERNAL", "PANDA"
     # "INTERNAL" - use internal TBS calculation
@@ -162,13 +162,13 @@ def export_egg(pth):
     # "NO" - do not calc TBS
     CALC_TBS = "NO" #"PANDA"#
     #: Type of texture processing. May be "SIMPLE" or "BAKE".
-    # "SIMPLE" - export all texture layers as MODULATE. 
-    # Exceptions: 
+    # "SIMPLE" - export all texture layers as MODULATE.
+    # Exceptions:
     #   use map normal == NORMAL
     #   use map specular == GLOSS
     #   use map emit == GLOW
     # "BAKE" - bake textures. BAKE_LAYERS setting up what will be baked.
-    # Also diffuse color of the material would set to (1,1,1) in the 
+    # Also diffuse color of the material would set to (1,1,1) in the
     # "BAKE" mode
     #TEXTURE_PROCESSOR = "BAKE"
     TEXTURE_PROCESSOR = "SIMPLE"
@@ -184,13 +184,13 @@ def export_egg(pth):
 
     egg_writer = io_scene_egg.yabee_libs.egg_writer
 
-    egg_writer.write_out(pth, 
+    egg_writer.write_out(pth,
                          ANIMATIONS,
-                         EXPORT_UV_IMAGE_AS_TEXTURE, 
-                         SEPARATE_ANIM_FILE, 
+                         EXPORT_UV_IMAGE_AS_TEXTURE,
+                         SEPARATE_ANIM_FILE,
                          ANIM_ONLY,
-                         COPY_TEX_FILES, 
-                         TEX_PATH, 
+                         COPY_TEX_FILES,
+                         TEX_PATH,
                          FLOATING_POINT_ACCURACY,
                          CALC_TBS,
                          TEXTURE_PROCESSOR,
@@ -216,7 +216,7 @@ def transform_model(rot):
         Loc = [(bb1 + bb0) / 2. for bb0, bb1 in zip(BB0, BB1)]
 
         return Dim, Loc
-    
+
     ## Select the meshes, add them to active object
     bpy.ops.object.select_by_type(type="MESH")
 
@@ -229,13 +229,13 @@ def transform_model(rot):
     ## applied, so I need to scale, then recompute location, then
     ## translate. Ideally, I'd translate, then re-scale, but that
     ## doesn't seem to work.
-    
+
     ## Re-scale
     Dim, Loc = calc_dim_loc(bpy.context.selected_objects)
     scale = [1. / max(Dim)] * 3
     bpy.ops.transform.resize(value=scale)
 
-    ## Re-locate 
+    ## Re-locate
     Dim, Loc = calc_dim_loc(bpy.context.selected_objects)
     bpy.ops.transform.translate(value=(-Loc[0], -Loc[1], -Loc[2]))
 
@@ -253,7 +253,7 @@ def run(obj_path, out_path, rot=None, alptweak=True):
     # (2) Conversion process will be done as before with the
     #     plain images.
     # (3) The original transparent images will be reintroduced
-    #     and the corresponding texture sections in the egg 
+    #     and the corresponding texture sections in the egg
     #     file will have an additional "alpha = dual" flag.
     # The above is done, because either blender or the
     # egg exporter seems to be confused when given transparent
@@ -287,7 +287,7 @@ def run(obj_path, out_path, rot=None, alptweak=True):
                       "for those versions.")
             if alptweak:
                 reintroduce_transp(out_path, repls, abspths)
-                    
+
         elif ext == ".obj":
             # Export obj
             if obj_path == out_path:
@@ -311,7 +311,7 @@ def run(obj_path, out_path, rot=None, alptweak=True):
 if __name__ == "__main__":
     # Get command line arguments
     args = sys.argv
-    
+
     # Get the relevant arguments, which follow the "--" sign
     pyargs = args[args.index("--") + 1:]
 

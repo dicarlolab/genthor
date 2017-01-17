@@ -44,23 +44,23 @@ def setup_renderer(window_type, size=(256, 256), light_spec=None, cam_spec=None)
     # Set up a camera
     if cam_spec is None:
         cam_spec = {}
-    print('cam_spec', cam_spec)
+    # print('cam_spec', cam_spec)
     cam_x, cam_z, cam_y = cam_spec.get('cam_pos', (0., -20., 0.))
     scene_width = cam_spec.get('scene_width', 3.)
     nm = np.sqrt(cam_x**2 + cam_y**2 + cam_z**2)
     fov = 2. * np.degrees(np.arctan(scene_width / (2. * nm)))
-    cam_lx, cam_lz, cam_ly = cam_spec.get('cam_lookat', (0., 0., 0.)) 
+    cam_lx, cam_lz, cam_ly = cam_spec.get('cam_lookat', (0., 0., 0.))
     cam_rot = cam_spec.get('cam_rot', 0.)
     camera = lbase.make_camera(output)
     lens = camera.node().getLens()
-    lens.setMinFov(fov)    
+    lens.setMinFov(fov)
     # Position the camera
     camera_rot = rootnode.attachNewNode('camera_rot')
     lbase.cameras.reparentTo(camera_rot)
     lbase.cameras.setPos(cam_x, cam_z, cam_y)
     lbase.cameras.lookAt(cam_lx, cam_lz, cam_ly)
     camera_rot.setH(cam_rot)
-    
+
     # Lights
     lights = LightBase.make_lights(light_spec=light_spec)
     lights.reparentTo(rootnode)
@@ -73,13 +73,13 @@ def setup_renderer(window_type, size=(256, 256), light_spec=None, cam_spec=None)
     return lbase, output
 
 
-def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr, 
+def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
                     bgscale, bghp,
                     texture=None,
                     internal_canonical=False,
-                    check_penetration=False, 
-                    light_spec=None, 
-                    use_envmap=False, 
+                    check_penetration=False,
+                    light_spec=None,
+                    use_envmap=False,
                     shader=None,
                     world_coords=False):
     """ Constructs the scene per the parameters. """
@@ -96,7 +96,7 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
         poses = [pos]
         hprs = [hpr]
         textures = [texture]
-    else:  
+    else:
         modelpaths = modelpath
         scales = scale
         poses = pos
@@ -110,7 +110,7 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
             texmodes.append(texmode)
             textures[_i] = texfile
         else:
-            texmodes.append(TexGenAttrib.MWorldNormal)    
+            texmodes.append(TexGenAttrib.MWorldNormal)
 
     assert hasattr(modelpaths, '__iter__')
     assert hasattr(scales, '__iter__')
@@ -118,21 +118,21 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
     assert hasattr(hprs, '__iter__')
     assert hasattr(textures, '__iter__')
     assert len(modelpaths) == len(scales) == len(hprs) == len(poses) == len(textures), (len(modelpaths), len(scales), len(hprs), len(poses), len(textures))
-        
+
     modelpaths = map(mt.resolve_model_path, modelpaths)
     modelpaths = map(cm.autogen_egg, modelpaths)
     textures = map(mt.resolve_texture_path, textures)
     objnodes = []
     for mpth, scale, hpr, pos, t, tm in zip(modelpaths, scales, hprs, poses, textures, texmodes):
         objnode = tools.read_file(lbase.loader.loadModel, mpth)
-        if t is not None: 
+        if t is not None:
             #ts = TextureStage('ts')
             ts = TextureStage.get_default()
-            ts.setMode(TextureStage.MReplace) 
-            tex = tools.read_file(lbase.loader.loadTexture, t) 
+            ts.setMode(TextureStage.MReplace)
+            tex = tools.read_file(lbase.loader.loadTexture, t)
             objnode.setTexGen(ts, tm)
             objnode.setTexture(tex, 6)
-        
+
         robjnode = rootnode.attachNewNode('root_' + objnode.get_name())
         objnode.reparentTo(robjnode)
         if internal_canonical:
@@ -142,12 +142,12 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
             ppos = vertices.mean(0) * cscale
             objnode.setPos(-ppos[0], -ppos[1], -ppos[2])
             objnode.setScale(cscale, cscale, cscale)
-            
+
         if world_coords:
             refnodeX = rootnode.attachNewNode('world_coords_x')
             refnodeY = rootnode.attachNewNode('world_coords_y')
             refnodeZ = rootnode.attachNewNode('world_coords_z')
-            
+
             robjnode.wrtReparentTo(refnodeZ)
             refnodeZ.setH(refnodeX, hpr[2])
             robjnode.wrtReparentTo(refnodeY)
@@ -157,7 +157,7 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
             robjnode.wrtReparentTo(rootnode)
         else:
             robjnode.setHpr(hpr[2], hpr[1], hpr[0])
-            
+
         robjnode.setScale(scale[0], scale[0], scale[0])
         robjnode.setPos(pos[0], -pos[2], pos[1])
         robjnode.setTwoSided(1)
@@ -204,7 +204,7 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
         c = 5.
         bgnode.setScale(c * bgscale[0], c * bgscale[0], c * bgscale[0])
         bgnode.setPos(0, 0, 0) #0)
-        bgnode.setHpr(bghp[0], bghp[1], 0.) 
+        bgnode.setHpr(bghp[0], bghp[1], 0.)
         # Detach point light
         plight1 = lbase.rootnode.find('**/plight1')
         if plight1:
@@ -218,7 +218,7 @@ def construct_scene(lbase, modelpath, bgpath, scale, pos, hpr,
 
     if shader is not None:
         vshaderpath, fshaderpath = shader
-        rootnode.setShaderAuto()  
+        rootnode.setShaderAuto()
         shader = Shader.load(Shader.SLGLSL, vshaderpath, fshaderpath)
         rootnode.setShader(shader)
 
@@ -265,7 +265,7 @@ def run(args):
     lbase, output = setup_renderer(window_type)
     if window_type == "offscreen":
         tex = output.getTexture()
-    
+
     # Construct a scene
     modelpath, bgpath, scale, pos, hpr, bgscale, bghp = args
     objnode, bgnode = construct_scene(lbase, modelpath, bgpath,
@@ -301,7 +301,7 @@ if __name__ == "__main__":
         (0., 0.),
         ]
     #args[1] = ""
-    
+
     lbase = run(args)
 
     raw_input("press ENTER to exit...")

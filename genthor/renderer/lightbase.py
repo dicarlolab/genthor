@@ -44,7 +44,7 @@ class LightBase(object):
         # Get a handle to the graphics pipe selector
         selection = GraphicsPipeSelection.getGlobalPtr()
         # Check for DISPLAY
-        if "DISPLAY" in os.environ:
+        if "DISPLAY" in os.environ and False:
             # Use the first option (should be glx)
             pipe_type = selection.getPipeTypes()[0]
         else:

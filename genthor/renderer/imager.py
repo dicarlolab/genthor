@@ -2,7 +2,7 @@
 """ Contains Imager and ImgRendererResizer class definitions."""
 from genthor.renderer.lightbase import LightBase
 import genthor.renderer.renderer as gr
-from PIL import Image
+from PIL import Image, ImageOps
 import numpy as np
 import os
 import pdb
@@ -92,7 +92,7 @@ class ImgRendererResizer(object):
         for c in children[2:]:
             c.removeNode()
 
-    def __call__(self, m, remove=True):
+    def __call__(self, m, remove=False):
         try:
             m['obj_path']
         except:
@@ -169,6 +169,9 @@ class ImgRendererResizer(object):
                 z[:] = y[:, :, -1]
                 im = ImageOps.invert(Image.fromarray(z))
                 im = im.convert('RGB')
+            elif self.mode == 'alpha':
+                z = _arr[:,:,3].astype(np.dtype('uint8'))
+                im = Image.fromarray(z)
             else:
                 im = im.convert(self.mode)
         rval = np.asarray(im, self._dtype)
