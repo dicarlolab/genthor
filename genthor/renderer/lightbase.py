@@ -25,7 +25,7 @@ import pdb
 import sys
 
 class LightBase(object):
-    
+
     """ LightBase is a lightweight interface for rendering with
     Panda3d. It contains several key Panda3d objects that are required
     for rendering, like GraphicsEngine, GraphicsPipe, GraphicsOutput,
@@ -38,13 +38,13 @@ class LightBase(object):
         self.output_list = []
         self.gsg_list = []
         self.cameras = None
-        
+
     def init_graphics(self):
         """ Creates GraphicsEngine, GraphicsPipe, and loader """
         # Get a handle to the graphics pipe selector
         selection = GraphicsPipeSelection.getGlobalPtr()
         # Check for DISPLAY
-        if "DISPLAY" in os.environ and False:
+        if "DISPLAY" in os.environ:
             # Use the first option (should be glx)
             pipe_type = selection.getPipeTypes()[0]
         else:
@@ -62,7 +62,7 @@ class LightBase(object):
     def init_fbp():
         """ Initial / default FrameBufferProperties """
         fbp = FrameBufferProperties()
-        fbp.setRgbColor(1) 
+        fbp.setRgbColor(1)
         fbp.setColorBits(1)
         fbp.setAlphaBits(1)
         fbp.setDepthBits(1)
@@ -115,7 +115,7 @@ class LightBase(object):
 
         # Initialize WindowProperties
         wp = self.init_wp('offscreen', size)
-        
+
         # Create the buffer
         output = self.make_output('offscreen', name, sort, wp=wp,
                                   xflags=xflags, host_out=host_out)
@@ -125,7 +125,7 @@ class LightBase(object):
         if output is None:
             print("Direct offscreen buffer creation failed...")
             print("... falling back to onscreen --> offscreen method.")
-            
+
             # Open an onscreen window first, just to get a GraphicsOutput
             # object which is needed to open an offscreen buffer.
             dummywin = self.make_window(size, 'dummy_onscreen_win', sort,
@@ -150,14 +150,14 @@ class LightBase(object):
         tex = self.add_render_texture(output, mode, bitplane)
         # Cause necessary stuff to be created (buffers, textures etc)
         self.render_frame()
-        
+
         return output, tex
 
     def make_output(self, window_type, name=None, sort=0, fbp=None, wp=None,
                     xflags=0, host_out=None):
         """ Makes a GraphicsOutput object and stores it in
         self.output_list. This is the low-level interface."""
-        
+
         # Input handling / defaults
         if name is None:
             name = window_type + '_win'
@@ -176,7 +176,7 @@ class LightBase(object):
             flags = flags | GraphicsPipe.BFRequireWindow
         elif window_type == 'offscreen':
             flags = flags | GraphicsPipe.BFRefuseWindow
-            
+
         # Make the window / buffer
         engine = self.engine
         pipe = self.pipe
@@ -195,7 +195,7 @@ class LightBase(object):
 
             # Cause necessary stuff to be created (buffers, textures etc)
             self.render_frame()
-            
+
         return output
 
     def add_to_output_gsg_lists(self, output):
@@ -210,7 +210,7 @@ class LightBase(object):
 
     @staticmethod
     def add_render_texture(output, mode=None, bitplane=None):
-        """ Similar to GraphicsOutput's addRenderTexture. 
+        """ Similar to GraphicsOutput's addRenderTexture.
 
         ** Possible mode values **
         GraphicsOutput.RTMNone
@@ -221,22 +221,22 @@ class LightBase(object):
         GraphicsOutput.RTMTriggeredCopyRam
 
         ** Possible bitplane values **
-        GraphicsOutput.RTPStencil 	
-        GraphicsOutput.RTPDepthStencil 	
-        GraphicsOutput.RTPColor 	
-        GraphicsOutput.RTPAuxRgba0 	
-        GraphicsOutput.RTPAuxRgba1 	
-        GraphicsOutput.RTPAuxRgba2 	
-        GraphicsOutput.RTPAuxRgba3 	
-        GraphicsOutput.RTPAuxHrgba0 	
-        GraphicsOutput.RTPAuxHrgba1 	
-        GraphicsOutput.RTPAuxHrgba2 	
-        GraphicsOutput.RTPAuxHrgba3 	
-        GraphicsOutput.RTPAuxFloat0 	
-        GraphicsOutput.RTPAuxFloat1 	
-        GraphicsOutput.RTPAuxFloat2 	
-        GraphicsOutput.RTPAuxFloat3 	
-        GraphicsOutput.RTPDepth 	
+        GraphicsOutput.RTPStencil
+        GraphicsOutput.RTPDepthStencil
+        GraphicsOutput.RTPColor
+        GraphicsOutput.RTPAuxRgba0
+        GraphicsOutput.RTPAuxRgba1
+        GraphicsOutput.RTPAuxRgba2
+        GraphicsOutput.RTPAuxRgba3
+        GraphicsOutput.RTPAuxHrgba0
+        GraphicsOutput.RTPAuxHrgba1
+        GraphicsOutput.RTPAuxHrgba2
+        GraphicsOutput.RTPAuxHrgba3
+        GraphicsOutput.RTPAuxFloat0
+        GraphicsOutput.RTPAuxFloat1
+        GraphicsOutput.RTPAuxFloat2
+        GraphicsOutput.RTPAuxFloat3
+        GraphicsOutput.RTPDepth
         GraphicsOutput.RTPCOUNT
 
         """
@@ -253,7 +253,7 @@ class LightBase(object):
 
         tex = Texture()
         tex.setFormat(Texture.FLuminance)
-            
+
         # Add the texture to the buffer
         output.addRenderTexture(tex, mode, bitplane)
         # Get a handle to the texture
@@ -263,15 +263,15 @@ class LightBase(object):
 
     def close_output(self, output):
         """
-        Closes the indicated output and removes it from the list. 
+        Closes the indicated output and removes it from the list.
         """
         output.setActive(False)
-        
+
         # First, remove all of the cameras associated with display
         # regions on the window.
-        num_regions = output.getNumDisplayRegions()        
+        num_regions = output.getNumDisplayRegions()
         for i in range(num_regions):
-            dr = output.getDisplayRegion(i)                   
+            dr = output.getDisplayRegion(i)
             dr.setCamera(NodePath())
 
         # Remove this output from the list
@@ -280,7 +280,7 @@ class LightBase(object):
         engine = output.getEngine()
         engine.removeWindow(output)
         # Give the window a chance to actually close before continuing.
-        engine.renderFrame()   
+        engine.renderFrame()
 
     def close_all_outputs(self):
         """ Closes all of this instance's outputs """
@@ -290,7 +290,7 @@ class LightBase(object):
             self.close_output(output)
         # Clear the output list
         self.output_list = []
-        
+
     def make_camera(self, output, sort=0, dr_dims=(0, 1, 0, 1),
                     aspect_ratio=None, clear_depth=False, clear_color=None,
                     lens=None, cam_name='camera0', mask=None):
@@ -307,7 +307,7 @@ class LightBase(object):
         camera to apply to the window, rather than creating a new
         camera.
         """
-        
+
         # self.cameras is the parent node of all cameras: a node that
         # we can move around to move all cameras as a group.
         if self.cameras is None:
@@ -342,7 +342,7 @@ class LightBase(object):
         # window will be cleared, which is normally sufficient).  But
         # we will if clearDepth is specified.
         if clear_depth:
-            dr.setClearDepthActive(1)          
+            dr.setClearDepthActive(1)
         if clear_color:
             dr.setClearColorActive(1)
             dr.setClearColor(clear_color)
@@ -407,7 +407,7 @@ class LightBase(object):
                     light.setColor(lspec['color'])
                     light.setPoint(lspec['pos'])
                     light.setDirection(lspec['direction'])
-                    
+
 
         return lights
 
@@ -451,7 +451,7 @@ class LightBase(object):
     @staticmethod
     def get_tex_image(tex, freshape=True):
         """ Returns numpy arr containing image in tex """
-        
+
         # Remember to call self.triggerCopy() before
         # self.renderFrame(), or the next frame won't be pushed to RAM
 
@@ -486,7 +486,7 @@ class LightBase(object):
             raise TypeError('Unhandled output type: ' + type(output))
 
         return f_success
-    
+
     def destroy(self):
         """ self.__exitfunc() calls this automatically """
         self.close_all_outputs()
@@ -498,7 +498,7 @@ class LightBase(object):
             self.engine = None
         if getattr(self, 'pipe', None):
             self.pipe = None
-            
+
     def __exitfunc(self):
         """ Customize pre-exit commands."""
         self.destroy()
@@ -507,7 +507,7 @@ class LightBase(object):
         """ The user has requested we exit the program. """
         self.__exitfunc()
         sys.exit()
-        
+
     @classmethod
     def destroy_windows(cls):
         """ General destroy windows method."""

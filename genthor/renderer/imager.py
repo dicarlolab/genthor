@@ -92,7 +92,7 @@ class ImgRendererResizer(object):
         for c in children[2:]:
             c.removeNode()
 
-    def __call__(self, m, remove=False):
+    def __call__(self, m, remove=True):
         try:
             m['obj_path']
         except:
